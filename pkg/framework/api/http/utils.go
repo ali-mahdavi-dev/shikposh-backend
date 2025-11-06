@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"reflect"
@@ -10,9 +11,51 @@ import (
 	"shikposh-backend/pkg/framework/errors"
 	"shikposh-backend/pkg/framework/errors/phrases"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 	"github.com/spf13/cast"
 )
+
+var validate *validator.Validate
+
+func init() {
+	validate = validator.New()
+}
+
+// formatValidationError formats validator errors into a readable message
+func formatValidationError(err error) string {
+	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+		var messages []string
+		for _, fieldError := range validationErrors {
+			message := fmt.Sprintf("field '%s' failed validation: %s", fieldError.Field(), getValidationMessage(fieldError))
+			messages = append(messages, message)
+		}
+		return strings.Join(messages, "; ")
+	}
+	return err.Error()
+}
+
+// getValidationMessage returns a user-friendly message for validation errors
+func getValidationMessage(fieldError validator.FieldError) string {
+	switch fieldError.Tag() {
+	case "required":
+		return "is required"
+	case "min":
+		return fmt.Sprintf("must be at least %s characters", fieldError.Param())
+	case "max":
+		return fmt.Sprintf("must be at most %s characters", fieldError.Param())
+	case "email":
+		return "must be a valid email address"
+	case "len":
+		return fmt.Sprintf("must be exactly %s characters", fieldError.Param())
+	case "gte":
+		return fmt.Sprintf("must be greater than or equal to %s", fieldError.Param())
+	case "lte":
+		return fmt.Sprintf("must be less than or equal to %s", fieldError.Param())
+	default:
+		return fmt.Sprintf("failed validation rule '%s'", fieldError.Tag())
+	}
+}
 
 var statusMap = map[string]int{
 	http.StatusText(http.StatusBadRequest):            http.StatusBadRequest,
@@ -57,16 +100,30 @@ func GetToken(c fiber.Ctx) string {
 
 // Parsing
 func ParseJSON(c fiber.Ctx, obj interface{}) error {
+	// Parse JSON body
 	if err := c.Bind().Body(obj); err != nil {
 		return errors.Validation(phrases.FailedParseJson, err.Error())
 	}
+
+	// Validate struct
+	if err := validate.Struct(obj); err != nil {
+		return errors.Validation(phrases.FailedParseJson, formatValidationError(err))
+	}
+
 	return nil
 }
 
 func ParseQuery(c fiber.Ctx, obj interface{}) error {
+	// Parse query parameters
 	if err := c.Bind().Query(obj); err != nil {
 		return errors.Validation(phrases.FailedParseQuery, err.Error())
 	}
+
+	// Validate struct
+	if err := validate.Struct(obj); err != nil {
+		return errors.Validation(phrases.FailedParseQuery, formatValidationError(err))
+	}
+
 	return nil
 }
 
@@ -81,9 +138,16 @@ func ParsePaginationQueryParam(c fiber.Ctx, obj *PaginationResult) error {
 }
 
 func ParseForm(c fiber.Ctx, obj interface{}) error {
+	// Parse form data
 	if err := c.Bind().Body(obj); err != nil {
 		return errors.Validation(phrases.FailedParseForm, err.Error())
 	}
+
+	// Validate struct
+	if err := validate.Struct(obj); err != nil {
+		return errors.Validation(phrases.FailedParseForm, formatValidationError(err))
+	}
+
 	return nil
 }
 

@@ -46,7 +46,6 @@ func (k *kafkaService) SendMessage(topic string, message interface{}) error {
 	producerConfig.Producer.Return.Successes = true
 	producer, err := sarama.NewSyncProducer(k.Brokers, producerConfig)
 	if err != nil {
-		fmt.Printf("Failed to create producer: %s\n", err)
 		return fmt.Errorf("failed to create producer: %v", err)
 	}
 	defer producer.Close()
@@ -75,10 +74,7 @@ func (k *kafkaService) ConsumeMessages(topic string, fn func(pc sarama.Partition
 	consumer, err := sarama.NewConsumer(k.Brokers, config)
 	defer func(consumer sarama.Consumer) {
 		if consumer != nil {
-			err := consumer.Close()
-			if err != nil {
-				fmt.Printf("Failed to close consumer: %v", err)
-			}
+			_ = consumer.Close()
 		}
 
 	}(consumer)

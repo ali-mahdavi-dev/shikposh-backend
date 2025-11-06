@@ -3,7 +3,6 @@ package adapter
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 
 	"gorm.io/gorm"
 
@@ -50,6 +49,9 @@ func (uow *BaseUnitOfWork) GetSession(ctx context.Context) *gorm.DB {
 // Do executes a function within a database transaction
 // If the function returns an error, the transaction will be rolled back
 func (uow *BaseUnitOfWork) Do(ctx context.Context, fc types.UowUseCase) error {
+	// Clear repositories before starting new transaction
+	uow.clearRepositories()
+	
 	return uow.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Store transaction in context so GetSession can retrieve it
 		txCtx := context.WithValue(ctx, txKey{}, tx)
@@ -58,6 +60,8 @@ func (uow *BaseUnitOfWork) Do(ctx context.Context, fc types.UowUseCase) error {
 }
 
 // CollectNewEvents collects domain events from repositories and sends them to the channel.
+// Note: This should be called after transaction is committed, so repositories are cleared
+// and entities are collected before the transaction ends.
 func (uow *BaseUnitOfWork) CollectNewEvents(ctx context.Context, eventCh chan<- any) {
 	uow.mu.RLock()
 	repos := make([]SeenedRepository, 0, len(uow.repositories))
@@ -67,22 +71,23 @@ func (uow *BaseUnitOfWork) CollectNewEvents(ctx context.Context, eventCh chan<- 
 	uow.mu.RUnlock()
 
 	if len(repos) == 0 {
-		logging.Debug("No repositories accessed, no events to collect").Log()
 		return
 	}
 
-	logging.Debug("Collecting domain events").
-		WithInt("repository_count", len(repos)).
-		Log()
-
+	// Collect all entities before accessing their events
+	// This must be done while repositories still have access to entities
 	allEntities := make([]Entity, 0, 10)
 	for _, repo := range repos {
 		entities := repo.Seen()
 		allEntities = append(allEntities, entities...)
 	}
 
+	// Clear repositories immediately after collecting entities
+	// This prevents using repositories with closed transactions
+	uow.clearRepositories()
+
+	// Now process events from collected entities
 	var wg sync.WaitGroup
-	var eventCount int64
 	for _, entity := range allEntities {
 		wg.Add(1)
 		go func(e Entity) {
@@ -91,8 +96,6 @@ func (uow *BaseUnitOfWork) CollectNewEvents(ctx context.Context, eventCh chan<- 
 			for _, event := range events {
 				select {
 				case eventCh <- event:
-					atomic.AddInt64(&eventCount, 1)
-					logging.Debug("Domain event collected and sent").Log()
 				case <-ctx.Done():
 					logging.Warn("Context cancelled while collecting events").
 						WithError(ctx.Err()).
@@ -104,12 +107,6 @@ func (uow *BaseUnitOfWork) CollectNewEvents(ctx context.Context, eventCh chan<- 
 	}
 
 	wg.Wait()
-
-	logging.Debug("Finished collecting domain events").
-		WithInt64("total_events", atomic.LoadInt64(&eventCount)).
-		Log()
-
-	uow.clearRepositories()
 }
 
 // clearRepositories clears all cached repositories after event collection.

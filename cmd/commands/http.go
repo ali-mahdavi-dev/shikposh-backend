@@ -50,9 +50,18 @@ type serverComponents struct {
 
 func startServer(cfg *config.Config) error {
 	// Initialize database
+	// Build DSN - don't include password parameter if it's empty
+	// PostgreSQL connects to default database (username) if password= is in connection string
+	var dsn string
+	if cfg.Postgres.Password != "" {
+		dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Postgres.Host, cfg.Postgres.Port, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.DbName, cfg.Postgres.SSLMode)
+	} else {
+		dsn = fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=%s", cfg.Postgres.Host, cfg.Postgres.Port, cfg.Postgres.User, cfg.Postgres.DbName, cfg.Postgres.SSLMode)
+	}
+	
 	dbConfig := databases.Config{
 		DBType:       "postgres",
-		DSN:          fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Postgres.Host, cfg.Postgres.Port, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.DbName, cfg.Postgres.SSLMode),
+		DSN:          dsn,
 		MaxOpenConns: cfg.Postgres.MaxOpenConns,
 		MaxIdleConns: cfg.Postgres.MaxIdleConns,
 		MaxLifetime:  int(cfg.Postgres.ConnMaxLifetime.Seconds()),
@@ -106,11 +115,14 @@ func startServer(cfg *config.Config) error {
 	serverErr := make(chan error, 1)
 	
 	go func() {
-		logging.Info("Starting HTTP server").
-			WithAny("address", addr).
-			WithAny("swagger", fmt.Sprintf("http://%s/swagger/index.html", addr)).
-			WithAny("api", fmt.Sprintf("http://%s/api", addr)).
-			Log()
+		// Log server ready after a short delay to ensure it's actually listening
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			logging.Info("HTTP server ready").
+				WithString("address", addr).
+				WithString("swagger", fmt.Sprintf("http://%s/swagger/index.html", addr)).
+				Log()
+		}()
 		
 		if err := server.Listen(addr); err != nil {
 			serverErr <- fmt.Errorf("server failed: %w", err)
@@ -121,10 +133,7 @@ func startServer(cfg *config.Config) error {
 	select {
 	case err := <-serverErr:
 		return err
-	case sig := <-quit:
-		logging.Info("Shutdown signal received").
-			WithAny("signal", sig.String()).
-			Log()
+	case <-quit:
 	}
 
 	// Graceful shutdown
@@ -195,8 +204,6 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 }
 
 func gracefulShutdown(ctx context.Context, components *serverComponents) error {
-	logging.Info("Initiating graceful shutdown").Log()
-
 	// Shutdown message bus first to stop processing new events
 	if err := components.bus.Shutdown(ctx); err != nil {
 		logging.Warn("Message bus shutdown error").WithError(err).Log()
@@ -207,7 +214,6 @@ func gracefulShutdown(ctx context.Context, components *serverComponents) error {
 		return fmt.Errorf("server shutdown error: %w", err)
 	}
 
-	logging.Info("Graceful shutdown completed").Log()
 	return nil
 }
 

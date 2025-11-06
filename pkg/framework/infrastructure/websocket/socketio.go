@@ -38,10 +38,6 @@ func (w *Websocket) AddWsRoutes() {
 			u := s.URL()
 			token = u.Query().Get("token")
 		}
-		logging.Info("WebSocket connection established").
-			WithString("socket_id", s.ID()).
-			WithString("token", token).
-			Log()
 
 		if token == "" {
 			s.Emit("error", "Missing token")

@@ -30,10 +30,8 @@ func New(cfg Config) (*gorm.DB, error) {
 
 	switch strings.ToLower(cfg.DBType) {
 	case "postgres":
-		logging.Debug("Using PostgreSQL database").Log()
 		dialector = postgres.Open(cfg.DSN)
 	case "sqlite3":
-		logging.Debug("Using SQLite database").Log()
 		_ = os.MkdirAll(filepath.Dir(cfg.DSN), os.ModePerm)
 		dialector = sqlite.Open(cfg.DSN)
 	default:
@@ -53,7 +51,6 @@ func New(cfg Config) (*gorm.DB, error) {
 
 	if cfg.Debug {
 		ormCfg.Logger = logger.Default
-		logging.Debug("Database debug mode enabled").Log()
 	}
 
 	db, err := gorm.Open(dialector, ormCfg)
@@ -82,11 +79,6 @@ func New(cfg Config) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(time.Duration(cfg.MaxLifetime) * time.Second)
 	sqlDB.SetConnMaxIdleTime(time.Duration(cfg.MaxIdleTime) * time.Second)
 
-	logging.Debug("Testing database connection").
-		WithInt("max_open_conns", cfg.MaxOpenConns).
-		WithInt("max_idle_conns", cfg.MaxIdleConns).
-		Log()
-
 	if err = sqlDB.Ping(); err != nil {
 		logging.Error("Database ping failed").
 			WithError(err).
@@ -94,6 +86,14 @@ func New(cfg Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	logging.Info("Database connection pool configured successfully").Log()
+	// Log database connection pool configuration (only once at startup, not performance critical)
+	logging.Info("Database connection pool configured").
+		WithString("db_type", cfg.DBType).
+		WithInt("max_open_conns", cfg.MaxOpenConns).
+		WithInt("max_idle_conns", cfg.MaxIdleConns).
+		WithInt("max_lifetime_sec", cfg.MaxLifetime).
+		WithInt("max_idle_time_sec", cfg.MaxIdleTime).
+		Log()
+	
 	return db, nil
 }

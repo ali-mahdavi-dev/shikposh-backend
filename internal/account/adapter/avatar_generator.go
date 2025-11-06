@@ -30,17 +30,12 @@ func NewAvatarGenerator(imagesFS embed.FS) (*AvatarGenerator, error) {
 	var err error
 	g := &AvatarGenerator{imagesFS: imagesFS}
 
-	logging.Debug("Loading avatar image layers").Log()
-
 	if g.bodies, err = loadLayerPaths(imagesFS, "assets/images/bodies/*"); err != nil {
 		logging.Error("Failed to load body images").
 			WithError(err).
 			Log()
 		return nil, err
 	}
-	logging.Debug("Loaded body images").
-		WithInt("count", len(g.bodies)).
-		Log()
 
 	if g.accessories, err = loadLayerPaths(imagesFS, "assets/images/accessories/*"); err != nil {
 		logging.Error("Failed to load accessory images").
@@ -48,9 +43,6 @@ func NewAvatarGenerator(imagesFS embed.FS) (*AvatarGenerator, error) {
 			Log()
 		return nil, err
 	}
-	logging.Debug("Loaded accessory images").
-		WithInt("count", len(g.accessories)).
-		Log()
 
 	if g.glasses, err = loadLayerPaths(imagesFS, "assets/images/glasses/*"); err != nil {
 		logging.Error("Failed to load glasses images").
@@ -58,9 +50,6 @@ func NewAvatarGenerator(imagesFS embed.FS) (*AvatarGenerator, error) {
 			Log()
 		return nil, err
 	}
-	logging.Debug("Loaded glasses images").
-		WithInt("count", len(g.glasses)).
-		Log()
 
 	if g.hats, err = loadLayerPaths(imagesFS, "assets/images/hats/*"); err != nil {
 		logging.Error("Failed to load hat images").
@@ -68,11 +57,7 @@ func NewAvatarGenerator(imagesFS embed.FS) (*AvatarGenerator, error) {
 			Log()
 		return nil, err
 	}
-	logging.Debug("Loaded hat images").
-		WithInt("count", len(g.hats)).
-		Log()
 
-	logging.Info("Avatar generator initialized successfully").Log()
 	return g, nil
 }
 
@@ -140,10 +125,6 @@ func (g *AvatarGenerator) Generate(identifier string) (image.Image, error) {
 	avatar := imaging.Overlay(img0, img1, image.Point{0, 0}, 1.0)
 	avatar = imaging.Overlay(avatar, img2, image.Point{0, 0}, 1.0)
 	avatar = imaging.Overlay(avatar, img3, image.Point{0, 0}, 1.0)
-
-	logging.Debug("Avatar generated successfully").
-		WithString("identifier", identifier).
-		Log()
 
 	return avatar, nil
 }

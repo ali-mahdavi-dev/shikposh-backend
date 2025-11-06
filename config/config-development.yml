@@ -18,8 +18,8 @@ postgres:
   host: localhost
   port: 5432
   user: ali
-  password: ""
-  dbName: "bunny_go"
+  password: "pg123"
+  dbName: "shikposh"
   sslMode: disable
   maxIdleConns: 15
   maxOpenConns: 100

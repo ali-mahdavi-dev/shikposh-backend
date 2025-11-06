@@ -17,9 +17,18 @@ import (
 var ErrMigrationFileNameRequired = errors.New("migration name is required")
 
 func dbmateDB() *dbmate.DB {
-	cnn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&TimeZone=Asia/Tehran",
-		cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.Host, cfg.Postgres.Port,
-		cfg.Postgres.DbName, cfg.Postgres.SSLMode)
+	// Build connection string - don't include password if it's empty
+	// PostgreSQL connects to default database (username) if password= is in connection string
+	var cnn string
+	if cfg.Postgres.Password != "" {
+		cnn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&TimeZone=Asia/Tehran",
+			cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.Host, cfg.Postgres.Port,
+			cfg.Postgres.DbName, cfg.Postgres.SSLMode)
+	} else {
+		cnn = fmt.Sprintf("postgres://%s@%s:%s/%s?sslmode=%s&TimeZone=Asia/Tehran",
+			cfg.Postgres.User, cfg.Postgres.Host, cfg.Postgres.Port,
+			cfg.Postgres.DbName, cfg.Postgres.SSLMode)
+	}
 	u, err := url.Parse(cnn)
 	if err != nil {
 		panic(fmt.Errorf("invalid DB connection string: %w", err))

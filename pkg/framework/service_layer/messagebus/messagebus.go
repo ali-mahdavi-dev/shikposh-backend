@@ -40,6 +40,10 @@ func NewMessageBus(uow unit_of_work.PGUnitOfWork) MessageBus {
 		closed:          false,
 	}
 
+	logging.Info("Message bus initialized").
+		WithInt("event_channel_capacity", 100).
+		Log()
+
 	// start event handler worker pool
 	// Using a single goroutine to process events sequentially to avoid race conditions
 	// Events are processed one at a time to ensure proper ordering and prevent concurrency issues
@@ -52,7 +56,6 @@ func NewMessageBus(uow unit_of_work.PGUnitOfWork) MessageBus {
 			select {
 			case event, ok := <-evCh:
 				if !ok {
-					logging.Debug("Event channel closed, stopping event handler").Log()
 					return
 				}
 				// Process events sequentially to avoid race conditions
@@ -61,7 +64,6 @@ func NewMessageBus(uow unit_of_work.PGUnitOfWork) MessageBus {
 					logging.Error("Failed to handle event").WithError(err).Log()
 				}
 			case <-mb.shutdownCh:
-				logging.Debug("Shutdown signal received, processing remaining events").Log()
 				// Process remaining events before shutdown
 				for {
 					select {
@@ -90,6 +92,9 @@ func (m *messageBus) AddHandler(handlers ...commandeventhandler.CommandHandler) 
 			return apperrors.Conflict("", fmt.Sprintf("command handler for %s already exists", cmdName))
 		}
 		m.handledCommands[cmdName] = handler
+		logging.Info("Command handler registered").
+			WithAny("command_name", cmdName).
+			Log()
 	}
 
 	return nil
@@ -102,6 +107,9 @@ func (m *messageBus) AddHandlerEvent(handlers ...commandeventhandler.EventHandle
 			return apperrors.Conflict("", fmt.Sprintf("event handler for %s already exists", eventName))
 		}
 		m.handledEvent[eventName] = handler
+		logging.Info("Event handler registered").
+			WithAny("event_name", eventName).
+			Log()
 	}
 
 	return nil
@@ -122,7 +130,7 @@ func (m *messageBus) AddEvent(handlers ...commandeventhandler.EventHandler) erro
 func (m *messageBus) Handle(ctx context.Context, cmd any) (any, error) {
 	cmdName := reflect.TypeOf(cmd).String()
 
-	logging.Debug("Handling command").
+	logging.Info("Handling command").
 		WithAny("command_name", cmdName).
 		Log()
 
@@ -146,10 +154,6 @@ func (m *messageBus) Handle(ctx context.Context, cmd any) (any, error) {
 
 	}
 
-	logging.Debug("Collecting domain events from transaction").
-		WithAny("command_name", cmdName).
-		Log()
-
 	// collect new events from the transaction
 	m.mu.RLock()
 	closed := m.closed
@@ -159,7 +163,7 @@ func (m *messageBus) Handle(ctx context.Context, cmd any) (any, error) {
 		m.uow.CollectNewEvents(ctx, m.eventCh)
 	}
 
-	logging.Debug("Command handled successfully").
+	logging.Info("Command handled successfully").
 		WithAny("command_name", cmdName).
 		Log()
 
@@ -168,7 +172,8 @@ func (m *messageBus) Handle(ctx context.Context, cmd any) (any, error) {
 
 func (m *messageBus) HandleEvent(ctx context.Context, event any) error {
 	eventName := reflect.TypeOf(event).String()
-	logging.Debug("Handling event").
+
+	logging.Info("Handling event").
 		WithAny("event_name", eventName).
 		Log()
 
@@ -192,10 +197,6 @@ func (m *messageBus) HandleEvent(ctx context.Context, event any) error {
 
 	// Collect and handle nested events that may have been created by the event handler
 	// This supports event handlers that create new events
-	logging.Debug("Collecting nested events from event handler").
-		WithAny("event_name", eventName).
-		Log()
-	
 	m.mu.RLock()
 	closed := m.closed
 	m.mu.RUnlock()
@@ -204,7 +205,7 @@ func (m *messageBus) HandleEvent(ctx context.Context, event any) error {
 		m.uow.CollectNewEvents(ctx, m.eventCh)
 	}
 
-	logging.Debug("Event handled successfully").
+	logging.Info("Event handled successfully").
 		WithAny("event_name", eventName).
 		Log()
 
@@ -222,8 +223,6 @@ func (m *messageBus) Shutdown(ctx context.Context) error {
 	m.closed = true
 	m.mu.Unlock()
 
-	logging.Debug("Initiating message bus shutdown").Log()
-
 	// Signal shutdown to the event handler goroutine
 	close(m.shutdownCh)
 
@@ -236,7 +235,7 @@ func (m *messageBus) Shutdown(ctx context.Context) error {
 
 	select {
 	case <-done:
-		logging.Debug("Message bus shutdown completed successfully").Log()
+		logging.Info("Message bus shutdown completed successfully").Log()
 		return nil
 	case <-ctx.Done():
 		logging.Warn("Message bus shutdown timed out").WithError(ctx.Err()).Log()
