@@ -237,5 +237,21 @@ func ResError(c fiber.Ctx, err error) error {
 	// Convert Error interface to HTTPError struct for JSON serialization
 	httpErrorStruct := ToHTTPError(httpErr)
 
+	// Add request_id from context if available
+	// Import middleware package to get request_id
+	requestID := getRequestIDFromContext(c)
+	if requestID != "" {
+		httpErrorStruct.RequestID = requestID
+	}
+
 	return ResJSON(c, statusCode, ResponseResult{Error: httpErrorStruct})
+}
+
+// getRequestIDFromContext extracts request ID from Fiber context
+// This avoids circular dependency with middleware package
+func getRequestIDFromContext(c fiber.Ctx) string {
+	if requestID, ok := c.Locals("request_id").(string); ok {
+		return requestID
+	}
+	return ""
 }

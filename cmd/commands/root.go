@@ -10,9 +10,8 @@ import (
 )
 
 var (
-	cfg        config.Config
-	LogInstans logging.Logger
-	rootCmd    = &cobra.Command{
+	cfg     config.Config
+	rootCmd = &cobra.Command{
 		Use: "",
 		Run: func(cmd *cobra.Command, args []string) {
 			initializeConfigs()
@@ -22,16 +21,6 @@ var (
 
 func initializeConfigs() {
 	cfg = *config.GetConfig()
-	loggerConfig := logging.LoggerConfig{
-		Type:   logging.LoggerTypeZerolog,
-		Level:  logging.LogLevel(cfg.Logger.Level),
-		Format: logging.LogFormatJSON,
-	}
-	var err error
-	LogInstans, err = logging.NewLogger(loggerConfig)
-	if err != nil {
-		panic(err)
-	}
 }
 
 func init() {

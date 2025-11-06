@@ -49,3 +49,9 @@ otp:
 jwt:
   secret: "mySecretKey"
   accessTokenExpireDuration: 60
+jaeger:
+  enabled: true
+  otlpEndpoint: "http://jaeger:4318"
+  serviceName: shikposh-backend
+  environment: docker
+  samplingRate: 1.0

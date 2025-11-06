@@ -49,3 +49,9 @@ otp:
 jwt:
   secret: "mySecretKey"
   accessTokenExpireDuration: 1440
+jaeger:
+  enabled: true
+  otlpEndpoint: "http://localhost:4318"
+  serviceName: shikposh-backend
+  environment: development
+  samplingRate: 1.0

@@ -27,7 +27,7 @@ func NewMiddleware(cfg MiddlewareConfig, db *gorm.DB) *Middleware {
 	// Create uow for middleware
 	eventCh := make(chan adapter.EventWithWaitGroup, 2)
 	uow := unit_of_work.New(db, eventCh)
-	
+
 	return &Middleware{
 		Cfg: cfg,
 		Uow: uow,
@@ -35,5 +35,8 @@ func NewMiddleware(cfg MiddlewareConfig, db *gorm.DB) *Middleware {
 }
 
 func (m *Middleware) Register(app *fiber.App) {
+	// Request ID middleware should be registered first
+	// so it's available for all subsequent middleware and handlers
+	app.Use(m.RequestIDMiddleware())
 	app.Use(m.DefaultStructuredLogger())
 }

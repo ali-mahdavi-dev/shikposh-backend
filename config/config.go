@@ -18,6 +18,7 @@ type Config struct {
 	Logger   LoggerConfig
 	Otp      OtpConfig
 	JWT      JWTConfig
+	Jaeger   JaegerConfig
 }
 
 type ServerConfig struct {
@@ -82,6 +83,14 @@ type OtpConfig struct {
 type JWTConfig struct {
 	AccessTokenExpireDuration time.Duration
 	Secret                    string
+}
+
+type JaegerConfig struct {
+	Enabled      bool
+	OTLPEndpoint string // e.g., "http://localhost:4318" for HTTP OTLP endpoint
+	ServiceName  string
+	Environment  string
+	SamplingRate float64
 }
 
 func GetConfig() *Config {

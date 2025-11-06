@@ -21,6 +21,7 @@ import (
 	mwF "shikposh-backend/pkg/framework/api/middleware"
 	"shikposh-backend/pkg/framework/infrastructure/databases"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
+	"shikposh-backend/pkg/framework/infrastructure/tracing"
 
 	"gorm.io/gorm"
 )
@@ -42,6 +43,7 @@ func runHTTPServerCMD() *cobra.Command {
 type serverComponents struct {
 	db     *gorm.DB
 	server *fiber.App
+	tracer *tracing.Tracer
 }
 
 func startServer(cfg *config.Config) error {
@@ -71,6 +73,32 @@ func startServer(cfg *config.Config) error {
 		}
 	}()
 
+	// Initialize Jaeger tracing via OTLP
+	serviceName := cfg.Jaeger.ServiceName
+	if serviceName == "" {
+		serviceName = cfg.Server.Name
+	}
+
+	environment := cfg.Jaeger.Environment
+	if environment == "" {
+		environment = cfg.Server.RunMode
+	}
+
+	tracer, err := tracing.New(tracing.Config{
+		ServiceName:  serviceName,
+		OTLPEndpoint: cfg.Jaeger.OTLPEndpoint,
+		Environment:  environment,
+		SamplingRate: cfg.Jaeger.SamplingRate,
+		Enabled:      cfg.Jaeger.Enabled,
+	})
+	if err != nil {
+		logging.Warn("Failed to initialize Jaeger tracing").
+			WithError(err).
+			Log()
+		// Continue without tracing if it fails
+		tracer = nil
+	}
+
 	// Create Fiber app
 	server := fiber.New(fiber.Config{
 		AppName:      cfg.Server.Name,
@@ -82,6 +110,7 @@ func startServer(cfg *config.Config) error {
 	components := &serverComponents{
 		db:     db,
 		server: server,
+		tracer: tracer,
 	}
 
 	// Setup routes and middleware
@@ -130,6 +159,12 @@ func startServer(cfg *config.Config) error {
 func setupServer(components *serverComponents, cfg *config.Config) error {
 	// Middleware
 	middlewareF := mwF.NewMiddleware(mwF.MiddlewareConfig{JWTSecret: cfg.JWT.Secret}, components.db)
+
+	// Register tracing middleware first (if enabled)
+	if components.tracer != nil && cfg.Jaeger.Enabled {
+		components.server.Use(middlewareF.TracingMiddleware())
+	}
+
 	middlewareF.Register(components.server)
 
 	// Health check endpoint
@@ -180,7 +215,7 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 	registerSwagger(components.server)
 
 	// Bootstrap application routes
-	if err := account.Bootstrap(components.server, components.db, cfg, LogInstans); err != nil {
+	if err := account.Bootstrap(components.server, components.db, cfg); err != nil {
 		return fmt.Errorf("failed to bootstrap account module: %w", err)
 	}
 
@@ -191,6 +226,13 @@ func gracefulShutdown(ctx context.Context, components *serverComponents) error {
 	// Shutdown HTTP server
 	if err := components.server.ShutdownWithContext(ctx); err != nil {
 		return fmt.Errorf("server shutdown error: %w", err)
+	}
+
+	// Shutdown Jaeger tracer
+	if components.tracer != nil {
+		if err := components.tracer.Shutdown(ctx); err != nil {
+			logging.Warn("Failed to shutdown Jaeger tracer").WithError(err).Log()
+		}
 	}
 
 	return nil

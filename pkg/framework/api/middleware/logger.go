@@ -24,6 +24,7 @@ func (m *Middleware) DefaultStructuredLogger() fiber.Handler {
 		method := c.Method()
 		status := c.Response().StatusCode()
 		path := c.OriginalURL()
+		requestID := GetRequestID(c)
 
 		entry := logging.Info("HTTP Request").
 			WithAny("path", path).
@@ -32,6 +33,11 @@ func (m *Middleware) DefaultStructuredLogger() fiber.Handler {
 			WithAny("latency", latency).
 			WithAny("status_code", status).
 			WithAny("body_size", len(respBody))
+
+		// Add request_id if available
+		if requestID != "" {
+			entry = entry.WithString("request_id", requestID)
+		}
 
 		if err != nil {
 			entry = entry.WithError(err)

@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, logger logging.Logger) error {
+func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 	// Create event channel and unit of work for this module
 	eventCh := make(chan adapter.EventWithWaitGroup, 100)
 	uow := unit_of_work.New(db, eventCh)

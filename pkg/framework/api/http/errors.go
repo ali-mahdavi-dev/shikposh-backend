@@ -10,10 +10,11 @@ import (
 
 // HTTPError is the HTTP-specific error representation
 type HTTPError struct {
-	Code    string `json:"code"` // Error code (from error ID)
-	Message string `json:"message"`
-	Detail  string `json:"detail"`
-	Status  string `json:"status"` // HTTP status text
+	Code      string `json:"code"` // Error code (from error ID)
+	Message   string `json:"message"`
+	Detail    string `json:"detail"`
+	Status    string `json:"status"`               // HTTP status text
+	RequestID string `json:"request_id,omitempty"` // Request ID for tracing
 }
 
 // ErrorToHTTP converts an app error to HTTP error with appropriate status code
@@ -88,6 +89,7 @@ func ToHTTPError(err Error) *HTTPError {
 		Message: err.Message(),
 		Detail:  err.Detail(),
 		Status:  err.Status(),
+		// RequestID will be set in ResError from context
 	}
 }
 
