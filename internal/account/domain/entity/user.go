@@ -31,8 +31,10 @@ func NewUser(
 		Email:            email,
 		Password:         password,
 	}
+	
+	// Add register event with pointer to user.ID so it updates when ID is set
 	user.AddEvent(&events.RegisterUserEvent{
-		UserID:           user.ID,
+		UserID:           &user.ID,
 		AvatarIdentifier: user.AvatarIdentifier,
 		UserName:         user.UserName,
 		FirstName:        user.FirstName,

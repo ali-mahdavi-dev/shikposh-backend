@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sync"
 
+	"shikposh-backend/pkg/framework/adapter"
 	apperrors "shikposh-backend/pkg/framework/errors"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	commandeventhandler "shikposh-backend/pkg/framework/service_layer/command_event_handler"
@@ -17,25 +18,26 @@ type MessageBus interface {
 	AddHandlerEvent(handlers ...commandeventhandler.EventHandler) error
 	Handle(ctx context.Context, cmd any) (any, error)
 	Shutdown(ctx context.Context) error
+	EventChannel() chan<- adapter.EventWithWaitGroup
 }
 
 type messageBus struct {
 	handledCommands map[any]commandeventhandler.CommandHandler
 	handledEvent    map[any]commandeventhandler.EventHandler
 	uow             unit_of_work.PGUnitOfWork
-	eventCh         chan any
+	eventCh         chan adapter.EventWithWaitGroup
 	shutdownCh      chan struct{}
 	wg              sync.WaitGroup
 	mu              sync.RWMutex
 	closed          bool
 }
 
-func NewMessageBus(uow unit_of_work.PGUnitOfWork) MessageBus {
+func NewMessageBus(uow unit_of_work.PGUnitOfWork, eventCh chan adapter.EventWithWaitGroup) MessageBus {
 	bus := &messageBus{
 		handledCommands: make(map[any]commandeventhandler.CommandHandler),
 		handledEvent:    make(map[any]commandeventhandler.EventHandler),
 		uow:             uow,
-		eventCh:         make(chan any, 100),
+		eventCh:         eventCh,
 		shutdownCh:      make(chan struct{}),
 		closed:          false,
 	}
@@ -48,36 +50,20 @@ func NewMessageBus(uow unit_of_work.PGUnitOfWork) MessageBus {
 	// Using a single goroutine to process events sequentially to avoid race conditions
 	// Events are processed one at a time to ensure proper ordering and prevent concurrency issues
 	bus.wg.Add(1)
-	go func(mb *messageBus, evCh chan any) {
+	go func(mb *messageBus, evCh chan adapter.EventWithWaitGroup) {
 		defer mb.wg.Done()
 		defer close(evCh)
-		
-		for {
-			select {
-			case event, ok := <-evCh:
-				if !ok {
-					return
-				}
-				// Process events sequentially to avoid race conditions
-				// Each event handler may create new events, which will be collected and processed
-				if err := mb.HandleEvent(context.Background(), event); err != nil {
-					logging.Error("Failed to handle event").WithError(err).Log()
-				}
-			case <-mb.shutdownCh:
-				// Process remaining events before shutdown
-				for {
-					select {
-					case event, ok := <-evCh:
-						if !ok {
-							return
-						}
-						if err := mb.HandleEvent(context.Background(), event); err != nil {
-							logging.Error("Failed to handle event during shutdown").WithError(err).Log()
-						}
-					default:
-						return
-					}
-				}
+		for eventWrapper := range evCh {
+			eventCtx := eventWrapper.Ctx
+			if eventCtx == nil {
+				eventCtx = context.Background()
+			}
+			if err := mb.HandleEvent(eventCtx, eventWrapper.Event); err != nil {
+				logging.Error("Failed to handle event").WithError(err).Log()
+			}
+			// Signal that event is done being handled
+			if eventWrapper.Wg != nil {
+				eventWrapper.Wg.Done()
 			}
 		}
 	}(bus, bus.eventCh)
@@ -154,15 +140,6 @@ func (m *messageBus) Handle(ctx context.Context, cmd any) (any, error) {
 
 	}
 
-	// collect new events from the transaction
-	m.mu.RLock()
-	closed := m.closed
-	m.mu.RUnlock()
-	
-	if !closed {
-		m.uow.CollectNewEvents(ctx, m.eventCh)
-	}
-
 	logging.Info("Command handled successfully").
 		WithAny("command_name", cmdName).
 		Log()
@@ -193,16 +170,6 @@ func (m *messageBus) HandleEvent(ctx context.Context, event any) error {
 			WithError(err).
 			Log()
 		return err
-	}
-
-	// Collect and handle nested events that may have been created by the event handler
-	// This supports event handlers that create new events
-	m.mu.RLock()
-	closed := m.closed
-	m.mu.RUnlock()
-	
-	if !closed {
-		m.uow.CollectNewEvents(ctx, m.eventCh)
 	}
 
 	logging.Info("Event handled successfully").
@@ -241,4 +208,9 @@ func (m *messageBus) Shutdown(ctx context.Context) error {
 		logging.Warn("Message bus shutdown timed out").WithError(ctx.Err()).Log()
 		return ctx.Err()
 	}
+}
+
+// EventChannel returns the event channel for use by unit of work
+func (m *messageBus) EventChannel() chan<- adapter.EventWithWaitGroup {
+	return m.eventCh
 }

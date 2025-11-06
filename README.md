@@ -232,14 +232,7 @@ cd shikposh-backend
 go mod download
 ```
 
-3. **تنظیم Environment Variables**
-
-```bash
-cp .env.example .env
-# ویرایش .env با مقادیر مناسب
-```
-
-4. **اجرای Migrations**
+3. **اجرای Migrations**
 
 ```bash
 go run cmd/main.go migrate

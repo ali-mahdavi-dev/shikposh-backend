@@ -21,8 +21,6 @@ import (
 	mwF "shikposh-backend/pkg/framework/api/middleware"
 	"shikposh-backend/pkg/framework/infrastructure/databases"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
-	"shikposh-backend/pkg/framework/service_layer/messagebus"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
 
 	"gorm.io/gorm"
 )
@@ -43,31 +41,25 @@ func runHTTPServerCMD() *cobra.Command {
 
 type serverComponents struct {
 	db     *gorm.DB
-	uow    unit_of_work.PGUnitOfWork
-	bus    messagebus.MessageBus
 	server *fiber.App
 }
 
 func startServer(cfg *config.Config) error {
 	// Initialize database
-	// Build DSN - don't include password parameter if it's empty
-	// PostgreSQL connects to default database (username) if password= is in connection string
 	var dsn string
 	if cfg.Postgres.Password != "" {
 		dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Postgres.Host, cfg.Postgres.Port, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.DbName, cfg.Postgres.SSLMode)
 	} else {
 		dsn = fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=%s", cfg.Postgres.Host, cfg.Postgres.Port, cfg.Postgres.User, cfg.Postgres.DbName, cfg.Postgres.SSLMode)
 	}
-	
-	dbConfig := databases.Config{
+
+	db, err := databases.New(databases.Config{
 		DBType:       "postgres",
 		DSN:          dsn,
 		MaxOpenConns: cfg.Postgres.MaxOpenConns,
 		MaxIdleConns: cfg.Postgres.MaxIdleConns,
 		MaxLifetime:  int(cfg.Postgres.ConnMaxLifetime.Seconds()),
-	}
-	
-	db, err := databases.New(dbConfig)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
@@ -79,10 +71,7 @@ func startServer(cfg *config.Config) error {
 		}
 	}()
 
-	uow := unit_of_work.New(db)
-	bus := messagebus.NewMessageBus(uow)
-
-	// Create Fiber app with configuration
+	// Create Fiber app
 	server := fiber.New(fiber.Config{
 		AppName:      cfg.Server.Name,
 		ReadTimeout:  10 * time.Second,
@@ -92,8 +81,6 @@ func startServer(cfg *config.Config) error {
 
 	components := &serverComponents{
 		db:     db,
-		uow:    uow,
-		bus:    bus,
 		server: server,
 	}
 
@@ -113,7 +100,7 @@ func startServer(cfg *config.Config) error {
 	// Start server in a goroutine
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Domain, cfg.Server.InternalPort)
 	serverErr := make(chan error, 1)
-	
+
 	go func() {
 		// Log server ready after a short delay to ensure it's actually listening
 		go func() {
@@ -123,7 +110,7 @@ func startServer(cfg *config.Config) error {
 				WithString("swagger", fmt.Sprintf("http://%s/swagger/index.html", addr)).
 				Log()
 		}()
-		
+
 		if err := server.Listen(addr); err != nil {
 			serverErr <- fmt.Errorf("server failed: %w", err)
 		}
@@ -142,10 +129,7 @@ func startServer(cfg *config.Config) error {
 
 func setupServer(components *serverComponents, cfg *config.Config) error {
 	// Middleware
-	middlewareConfig := mwF.MiddlewareConfig{
-		JWTSecret: cfg.JWT.Secret,
-	}
-	middlewareF := mwF.NewMiddleware(middlewareConfig, components.uow)
+	middlewareF := mwF.NewMiddleware(mwF.MiddlewareConfig{JWTSecret: cfg.JWT.Secret}, components.db)
 	middlewareF.Register(components.server)
 
 	// Health check endpoint
@@ -166,7 +150,7 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 				"error":  "database connection failed",
 			})
 		}
-		
+
 		if err := sqlDB.Ping(); err != nil {
 			return c.Status(503).JSON(fiber.Map{
 				"status": "not ready",
@@ -183,12 +167,12 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 	components.server.Get("/metrics", func(c fiber.Ctx) error {
 		metricsHandler := promhttp.Handler()
 		adapter := fasthttpadaptor.NewFastHTTPHandler(metricsHandler)
-		
+
 		if reqCtx, ok := c.Locals("requestCtx").(*fasthttp.RequestCtx); ok && reqCtx != nil {
 			adapter(reqCtx)
 			return nil
 		}
-		
+
 		return c.Status(503).SendString("Metrics unavailable")
 	})
 
@@ -196,7 +180,7 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 	registerSwagger(components.server)
 
 	// Bootstrap application routes
-	if err := account.Bootstrap(components.server, components.db, cfg, LogInstans, components.bus); err != nil {
+	if err := account.Bootstrap(components.server, components.db, cfg, LogInstans); err != nil {
 		return fmt.Errorf("failed to bootstrap account module: %w", err)
 	}
 
@@ -204,11 +188,6 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 }
 
 func gracefulShutdown(ctx context.Context, components *serverComponents) error {
-	// Shutdown message bus first to stop processing new events
-	if err := components.bus.Shutdown(ctx); err != nil {
-		logging.Warn("Message bus shutdown error").WithError(err).Log()
-	}
-
 	// Shutdown HTTP server
 	if err := components.server.ShutdownWithContext(ctx); err != nil {
 		return fmt.Errorf("server shutdown error: %w", err)

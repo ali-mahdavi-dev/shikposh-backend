@@ -3,9 +3,11 @@ package middleware
 import (
 	"errors"
 
+	"shikposh-backend/pkg/framework/adapter"
 	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
 
 	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 )
 
 var errFailGetTokenFromDB = errors.New("fail to get token from DB")
@@ -21,7 +23,11 @@ type Middleware struct {
 	Uow unit_of_work.PGUnitOfWork
 }
 
-func NewMiddleware(cfg MiddlewareConfig, uow unit_of_work.PGUnitOfWork) *Middleware {
+func NewMiddleware(cfg MiddlewareConfig, db *gorm.DB) *Middleware {
+	// Create uow for middleware
+	eventCh := make(chan adapter.EventWithWaitGroup, 2)
+	uow := unit_of_work.New(db, eventCh)
+	
 	return &Middleware{
 		Cfg: cfg,
 		Uow: uow,

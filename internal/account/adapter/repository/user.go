@@ -31,7 +31,7 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 }
 
 func (u *userGormRepository) Model(ctx context.Context) *gorm.DB {
-	return u.db.WithContext(ctx).Model(&entity.User{})
+	return u.db.Model(&entity.User{})
 }
 
 func (u *userGormRepository) FindByUsernameExcludingID(ctx context.Context, username string, id uint) (*entity.User, error) {

@@ -23,9 +23,9 @@ type pgUnitOfWork struct {
 }
 
 // New creates a new PostgreSQL UnitOfWork instance.
-func New(db *gorm.DB) PGUnitOfWork {
+func New(db *gorm.DB, eventCh chan<- adapter.EventWithWaitGroup) PGUnitOfWork {
 	return &pgUnitOfWork{
-		BaseUnitOfWork: adapter.NewBaseUnitOfWork(db).(*adapter.BaseUnitOfWork),
+		BaseUnitOfWork: adapter.NewBaseUnitOfWork(db, eventCh).(*adapter.BaseUnitOfWork),
 		db:             db,
 	}
 }

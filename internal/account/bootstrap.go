@@ -2,10 +2,11 @@ package account
 
 import (
 	"shikposh-backend/config"
-	"shikposh-backend/internal/account/adapter"
+	accountadapter "shikposh-backend/internal/account/adapter"
 	"shikposh-backend/internal/account/entryporint/handler"
 	"shikposh-backend/internal/account/service_layer/command_handler"
 	"shikposh-backend/internal/account/service_layer/event_handler"
+	"shikposh-backend/pkg/framework/adapter"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	commandeventhandler "shikposh-backend/pkg/framework/service_layer/command_event_handler"
 	"shikposh-backend/pkg/framework/service_layer/messagebus"
@@ -15,10 +16,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, logger logging.Logger, bus messagebus.MessageBus) error {
-	uow := unit_of_work.New(db)
+func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, logger logging.Logger) error {
+	// Create event channel and unit of work for this module
+	eventCh := make(chan adapter.EventWithWaitGroup, 100)
+	uow := unit_of_work.New(db, eventCh)
+	bus := messagebus.NewMessageBus(uow, eventCh)
 
-	ag, err := adapter.NewAvatarGenerator(AssetsFS)
+	ag, err := accountadapter.NewAvatarGenerator(AssetsFS)
 	if err != nil {
 		logging.Error("Failed to initialize avatar generator").WithError(err).Log()
 		return err

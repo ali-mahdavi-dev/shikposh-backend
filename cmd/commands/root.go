@@ -11,7 +11,6 @@ import (
 
 var (
 	cfg        config.Config
-	envFile    string
 	LogInstans logging.Logger
 	rootCmd    = &cobra.Command{
 		Use: "",
@@ -37,7 +36,6 @@ func initializeConfigs() {
 
 func init() {
 	cobra.OnInitialize()
-	rootCmd.PersistentFlags().StringVarP(&envFile, "env-file", "e", ".env", ".env file")
 
 	rootCmd.AddCommand(runHTTPServerCMD())
 	rootCmd.AddCommand(migrateCmd())
