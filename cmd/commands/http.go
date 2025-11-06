@@ -32,9 +32,7 @@ func runHTTPServerCMD() *cobra.Command {
 		Short: "start http server",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			initializeConfigs()
-
 			log.Println("starting http server")
-
 			return startServer(&cfg)
 		},
 	}
@@ -47,65 +45,17 @@ type serverComponents struct {
 }
 
 func startServer(cfg *config.Config) error {
-	// Initialize database
-	var dsn string
-	if cfg.Postgres.Password != "" {
-		dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Postgres.Host, cfg.Postgres.Port, cfg.Postgres.User, cfg.Postgres.Password, cfg.Postgres.DbName, cfg.Postgres.SSLMode)
-	} else {
-		dsn = fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=%s", cfg.Postgres.Host, cfg.Postgres.Port, cfg.Postgres.User, cfg.Postgres.DbName, cfg.Postgres.SSLMode)
-	}
-
-	db, err := databases.New(databases.Config{
-		DBType:       "postgres",
-		DSN:          dsn,
-		MaxOpenConns: cfg.Postgres.MaxOpenConns,
-		MaxIdleConns: cfg.Postgres.MaxIdleConns,
-		MaxLifetime:  int(cfg.Postgres.ConnMaxLifetime.Seconds()),
-	})
+	// Initialize components
+	db, err := initializeDatabase(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
-	defer func() {
-		if sqlDB, err := db.DB(); err == nil {
-			if closeErr := sqlDB.Close(); closeErr != nil {
-				logging.Warn("Failed to close database connection").WithError(closeErr).Log()
-			}
-		}
-	}()
+	defer closeDatabase(db)
 
-	// Initialize Jaeger tracing via OTLP
-	serviceName := cfg.Jaeger.ServiceName
-	if serviceName == "" {
-		serviceName = cfg.Server.Name
-	}
-
-	environment := cfg.Jaeger.Environment
-	if environment == "" {
-		environment = cfg.Server.RunMode
-	}
-
-	tracer, err := tracing.New(tracing.Config{
-		ServiceName:  serviceName,
-		OTLPEndpoint: cfg.Jaeger.OTLPEndpoint,
-		Environment:  environment,
-		SamplingRate: cfg.Jaeger.SamplingRate,
-		Enabled:      cfg.Jaeger.Enabled,
-	})
-	if err != nil {
-		logging.Warn("Failed to initialize Jaeger tracing").
-			WithError(err).
-			Log()
-		// Continue without tracing if it fails
-		tracer = nil
-	}
+	tracer := initializeTracing(cfg)
 
 	// Create Fiber app
-	server := fiber.New(fiber.Config{
-		AppName:      cfg.Server.Name,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
-	})
+	server := createFiberApp(cfg)
 
 	components := &serverComponents{
 		db:     db,
@@ -118,47 +68,123 @@ func startServer(cfg *config.Config) error {
 		return fmt.Errorf("failed to setup server: %w", err)
 	}
 
-	// Setup graceful shutdown
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer shutdownCancel()
+	// Start server and wait for shutdown
+	return runServer(components, cfg)
+}
 
-	// Channel to listen for interrupt signals
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+func initializeDatabase(cfg *config.Config) (*gorm.DB, error) {
+	dsn := buildDSN(cfg)
 
-	// Start server in a goroutine
-	addr := fmt.Sprintf("%s:%s", cfg.Server.Domain, cfg.Server.InternalPort)
-	serverErr := make(chan error, 1)
-
-	go func() {
-		// Log server ready after a short delay to ensure it's actually listening
-		go func() {
-			time.Sleep(100 * time.Millisecond)
-			logging.Info("HTTP server ready").
-				WithString("address", addr).
-				WithString("swagger", fmt.Sprintf("http://%s/swagger/index.html", addr)).
-				Log()
-		}()
-
-		if err := server.Listen(addr); err != nil {
-			serverErr <- fmt.Errorf("server failed: %w", err)
-		}
-	}()
-
-	// Wait for interrupt signal or server error
-	select {
-	case err := <-serverErr:
-		return err
-	case <-quit:
+	db, err := databases.New(databases.Config{
+		DBType:       "postgres",
+		DSN:          dsn,
+		MaxOpenConns: cfg.Postgres.MaxOpenConns,
+		MaxIdleConns: cfg.Postgres.MaxIdleConns,
+		MaxLifetime:  int(cfg.Postgres.ConnMaxLifetime.Seconds()),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	// Graceful shutdown
-	return gracefulShutdown(shutdownCtx, components)
+	return db, nil
+}
+
+func buildDSN(cfg *config.Config) string {
+	if cfg.Postgres.Password != "" {
+		return fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+			cfg.Postgres.Host,
+			cfg.Postgres.Port,
+			cfg.Postgres.User,
+			cfg.Postgres.Password,
+			cfg.Postgres.DbName,
+			cfg.Postgres.SSLMode,
+		)
+	}
+
+	return fmt.Sprintf(
+		"host=%s port=%s user=%s dbname=%s sslmode=%s",
+		cfg.Postgres.Host,
+		cfg.Postgres.Port,
+		cfg.Postgres.User,
+		cfg.Postgres.DbName,
+		cfg.Postgres.SSLMode,
+	)
+}
+
+func closeDatabase(db *gorm.DB) {
+	if sqlDB, err := db.DB(); err == nil {
+		if closeErr := sqlDB.Close(); closeErr != nil {
+			logging.Warn("Failed to close database connection").WithError(closeErr).Log()
+		}
+	}
+}
+
+func initializeTracing(cfg *config.Config) *tracing.Tracer {
+	if !cfg.Jaeger.Enabled {
+		return nil
+	}
+
+	serviceName := getServiceName(cfg)
+	environment := getEnvironment(cfg)
+
+	tracer, err := tracing.New(tracing.Config{
+		ServiceName:  serviceName,
+		OTLPEndpoint: cfg.Jaeger.OTLPEndpoint,
+		Environment:  environment,
+		SamplingRate: cfg.Jaeger.SamplingRate,
+		Enabled:      cfg.Jaeger.Enabled,
+	})
+	if err != nil {
+		logging.Warn("Failed to initialize Jaeger tracing").
+			WithError(err).
+			Log()
+		return nil
+	}
+
+	return tracer
+}
+
+func getServiceName(cfg *config.Config) string {
+	if cfg.Jaeger.ServiceName != "" {
+		return cfg.Jaeger.ServiceName
+	}
+	return cfg.Server.Name
+}
+
+func getEnvironment(cfg *config.Config) string {
+	if cfg.Jaeger.Environment != "" {
+		return cfg.Jaeger.Environment
+	}
+	return cfg.Server.RunMode
+}
+
+func createFiberApp(cfg *config.Config) *fiber.App {
+	return fiber.New(fiber.Config{
+		AppName:      cfg.Server.Name,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	})
 }
 
 func setupServer(components *serverComponents, cfg *config.Config) error {
-	// Middleware
-	middlewareF := mwF.NewMiddleware(mwF.MiddlewareConfig{JWTSecret: cfg.JWT.Secret}, components.db)
+	if err := setupMiddleware(components, cfg); err != nil {
+		return fmt.Errorf("failed to setup middleware: %w", err)
+	}
+
+	if err := setupRoutes(components, cfg); err != nil {
+		return fmt.Errorf("failed to setup routes: %w", err)
+	}
+
+	return nil
+}
+
+func setupMiddleware(components *serverComponents, cfg *config.Config) error {
+	middlewareF := mwF.NewMiddleware(
+		mwF.MiddlewareConfig{JWTSecret: cfg.JWT.Secret},
+		components.db,
+	)
 
 	// Register tracing middleware first (if enabled)
 	if components.tracer != nil && cfg.Jaeger.Enabled {
@@ -166,19 +192,35 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 	}
 
 	middlewareF.Register(components.server)
+	return nil
+}
 
-	// Health check endpoint
-	components.server.Get("/health", func(c fiber.Ctx) error {
+func setupRoutes(components *serverComponents, cfg *config.Config) error {
+	setupHealthRoutes(components.server, cfg)
+	setupReadinessRoute(components.server, components.db)
+	setupMetricsRoute(components.server)
+	registerSwagger(components.server)
+
+	// Bootstrap application routes
+	if err := account.Bootstrap(components.server, components.db, cfg); err != nil {
+		return fmt.Errorf("failed to bootstrap account module: %w", err)
+	}
+
+	return nil
+}
+
+func setupHealthRoutes(app *fiber.App, cfg *config.Config) {
+	app.Get("/health", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":  "ok",
 			"service": cfg.Server.Name,
 		})
 	})
+}
 
-	// Readiness check endpoint
-	components.server.Get("/ready", func(c fiber.Ctx) error {
-		// Check database connection
-		sqlDB, err := components.db.DB()
+func setupReadinessRoute(app *fiber.App, db *gorm.DB) {
+	app.Get("/ready", func(c fiber.Ctx) error {
+		sqlDB, err := db.DB()
 		if err != nil {
 			return c.Status(503).JSON(fiber.Map{
 				"status": "not ready",
@@ -197,9 +239,10 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 			"status": "ready",
 		})
 	})
+}
 
-	// Metrics (Prometheus)
-	components.server.Get("/metrics", func(c fiber.Ctx) error {
+func setupMetricsRoute(app *fiber.App) {
+	app.Get("/metrics", func(c fiber.Ctx) error {
 		metricsHandler := promhttp.Handler()
 		adapter := fasthttpadaptor.NewFastHTTPHandler(metricsHandler)
 
@@ -210,36 +253,9 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 
 		return c.Status(503).SendString("Metrics unavailable")
 	})
-
-	// Swagger Documentation
-	registerSwagger(components.server)
-
-	// Bootstrap application routes
-	if err := account.Bootstrap(components.server, components.db, cfg); err != nil {
-		return fmt.Errorf("failed to bootstrap account module: %w", err)
-	}
-
-	return nil
-}
-
-func gracefulShutdown(ctx context.Context, components *serverComponents) error {
-	// Shutdown HTTP server
-	if err := components.server.ShutdownWithContext(ctx); err != nil {
-		return fmt.Errorf("server shutdown error: %w", err)
-	}
-
-	// Shutdown Jaeger tracer
-	if components.tracer != nil {
-		if err := components.tracer.Shutdown(ctx); err != nil {
-			logging.Warn("Failed to shutdown Jaeger tracer").WithError(err).Log()
-		}
-	}
-
-	return nil
 }
 
 func registerSwagger(app *fiber.App) {
-	// Serve swagger.json file directly
 	app.Get("/swagger.json", func(c fiber.Ctx) error {
 		return c.SendFile("docs/swagger.json")
 	})
@@ -247,4 +263,56 @@ func registerSwagger(app *fiber.App) {
 	app.Get("/swagger/*", swagger.New(swagger.Config{
 		URL: "/swagger.json",
 	}))
+}
+
+func runServer(components *serverComponents, cfg *config.Config) error {
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+	addr := fmt.Sprintf("%s:%s", cfg.Server.Domain, cfg.Server.InternalPort)
+	serverErr := make(chan error, 1)
+
+	startServerAsync(components.server, addr, serverErr)
+
+	// Wait for interrupt signal or server error
+	select {
+	case err := <-serverErr:
+		return err
+	case <-quit:
+		return gracefulShutdown(shutdownCtx, components)
+	}
+}
+
+func startServerAsync(server *fiber.App, addr string, serverErr chan<- error) {
+	go func() {
+		// Log server ready after a short delay
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			logging.Info("HTTP server ready").
+				WithString("address", addr).
+				WithString("swagger", fmt.Sprintf("http://%s/swagger/index.html", addr)).
+				Log()
+		}()
+
+		if err := server.Listen(addr); err != nil {
+			serverErr <- fmt.Errorf("server failed: %w", err)
+		}
+	}()
+}
+
+func gracefulShutdown(ctx context.Context, components *serverComponents) error {
+	if err := components.server.ShutdownWithContext(ctx); err != nil {
+		return fmt.Errorf("server shutdown error: %w", err)
+	}
+
+	if components.tracer != nil {
+		if err := components.tracer.Shutdown(ctx); err != nil {
+			logging.Warn("Failed to shutdown Jaeger tracer").WithError(err).Log()
+		}
+	}
+
+	return nil
 }
