@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"shikposh-backend/internal/account/adapter/repository"
+	productrepository "shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/pkg/framework/adapter"
 )
 
@@ -15,6 +16,9 @@ type PGUnitOfWork interface {
 	User(ctx context.Context) repository.UserRepository
 	Token(ctx context.Context) repository.TokenRepository
 	Profile(ctx context.Context) repository.ProfileRepository
+	Product(ctx context.Context) productrepository.ProductRepository
+	Category(ctx context.Context) productrepository.CategoryRepository
+	Review(ctx context.Context) productrepository.ReviewRepository
 }
 
 type pgUnitOfWork struct {
@@ -49,4 +53,25 @@ func (uow *pgUnitOfWork) Profile(ctx context.Context) repository.ProfileReposito
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "profile", func(session *gorm.DB) adapter.SeenedRepository {
 		return repository.NewProfileRepository(session)
 	}).(repository.ProfileRepository)
+}
+
+// Product returns the ProductRepository instance for the current transaction.
+func (uow *pgUnitOfWork) Product(ctx context.Context) productrepository.ProductRepository {
+	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "product", func(session *gorm.DB) adapter.SeenedRepository {
+		return productrepository.NewProductRepository(session)
+	}).(productrepository.ProductRepository)
+}
+
+// Category returns the CategoryRepository instance for the current transaction.
+func (uow *pgUnitOfWork) Category(ctx context.Context) productrepository.CategoryRepository {
+	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "category", func(session *gorm.DB) adapter.SeenedRepository {
+		return productrepository.NewCategoryRepository(session)
+	}).(productrepository.CategoryRepository)
+}
+
+// Review returns the ReviewRepository instance for the current transaction.
+func (uow *pgUnitOfWork) Review(ctx context.Context) productrepository.ReviewRepository {
+	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "review", func(session *gorm.DB) adapter.SeenedRepository {
+		return productrepository.NewReviewRepository(session)
+	}).(productrepository.ReviewRepository)
 }

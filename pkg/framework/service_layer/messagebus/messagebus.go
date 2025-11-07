@@ -17,6 +17,7 @@ type MessageBus interface {
 	AddHandler(handlers ...commandeventhandler.CommandHandler) error
 	AddHandlerEvent(handlers ...commandeventhandler.EventHandler) error
 	Handle(ctx context.Context, cmd any) (any, error)
+	Uow() unit_of_work.PGUnitOfWork
 	Shutdown(ctx context.Context) error
 	EventChannel() chan<- adapter.EventWithWaitGroup
 }
@@ -69,6 +70,10 @@ func NewMessageBus(uow unit_of_work.PGUnitOfWork, eventCh chan adapter.EventWith
 	}(bus, bus.eventCh)
 
 	return bus
+}
+
+func (m *messageBus) Uow() unit_of_work.PGUnitOfWork {
+	return m.uow
 }
 
 func (m *messageBus) AddHandler(handlers ...commandeventhandler.CommandHandler) error {

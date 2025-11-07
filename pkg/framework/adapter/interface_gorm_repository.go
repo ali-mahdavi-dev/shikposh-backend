@@ -28,7 +28,7 @@ func (c *gormRepository[E]) FindByID(ctx context.Context, id uint64) (E, error) 
 
 func (c *gormRepository[E]) FindByField(ctx context.Context, field string, value interface{}) (E, error) {
 	var e E
-	err := c.Model(ctx).Where(field+"=?", value).First(&e).Error
+	err := c.db.WithContext(ctx).Model(e).Where(field+"=?", value).First(&e).Error
 	c.SetSeen(e)
 	return e, err
 }
@@ -37,7 +37,8 @@ func (c *gormRepository[E]) Remove(ctx context.Context, model E, softDelete bool
 	c.SetSeen(model)
 	if softDelete {
 		now := time.Now()
-		return c.Model(ctx).Update("deleted_at", &now).Error
+		var e E
+		return c.db.WithContext(ctx).Model(e).Update("deleted_at", &now).Error
 	}
 
 	return c.db.WithContext(ctx).Delete(model).Error
@@ -59,15 +60,10 @@ func (c *gormRepository[E]) Modify(ctx context.Context, model E) error {
 	return err
 }
 
-func (c *gormRepository[E]) Model(ctx context.Context) *gorm.DB {
-	var e E
-	return c.db.WithContext(ctx).Model(e)
-}
-
 func (c *gormRepository[E]) Seen() []Entity {
 	c.seenMu.Lock()
 	defer c.seenMu.Unlock()
-	
+
 	seen := make([]Entity, len(c.seen))
 	copy(seen, c.seen)
 	c.seen = []Entity{}
