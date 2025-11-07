@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -54,7 +55,7 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 	{
 		// Products
 		publicRoute.Get("/products", p.GetAllProducts)
-		publicRoute.Get("/products/:id", p.GetProductByID)
+		publicRoute.Get("/products/:slug", p.GetProductBySlug)
 		publicRoute.Get("/products/featured", p.GetFeaturedProducts)
 		publicRoute.Get("/products/category/:category", p.GetProductsByCategory)
 
@@ -152,16 +153,36 @@ func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
 	return httpapi.ResSuccess(c, productsMap)
 }
 
-// GetProductByID godoc
+// GetProductBySlug godoc
 //
-//	@Summary		Get product by ID
-//	@Description	Retrieves a single product by its ID
+//	@Summary		Get product by slug
+//	@Description	Retrieves a single product by its slug
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
-//	@Param			id	path		uint64	true	"Product ID"
-//	@Success		200	{object}	httpapi.ResponseResult
-//	@Router			/api/v1/public/products/{id} [get]
+//	@Param			slug	path		string	true	"Product slug"
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Router			/api/v1/public/products/{slug} [get]
+func (p *ProductHandler) GetProductBySlug(c fiber.Ctx) error {
+	ctx := c.Context()
+	slug := c.Params("slug")
+	if slug == "" {
+		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "slug is required"))
+	}
+
+	product, err := p.productQueryHandler.GetProductBySlug(ctx, slug)
+	if err != nil {
+		if errors.Is(err, repository.ErrProductNotFound) {
+			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
+		}
+		return httpapi.ResError(c, err)
+	}
+
+	// Convert to map format
+	productMap := product.ToMap()
+	return httpapi.ResSuccess(c, productMap)
+}
+
 func (p *ProductHandler) GetProductByID(c fiber.Ctx) error {
 	ctx := c.Context()
 	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
@@ -171,6 +192,9 @@ func (p *ProductHandler) GetProductByID(c fiber.Ctx) error {
 
 	product, err := p.productQueryHandler.GetProductByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, repository.ErrProductNotFound) {
+			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
+		}
 		return httpapi.ResError(c, err)
 	}
 
@@ -217,6 +241,9 @@ func (p *ProductHandler) GetProductsByCategory(c fiber.Ctx) error {
 
 	products, err := p.productQueryHandler.GetProductsByCategory(ctx, categorySlug)
 	if err != nil {
+		if errors.Is(err, repository.ErrCategoryNotFound) {
+			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Category not found"))
+		}
 		return httpapi.ResError(c, err)
 	}
 
@@ -264,6 +291,9 @@ func (p *ProductHandler) GetReviewsByProductID(c fiber.Ctx) error {
 
 	reviews, err := p.reviewQueryHandler.GetReviewsByProductID(ctx, productID)
 	if err != nil {
+		if errors.Is(err, repository.ErrProductNotFound) {
+			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
+		}
 		return httpapi.ResError(c, err)
 	}
 

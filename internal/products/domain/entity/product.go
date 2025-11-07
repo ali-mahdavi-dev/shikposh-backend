@@ -20,6 +20,7 @@ import (
 type Product struct {
 	adapter.BaseEntity
 	Name        string                             `json:"name" gorm:"name"`
+	Slug        string                             `json:"slug" gorm:"slug;uniqueIndex"`
 	Brand       string                             `json:"brand" gorm:"brand"`
 	Rating      float64                            `json:"rating" gorm:"rating;default:0"`
 	ReviewCount int                                `json:"review_count" gorm:"review_count;default:0"`
@@ -84,6 +85,7 @@ func (p *Product) ToMap() map[string]interface{} {
 	result := map[string]interface{}{
 		"id":           strconv.FormatUint(p.ID, 10),
 		"name":         p.Name,
+		"slug":         p.Slug,
 		"brand":        p.Brand,
 		"rating":       p.Rating,
 		"review_count": p.ReviewCount,

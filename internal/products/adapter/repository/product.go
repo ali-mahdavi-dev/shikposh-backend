@@ -15,6 +15,7 @@ var ErrProductNotFound = errors.New("product not found")
 type ProductRepository interface {
 	adapter.BaseRepository[*entity.Product]
 	GetAll(ctx context.Context) ([]*entity.Product, error)
+	FindBySlug(ctx context.Context, slug string) (*entity.Product, error)
 	FindByCategoryID(ctx context.Context, categoryID uint64) ([]*entity.Product, error)
 	FindByCategorySlug(ctx context.Context, categorySlug string) ([]*entity.Product, error)
 	FindFeatured(ctx context.Context) ([]*entity.Product, error)
@@ -69,6 +70,19 @@ func (r *productGormRepository) GetAll(ctx context.Context) ([]*entity.Product, 
 		r.SetSeen(p)
 	}
 	return products, nil
+}
+
+func (r *productGormRepository) FindBySlug(ctx context.Context, slug string) (*entity.Product, error) {
+	var product entity.Product
+	err := r.Model(ctx).Where("slug = ?", slug).First(&product).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProductNotFound
+		}
+		return nil, err
+	}
+	r.SetSeen(&product)
+	return &product, nil
 }
 
 func (r *productGormRepository) FindByCategoryID(ctx context.Context, categoryID uint64) ([]*entity.Product, error) {

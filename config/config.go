@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -129,8 +130,21 @@ func ParseConfig(v *viper.Viper) (*Config, error) {
 func LoadConfig(filename string, fileType string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigType(fileType)
-	v.SetConfigName(filename)
-	v.AddConfigPath(".")
+
+	// Extract directory and filename from path
+	// If filename contains a path, split it
+	dir := "."
+	configName := filename
+
+	// Check if filename contains a path
+	if strings.Contains(filename, "/") {
+		lastSlash := strings.LastIndex(filename, "/")
+		dir = filename[:lastSlash]
+		configName = filename[lastSlash+1:]
+	}
+
+	v.SetConfigName(configName)
+	v.AddConfigPath(dir)
 	v.AutomaticEnv()
 
 	err := v.ReadInConfig()

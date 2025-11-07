@@ -13,7 +13,6 @@ import (
 	"github.com/gofiber/swagger/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
-	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 
 	config "shikposh-backend/config"
@@ -251,7 +250,8 @@ func setupMetricsRoute(app *fiber.App) {
 		metricsHandler := promhttp.Handler()
 		adapter := fasthttpadaptor.NewFastHTTPHandler(metricsHandler)
 
-		if reqCtx, ok := c.Locals("requestCtx").(*fasthttp.RequestCtx); ok && reqCtx != nil {
+		reqCtx := c.RequestCtx()
+		if reqCtx != nil {
 			adapter(reqCtx)
 			return nil
 		}

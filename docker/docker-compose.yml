@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   ####################### SETUP #######################
   setup:
@@ -88,7 +86,7 @@ services:
 
   ####################### POSTGRES #######################
   postgres:
-    image: postgres
+    image: postgres:17
     container_name: postgres_container
     environment:
       POSTGRES_USER: postgres
@@ -123,7 +121,7 @@ services:
   redis:
     image: redis:latest
     container_name: redis_container
-    command: [ "redis-server", "/etc/redis/redis.conf" ]
+    command: ["redis-server", "/etc/redis/redis.conf"]
     volumes:
       - ./redis/redis.conf:/etc/redis/redis.conf
       - redis:/etc/redis
@@ -198,6 +196,21 @@ services:
     networks:
       - webapi_network
     restart: always
+
+  ##################### Jaeger #################
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger_container
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "14268:14268" # Jaeger HTTP collector
+    networks:
+      - webapi_network
+    restart: unless-stopped
   bunny-go-api1:
     build: ../
     image: bunny-go:1.0.1
@@ -213,23 +226,8 @@ services:
     depends_on:
       - postgres
       - elasticsearch
+      - jaeger
     restart: unless-stopped
-  # bunny-go--api2:
-  #   build: ../
-  #   image: bunny-go:1.0.1
-  #   container_name: web-api2
-  #   environment:
-  #     - PORT=9002
-  #   ports:
-  #     - 9002:5000
-  #   networks:
-  #     - webapi_network
-  #   volumes:
-  #     - logs:/app/logs
-  #   depends_on:
-  #     - postgres
-  #     - elasticsearch
-  #   restart: unless-stopped
 ####################### VOLUME AND NETWORKS #######################
 volumes:
   postgres:
@@ -240,7 +238,6 @@ volumes:
   elasticsearch:
   prometheus_data:
   grafana_data:
-
 
 networks:
   webapi_network:

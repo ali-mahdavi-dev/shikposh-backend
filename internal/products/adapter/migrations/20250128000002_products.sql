@@ -2,6 +2,7 @@
 CREATE TABLE products (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
     brand VARCHAR(255) NOT NULL,
     rating DECIMAL(3,2) DEFAULT 0.00,
     review_count INTEGER DEFAULT 0,
@@ -22,8 +23,8 @@ CREATE INDEX idx_products_deleted_at ON products(deleted_at);
 CREATE INDEX idx_products_category_id ON products(category_id);
 CREATE INDEX idx_products_is_featured ON products(is_featured);
 CREATE INDEX idx_products_rating ON products(rating);
-CREATE INDEX idx_products_price ON products(price);
 CREATE INDEX idx_products_tags ON products USING GIN(tags);
+CREATE UNIQUE INDEX idx_products_slug ON products(slug) WHERE deleted_at IS NULL;
 
 -- migrate:down
 DROP INDEX IF EXISTS idx_products_tags;

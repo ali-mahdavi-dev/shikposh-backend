@@ -42,6 +42,19 @@ func (h *ProductQueryHandler) GetProductByID(ctx context.Context, id uint64) (*e
 	return product, err
 }
 
+func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string) (*entity.Product, error) {
+	var product *entity.Product
+	err := h.uow.Do(ctx, func(ctx context.Context) error {
+		var err error
+		product, err = h.uow.Product(ctx).FindBySlug(ctx, slug)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return product, err
+}
+
 func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*entity.Product, error) {
 	var products []*entity.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {

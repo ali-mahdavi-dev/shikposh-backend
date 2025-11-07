@@ -2,8 +2,10 @@ package command_handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity"
 	apperrors "shikposh-backend/pkg/framework/errors"
@@ -26,7 +28,10 @@ func (h *ReviewCommandHandler) CreateReviewHandler(ctx context.Context, cmd *com
 		// Verify product exists
 		product, err := h.uow.Product(ctx).FindByID(ctx, cmd.ProductID)
 		if err != nil {
-			return apperrors.NotFound(phrases.UserNotFound)
+			if errors.Is(err, repository.ErrProductNotFound) {
+				return apperrors.NotFound(phrases.UserNotFound)
+			}
+			return fmt.Errorf("ReviewCommandHandler.CreateReviewHandler error finding product: %w", err)
 		}
 
 		// Create review
@@ -70,7 +75,10 @@ func (h *ReviewCommandHandler) UpdateReviewHelpfulHandler(ctx context.Context, c
 		var err error
 		review, err = h.uow.Review(ctx).FindByID(ctx, cmd.ReviewID)
 		if err != nil {
-			return apperrors.NotFound(phrases.UserNotFound)
+			if errors.Is(err, repository.ErrReviewNotFound) {
+				return apperrors.NotFound(phrases.UserNotFound)
+			}
+			return fmt.Errorf("ReviewCommandHandler.UpdateReviewHelpfulHandler error finding review: %w", err)
 		}
 
 		if cmd.Type == "helpful" {

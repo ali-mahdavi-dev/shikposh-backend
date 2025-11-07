@@ -16,6 +16,8 @@ RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -
     ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+
 COPY --from=builder /app/server /app/server
 COPY --from=builder /app/config/config-docker.yml /app/config/config-docker.yml
 COPY --from=builder /app/docs /app/docs
