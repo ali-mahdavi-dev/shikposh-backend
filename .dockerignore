@@ -1,0 +1,7 @@
+# Ignore PNG images in docs (only for README, not needed in build)
+docs/*.png
+
+# Keep swagger files
+!docs/swagger.*
+!docs/docs.go
+
