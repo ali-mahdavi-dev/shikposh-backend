@@ -337,8 +337,10 @@ backend/
 
 <div align="center">
 
-**Built with ❤️ for better online shopping experience**
+**Portfolio Project - Built with ❤️ to showcase backend development skills**
 
-⭐ If this project was helpful, give it a Star!
+This is a demonstration project for my resume, showcasing modern Go backend architecture and best practices.
+
+⭐ If you find this project interesting, give it a Star!
 
 </div>

@@ -72,6 +72,11 @@ func (h *ReviewCommandHandler) UpdateReviewHelpfulHandler(ctx context.Context, c
 	var review *entity.Review
 
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
+		// Validate enum type
+		if !cmd.Type.IsValid() {
+			return apperrors.Validation(phrases.DefaultValidationID, fmt.Sprintf("invalid review helpful type: %s, must be 'helpful' or 'notHelpful'", cmd.Type))
+		}
+
 		var err error
 		review, err = h.uow.Review(ctx).FindByID(ctx, cmd.ReviewID)
 		if err != nil {
@@ -81,9 +86,10 @@ func (h *ReviewCommandHandler) UpdateReviewHelpfulHandler(ctx context.Context, c
 			return fmt.Errorf("ReviewCommandHandler.UpdateReviewHelpfulHandler error finding review: %w", err)
 		}
 
-		if cmd.Type == "helpful" {
+		switch cmd.Type {
+		case commands.ReviewHelpfulTypeHelpful:
 			review.Helpful++
-		} else if cmd.Type == "notHelpful" {
+		case commands.ReviewHelpfulTypeNotHelpful:
 			review.NotHelpful++
 		}
 

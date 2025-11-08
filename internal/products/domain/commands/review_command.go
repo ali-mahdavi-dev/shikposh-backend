@@ -8,7 +8,25 @@ type CreateReview struct {
 	Comment   string `json:"comment" validate:"required,min=10"`
 }
 
+// ReviewHelpfulType represents the type of helpful feedback for a review
+type ReviewHelpfulType string
+
+const (
+	ReviewHelpfulTypeHelpful    ReviewHelpfulType = "helpful"
+	ReviewHelpfulTypeNotHelpful ReviewHelpfulType = "notHelpful"
+)
+
+// IsValid checks if the ReviewHelpfulType is valid
+func (t ReviewHelpfulType) IsValid() bool {
+	return t == ReviewHelpfulTypeHelpful || t == ReviewHelpfulTypeNotHelpful
+}
+
+// String returns the string representation of the type
+func (t ReviewHelpfulType) String() string {
+	return string(t)
+}
+
 type UpdateReviewHelpful struct {
-	ReviewID uint64 `json:"review_id" validate:"required"`
-	Type     string `json:"type" validate:"required,oneof=helpful notHelpful"`
+	ReviewID uint64            `json:"review_id" validate:"required"`
+	Type     ReviewHelpfulType `json:"type" validate:"required"`
 }
