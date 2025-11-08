@@ -339,8 +339,6 @@ backend/
 
 **Portfolio Project - Built with ❤️ to showcase backend development skills**
 
-This is a demonstration project for my resume, showcasing modern Go backend architecture and best practices.
-
 ⭐ If you find this project interesting, give it a Star!
 
 </div>
