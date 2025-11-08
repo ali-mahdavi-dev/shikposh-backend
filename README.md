@@ -337,7 +337,7 @@ backend/
 
 <div align="center">
 
-**Portfolio Project - Built with ❤️ to showcase backend development skills**
+**Built with ❤️ to showcase backend development skills**
 
 ⭐ If you find this project interesting, give it a Star!
 
