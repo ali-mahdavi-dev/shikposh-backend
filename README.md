@@ -14,6 +14,31 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [✨ Features](#-features)
+  - [🏗️ Architecture & Design Patterns](#️-architecture--design-patterns)
+  - [🚀 Performance & Scalability](#-performance--scalability)
+  - [🔐 Security & Authentication](#-security--authentication)
+  - [📊 Monitoring & Observability](#-monitoring--observability)
+  - [🛠️ Developer Experience](#️-developer-experience)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [🏗️ Architecture](#️-architecture)
+- [📁 Project Structure](#-project-structure)
+- [🚀 Getting Started](#-getting-started)
+- [📜 Available Commands](#-available-commands)
+- [📚 API Documentation](#-api-documentation)
+- [🔒 Security Features](#-security-features)
+- [📊 Monitoring & Observability](#-monitoring--observability-1)
+- [⚡ Performance Optimizations](#-performance-optimizations)
+- [🧪 Testing](#-testing)
+- [🚀 Deployment](#-deployment)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [👨‍💻 Developer](#️-developer)
+
+---
+
 ## ✨ Features
 
 ### 🏗️ Architecture & Design Patterns
