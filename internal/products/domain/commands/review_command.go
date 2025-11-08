@@ -12,4 +12,3 @@ type UpdateReviewHelpful struct {
 	ReviewID uint64 `json:"review_id" validate:"required"`
 	Type     string `json:"type" validate:"required,oneof=helpful notHelpful"`
 }
-

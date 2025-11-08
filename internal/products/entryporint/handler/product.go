@@ -76,15 +76,15 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
-//	@Param			q		query		string	false	"Search query"
+//	@Param			q			query		string	false	"Search query"
 //	@Param			category	query		string	false	"Category slug"
-//	@Param			min		query		number	false	"Minimum price"
-//	@Param			max		query		number	false	"Maximum price"
-//	@Param			rating	query		number	false	"Minimum rating"
+//	@Param			min			query		number	false	"Minimum price"
+//	@Param			max			query		number	false	"Maximum price"
+//	@Param			rating		query		number	false	"Minimum rating"
 //	@Param			featured	query		boolean	false	"Featured products only"
-//	@Param			tags	query		string	false	"Comma-separated tags"
-//	@Param			sort	query		string	false	"Sort order (price_asc, price_desc, rating, newest)"
-//	@Success		200		{object}	httpapi.ResponseResult
+//	@Param			tags		query		string	false	"Comma-separated tags"
+//	@Param			sort		query		string	false	"Sort order (price_asc, price_desc, rating, newest)"
+//	@Success		200			{object}	httpapi.ResponseResult
 //	@Router			/api/v1/public/products [get]
 func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -345,7 +345,7 @@ func (p *ProductHandler) CreateReview(c fiber.Ctx) error {
 //	@Tags			reviews
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		uint64	true	"Review ID"
+//	@Param			id		path		uint64							true	"Review ID"
 //	@Param			request	body		commands.UpdateReviewHelpful	true	"UpdateReviewHelpful request"
 //	@Success		200		{object}	httpapi.ResponseResult
 //	@Router			/api/v1/public/reviews/{id} [patch]

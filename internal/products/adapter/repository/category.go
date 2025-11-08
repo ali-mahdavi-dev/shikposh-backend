@@ -56,4 +56,3 @@ func (r *categoryGormRepository) FindBySlug(ctx context.Context, slug string) (*
 	}
 	return category, nil
 }
-

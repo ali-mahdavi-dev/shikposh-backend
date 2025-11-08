@@ -2,12 +2,14 @@ package commands
 
 import (
 	"fmt"
+	"io/fs"
 	"net/url"
 
 	"errors"
 	"log"
 
 	"shikposh-backend/internal/account/adapter/migrations"
+	productsMigrations "shikposh-backend/internal/products/adapter/migrations"
 
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
@@ -35,7 +37,9 @@ func dbmateDB() *dbmate.DB {
 	}
 
 	dbConn := dbmate.New(u)
-	dbConn.FS = migrations.Migrations
+	// Combine both account and products migrations
+	combinedFS := combineFS(migrations.Migrations, productsMigrations.Migrations)
+	dbConn.FS = combinedFS
 	dbConn.MigrationsDir = []string{"./"}
 	dbConn.AutoDumpSchema = false
 
@@ -133,6 +137,24 @@ func migrateRollback() error {
 	}
 
 	return nil
+}
+
+// combineFS combines multiple embed.FS into a single fs.FS
+func combineFS(fsList ...fs.FS) fs.FS {
+	return &combinedFS{filesystems: fsList}
+}
+
+type combinedFS struct {
+	filesystems []fs.FS
+}
+
+func (c *combinedFS) Open(name string) (fs.File, error) {
+	for _, filesystem := range c.filesystems {
+		if file, err := filesystem.Open(name); err == nil {
+			return file, nil
+		}
+	}
+	return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
 }
 
 func makeMigration(name string) error {

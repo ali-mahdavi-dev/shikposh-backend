@@ -45,4 +45,3 @@ func (p *profileGormRepository) FindByUserID(ctx context.Context, userID uint64)
 
 	return profile, nil
 }
-

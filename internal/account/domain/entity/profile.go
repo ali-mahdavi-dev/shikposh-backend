@@ -17,4 +17,3 @@ func NewProfile(userID uint64) *Profile {
 		UserID: userID,
 	}
 }
-

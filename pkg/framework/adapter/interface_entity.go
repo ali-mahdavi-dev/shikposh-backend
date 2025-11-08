@@ -30,7 +30,7 @@ func (u *BaseEntity) GetID() uint64 {
 func (u *BaseEntity) Event() []any {
 	u.eventsMu.Lock()
 	defer u.eventsMu.Unlock()
-	
+
 	events := append([]any(nil), u.Events...)
 	u.Events = nil
 	return events

@@ -94,6 +94,6 @@ func New(cfg Config) (*gorm.DB, error) {
 		WithInt("max_lifetime_sec", cfg.MaxLifetime).
 		WithInt("max_idle_time_sec", cfg.MaxIdleTime).
 		Log()
-	
+
 	return db, nil
 }

@@ -1,4 +1,26 @@
 definitions:
+  commands.CreateReview:
+    properties:
+      comment:
+        minLength: 10
+        type: string
+      product_id:
+        type: integer
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+      user_id:
+        type: integer
+      user_name:
+        type: string
+    required:
+    - comment
+    - product_id
+    - rating
+    - user_id
+    - user_name
+    type: object
   commands.LoginUser:
     properties:
       password:
@@ -14,7 +36,6 @@ definitions:
       avatar_identifier:
         type: string
       email:
-        minLength: 3
         type: string
       first_name:
         minLength: 3
@@ -23,7 +44,7 @@ definitions:
         minLength: 3
         type: string
       password:
-        minLength: 3
+        minLength: 6
         type: string
       user_name:
         minLength: 3
@@ -36,6 +57,19 @@ definitions:
     - password
     - user_name
     type: object
+  commands.UpdateReviewHelpful:
+    properties:
+      review_id:
+        type: integer
+      type:
+        enum:
+        - helpful
+        - notHelpful
+        type: string
+    required:
+    - review_id
+    - type
+    type: object
   http.HTTPError:
     properties:
       code:
@@ -44,6 +78,9 @@ definitions:
       detail:
         type: string
       message:
+        type: string
+      request_id:
+        description: Request ID for tracing
         type: string
       status:
         description: HTTP status text
@@ -66,6 +103,21 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/public/categories:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all product categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Get all categories
+      tags:
+      - categories
   /api/v1/public/login:
     post:
       consumes:
@@ -144,6 +196,133 @@ paths:
       summary: Logout user
       tags:
       - users
+  /api/v1/public/products:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all products with optional filtering
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        type: string
+      - description: Category slug
+        in: query
+        name: category
+        type: string
+      - description: Minimum price
+        in: query
+        name: min
+        type: number
+      - description: Maximum price
+        in: query
+        name: max
+        type: number
+      - description: Minimum rating
+        in: query
+        name: rating
+        type: number
+      - description: Featured products only
+        in: query
+        name: featured
+        type: boolean
+      - description: Comma-separated tags
+        in: query
+        name: tags
+        type: string
+      - description: Sort order (price_asc, price_desc, rating, newest)
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Get all products
+      tags:
+      - products
+  /api/v1/public/products/{id}/reviews:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all reviews for a specific product
+      parameters:
+      - description: Product ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Get reviews by product ID
+      tags:
+      - reviews
+  /api/v1/public/products/{slug}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a single product by its slug
+      parameters:
+      - description: Product slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Get product by slug
+      tags:
+      - products
+  /api/v1/public/products/category/{category}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all products in a specific category
+      parameters:
+      - description: Category slug
+        in: path
+        name: category
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Get products by category
+      tags:
+      - products
+  /api/v1/public/products/featured:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all featured products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Get featured products
+      tags:
+      - products
   /api/v1/public/register:
     post:
       consumes:
@@ -183,4 +362,54 @@ paths:
       summary: Register a new user
       tags:
       - users
+  /api/v1/public/reviews:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new review for a product
+      parameters:
+      - description: CreateReview request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/commands.CreateReview'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Create a review
+      tags:
+      - reviews
+  /api/v1/public/reviews/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Increments helpful or notHelpful count for a review
+      parameters:
+      - description: Review ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: UpdateReviewHelpful request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/commands.UpdateReviewHelpful'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Update review helpful count
+      tags:
+      - reviews
 swagger: "2.0"

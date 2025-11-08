@@ -4,6 +4,29 @@
         "contact": {}
     },
     "paths": {
+        "/api/v1/public/categories": {
+            "get": {
+                "description": "Retrieves all product categories",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Get all categories",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/public/login": {
             "post": {
                 "description": "Authenticates a user and returns an access token.",
@@ -118,6 +141,199 @@
                 }
             }
         },
+        "/api/v1/public/products": {
+            "get": {
+                "description": "Retrieves all products with optional filtering",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get all products",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Category slug",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Minimum price",
+                        "name": "min",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Maximum price",
+                        "name": "max",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Minimum rating",
+                        "name": "rating",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Featured products only",
+                        "name": "featured",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated tags",
+                        "name": "tags",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order (price_asc, price_desc, rating, newest)",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/products/category/{category}": {
+            "get": {
+                "description": "Retrieves all products in a specific category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get products by category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category slug",
+                        "name": "category",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/products/featured": {
+            "get": {
+                "description": "Retrieves all featured products",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get featured products",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/products/{id}/reviews": {
+            "get": {
+                "description": "Retrieves all reviews for a specific product",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Get reviews by product ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/products/{slug}": {
+            "get": {
+                "description": "Retrieves a single product by its slug",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get product by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/public/register": {
             "post": {
                 "description": "Handles user registration by parsing the request body and invoking the registration command.",
@@ -175,9 +391,115 @@
                     }
                 }
             }
+        },
+        "/api/v1/public/reviews": {
+            "post": {
+                "description": "Creates a new review for a product",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Create a review",
+                "parameters": [
+                    {
+                        "description": "CreateReview request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commands.CreateReview"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/reviews/{id}": {
+            "patch": {
+                "description": "Increments helpful or notHelpful count for a review",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Update review helpful count",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Review ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "UpdateReviewHelpful request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commands.UpdateReviewHelpful"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "commands.CreateReview": {
+            "type": "object",
+            "required": [
+                "comment",
+                "product_id",
+                "rating",
+                "user_id",
+                "user_name"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "minLength": 10
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "rating": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 1
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
         "commands.LoginUser": {
             "type": "object",
             "required": [
@@ -208,8 +530,7 @@
                     "type": "string"
                 },
                 "email": {
-                    "type": "string",
-                    "minLength": 3
+                    "type": "string"
                 },
                 "first_name": {
                     "type": "string",
@@ -221,11 +542,30 @@
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 3
+                    "minLength": 6
                 },
                 "user_name": {
                     "type": "string",
                     "minLength": 3
+                }
+            }
+        },
+        "commands.UpdateReviewHelpful": {
+            "type": "object",
+            "required": [
+                "review_id",
+                "type"
+            ],
+            "properties": {
+                "review_id": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "helpful",
+                        "notHelpful"
+                    ]
                 }
             }
         },
@@ -240,6 +580,10 @@
                     "type": "string"
                 },
                 "message": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "description": "Request ID for tracing",
                     "type": "string"
                 },
                 "status": {
