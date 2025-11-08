@@ -44,7 +44,7 @@
 - 📈 **Prometheus** - Metrics collection and monitoring
 - 📊 **Grafana** - Beautiful monitoring dashboards
 - 📝 **ELK Stack** - Centralized logging (Elasticsearch, Filebeat, Kibana)
-- 🔍 **Distributed Tracing** - OpenTelemetry support
+- 🔍 **Jaeger** - Distributed tracing with OpenTelemetry
 - 📡 **Kafka** - Event streaming for microservices
 
 ### 🛠️ Developer Experience
@@ -59,44 +59,55 @@
 
 ## 🛠️ Tech Stack
 
+<div align="center">
+
+![System Architecture](docs/apwp_aa01.png)
+
+_System Architecture & Technology Stack_
+
+</div>
+
 ### Core Framework
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Go** | 1.25 | High-performance programming language |
-| **Fiber** | v3.0.0-rc.2 | Fast HTTP web framework |
-| **GORM** | 1.31.0 | Powerful ORM for database operations |
+| Technology | Version     | Purpose                               |
+| ---------- | ----------- | ------------------------------------- |
+| **Go**     | 1.25        | High-performance programming language |
+| **Fiber**  | v3.0.0-rc.2 | Fast HTTP web framework               |
+| **GORM**   | 1.31.0      | Powerful ORM for database operations  |
 
 ### Database & Cache
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **PostgreSQL** | 12+ | Primary relational database |
-| **Redis** | 6+ | Caching and session management |
-| **SQLite** | - | Development/testing database |
+| Technology     | Version | Purpose                        |
+| -------------- | ------- | ------------------------------ |
+| **PostgreSQL** | 12+     | Primary relational database    |
+| **Redis**      | 6+      | Caching and session management |
+| **SQLite**     | -       | Development/testing database   |
 
 ### Infrastructure & DevOps
 
-| Technology | Purpose |
-|------------|---------|
-| **Docker** | Containerization |
+| Technology         | Purpose                       |
+| ------------------ | ----------------------------- |
+| **Docker**         | Containerization              |
 | **Docker Compose** | Multi-container orchestration |
-| **Prometheus** | Metrics collection |
-| **Grafana** | Monitoring dashboards |
-| **ELK Stack** | Log aggregation and analysis |
-| **Kafka** | Event streaming platform |
+| **Prometheus**     | Metrics collection            |
+| **Grafana**        | Monitoring dashboards         |
+| **ELK Stack**      | Log aggregation and analysis  |
+| **Jaeger**         | Distributed tracing           |
+| **Kafka**          | Event streaming platform      |
 
 ### Libraries & Tools
 
-| Technology | Purpose |
-|------------|---------|
-| **JWT (golang-jwt)** | Authentication tokens |
-| **Zerolog** | Structured logging |
-| **Viper** | Configuration management |
-| **Cobra** | CLI framework |
-| **Swagger** | API documentation |
-| **WebSocket (go-socket.io)** | Real-time communication |
-| **Sarama** | Kafka client |
+| Technology                   | Purpose                      |
+| ---------------------------- | ---------------------------- |
+| **JWT (golang-jwt)**         | Authentication tokens        |
+| **Zerolog**                  | Structured logging           |
+| **Viper**                    | Configuration management     |
+| **Cobra**                    | CLI framework                |
+| **Swagger**                  | API documentation            |
+| **WebSocket (go-socket.io)** | Real-time communication      |
+| **Sarama**                   | Kafka client                 |
+| **OpenTelemetry**            | Observability framework      |
+| **Jaeger Exporter**          | Distributed tracing exporter |
 
 ---
 
@@ -358,11 +369,13 @@ docker-compose up -d
 ```
 
 This starts:
+
 - PostgreSQL database
 - Redis cache
 - Prometheus metrics
 - Grafana dashboards
 - ELK stack for logging
+- **Jaeger** for distributed tracing
 - Kafka for event streaming
 
 ---
@@ -428,22 +441,23 @@ Interactive API documentation is available at:
 
 #### 🔐 Authentication
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
+| Method | Endpoint                  | Description       |
+| ------ | ------------------------- | ----------------- |
 | `POST` | `/api/v1/public/register` | User registration |
-| `POST` | `/api/v1/public/login` | User login |
-| `POST` | `/api/v1/public/logout` | User logout |
+| `POST` | `/api/v1/public/login`    | User login        |
+| `POST` | `/api/v1/public/logout`   | User logout       |
 
 #### 🛍️ Products
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/public/products` | List all products (with filters) |
-| `GET` | `/api/v1/public/products/:slug` | Get product by slug |
-| `GET` | `/api/v1/public/products/featured` | Get featured products |
-| `GET` | `/api/v1/public/products/category/:category` | Get products by category |
+| Method | Endpoint                                     | Description                      |
+| ------ | -------------------------------------------- | -------------------------------- |
+| `GET`  | `/api/v1/public/products`                    | List all products (with filters) |
+| `GET`  | `/api/v1/public/products/:slug`              | Get product by slug              |
+| `GET`  | `/api/v1/public/products/featured`           | Get featured products            |
+| `GET`  | `/api/v1/public/products/category/:category` | Get products by category         |
 
 **Query Parameters:**
+
 - `q` - Search query
 - `category` - Category slug
 - `min` - Minimum price
@@ -455,24 +469,24 @@ Interactive API documentation is available at:
 
 #### 📂 Categories
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/public/categories` | List all categories |
+| Method | Endpoint                    | Description         |
+| ------ | --------------------------- | ------------------- |
+| `GET`  | `/api/v1/public/categories` | List all categories |
 
 #### ⭐ Reviews
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/public/products/:id/reviews` | Get product reviews |
-| `POST` | `/api/v1/public/reviews` | Create a review |
-| `PATCH` | `/api/v1/public/reviews/:id` | Update review helpful count |
+| Method  | Endpoint                              | Description                 |
+| ------- | ------------------------------------- | --------------------------- |
+| `GET`   | `/api/v1/public/products/:id/reviews` | Get product reviews         |
+| `POST`  | `/api/v1/public/reviews`              | Create a review             |
+| `PATCH` | `/api/v1/public/reviews/:id`          | Update review helpful count |
 
 #### 👤 User Profile
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/public/users/:id` | Get user profile |
-| `GET` | `/api/v1/public/users/:id/avatar` | Get user avatar |
+| Method | Endpoint                          | Description      |
+| ------ | --------------------------------- | ---------------- |
+| `GET`  | `/api/v1/public/users/:id`        | Get user profile |
+| `GET`  | `/api/v1/public/users/:id/avatar` | Get user avatar  |
 
 ---
 
@@ -532,13 +546,28 @@ Pre-configured dashboards for:
 - Error tracking
 - Request patterns
 
-### Distributed Tracing
+### Distributed Tracing (Jaeger)
 
-OpenTelemetry support for:
+**Jaeger** integration via OpenTelemetry for:
 
-- Request tracing across services
-- Performance bottleneck identification
-- Service dependency mapping
+- **Request Tracing** - End-to-end request tracing across services
+- **Performance Analysis** - Identify bottlenecks and slow operations
+- **Service Dependencies** - Visualize service interactions
+- **Span Analysis** - Detailed span timing and metadata
+- **Trace Search** - Search and filter traces by tags and attributes
+
+**Access Jaeger UI:**
+
+- **Jaeger UI**: `http://localhost:16686`
+- **OTLP HTTP Endpoint**: `http://localhost:4318`
+- **OTLP gRPC Endpoint**: `http://localhost:4317`
+
+**Features:**
+
+- OpenTelemetry (OTLP) protocol support
+- Configurable sampling rates
+- Service and environment tagging
+- Trace context propagation
 
 ---
 
@@ -650,6 +679,13 @@ SERVER_HOST=0.0.0.0
 # JWT
 JWT_SECRET=your-secret-key
 JWT_EXPIRATION=24h
+
+# Jaeger Tracing
+JAEGER_ENABLED=true
+JAEGER_SERVICE_NAME=shikposh-backend
+JAEGER_ENVIRONMENT=development
+JAEGER_OTLP_ENDPOINT=http://localhost:4318
+JAEGER_SAMPLING_RATE=1.0
 ```
 
 ---
