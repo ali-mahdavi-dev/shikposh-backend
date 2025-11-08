@@ -90,7 +90,7 @@ _System Architecture Diagram_
 - **Docker & Docker Compose** - Containerization
 - **Prometheus** - Metrics collection
 - **Grafana** - Monitoring dashboards
-- **ELK Stack** - Logging (Elasticsearch, Logstash, Kibana)
+- **EFK Stack** - Logging (Elasticsearch, Filebeat, Kibana)
 - **Kafka** - Event streaming
 - **JWT** - Authentication
 - **Swagger** - API documentation
@@ -324,18 +324,6 @@ backend/
 ├── docker/           # Docker configurations
 └── docs/             # API documentation
 ```
-
----
-
-## 🤝 Contributing
-
-This project showcases my skills in Go backend development and software architecture.
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License.
 
 ---
 
