@@ -158,6 +158,56 @@ graph TD
     style D fill:#fce4ec
 ```
 
+
+**🧩 Modular Architecture:**
+
+The backend is built with a **highly modular architecture** that promotes separation of concerns, maintainability, and scalability. Each module is self-contained and follows a consistent structure:
+
+**Module Structure:**
+
+```
+module/
+├── entrypoint/          # HTTP handlers and routes
+│   └── handler/         # Request handlers
+├── service_layer/       # Application services
+│   ├── command_handler/ # Write operations (CQRS)
+│   └── event_handler/   # Event processing
+├── domain/              # Business logic layer
+│   ├── entity/          # Domain entities
+│   ├── commands/        # Command DTOs
+│   └── events/          # Domain events
+├── query/               # Read operations (CQRS)
+├── adapter/             # Infrastructure adapters
+│   ├── repository/      # Data access layer
+│   └── migrations/      # Database migrations
+└── bootstrap.go         # Module initialization
+```
+
+**Key Benefits:**
+
+- ✅ **Independent Modules** - Each module (Account, Products, etc.) operates independently
+- ✅ **Isolated Dependencies** - Modules have their own dependencies and don't interfere with each other
+- ✅ **Easy to Extend** - Add new modules without affecting existing ones
+- ✅ **Testability** - Each module can be tested in isolation
+- ✅ **Scalability** - Modules can be easily extracted into microservices
+- ✅ **Consistent Structure** - All modules follow the same architectural pattern
+
+**Current Modules:**
+
+- 👤 **Account Module** - User management, authentication, profiles, and avatar generation
+- 🛍️ **Products Module** - Product management, categories, reviews, and product aggregates
+
+**Module Initialization:**
+Each module has a `Bootstrap()` function that:
+
+- Initializes its own Unit of Work and Message Bus
+- Registers command and event handlers
+- Sets up HTTP routes
+- Configures module-specific dependencies
+
+This modular approach makes the codebase highly maintainable and ready for microservices migration when needed.
+
+
 ### Design Patterns
 
 #### 1. Domain-Driven Design (DDD)
