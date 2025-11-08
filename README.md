@@ -77,75 +77,19 @@
 
 ## 🛠️ تکنولوژی‌ها
 
-### معماری تکنولوژی‌ها
 
-```mermaid
-graph TB
-    subgraph Client["Client Layer"]
-        WEB[Web Browser]
-        MOBILE[Mobile App]
-    end
+## 🏗️ معماری و ساختار
 
-    subgraph Presentation["Presentation Layer"]
-        FIBER[Fiber Framework<br/>HTTP Server]
-        SWAGGER[Swagger<br/>API Docs]
-    end
+<div align="center">
 
-    subgraph Application["Application Layer"]
-        GO[Go 1.25<br/>Backend Language]
-        GORM[GORM<br/>ORM]
-    end
+![Architecture Diagram](docs/apwp_aa01.png)
 
-    subgraph Data["Data Layer"]
-        PG[(PostgreSQL<br/>Primary Database)]
-        REDIS[(Redis<br/>Cache & Sessions)]
-    end
+_نمودار معماری سیستم_
 
-    subgraph Message["Message Queue"]
-        KAFKA[Kafka<br/>Event Streaming]
-    end
+</div>
 
-    subgraph Monitoring["Monitoring Stack"]
-        PROM[Prometheus]
-        GRAFANA[Grafana]
-        ELK[ELK Stack]
-    end
-
-    subgraph Infrastructure["Infrastructure"]
-        DOCKER[Docker<br/>Containerization]
-        COMPOSE[Docker Compose]
-    end
-
-    WEB --> FIBER
-    MOBILE --> FIBER
-    FIBER --> GO
-    GO --> GORM
-    GORM --> PG
-    GO --> REDIS
-    GO --> KAFKA
-    GO --> PROM
-    PROM --> GRAFANA
-    GO --> ELK
-    DOCKER --> COMPOSE
-
-    style Client fill:#e3f2fd
-    style Presentation fill:#e1f5ff
-    style Application fill:#fff4e1
-    style Data fill:#e8f5e9
-    style Message fill:#f3e5f5
-    style Monitoring fill:#fce4ec
-    style Infrastructure fill:#fff9c4
-```
 
 ### Backend Stack
-
-#### Go 1.25
-
-- **زبان برنامه‌نویسی** با عملکرد بالا و همزمانی عالی
-- **Goroutines** برای پردازش همزمان و مقیاس‌پذیری
-- **Type Safety** و **Memory Safety** برای امنیت بیشتر
-- **Compile Time** سریع و اجرای کارآمد
-- **Rich Standard Library** برای توسعه سریع‌تر
 
 #### Fiber v3
 
@@ -308,17 +252,6 @@ graph TB
 - **Use Cases**: Notifications، Chat، Live Updates
 
 ---
-
-## 🏗️ معماری و ساختار
-
-<div align="center">
-
-![Architecture Diagram](docs/apwp_aa01.png)
-
-_نمودار معماری سیستم_
-
-</div>
-
 ### معماری Clean Architecture
 
 این پروژه با استفاده از **Clean Architecture** طراحی شده است که جداسازی کامل لایه‌ها و وابستگی‌ها را تضمین می‌کند:
