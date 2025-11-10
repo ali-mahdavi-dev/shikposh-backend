@@ -2,6 +2,7 @@ package products
 
 import (
 	"shikposh-backend/config"
+	"shikposh-backend/internal/products/entryporint"
 	"shikposh-backend/internal/products/entryporint/handler"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
@@ -39,7 +40,11 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 		productHandler,
 		bus,
 	)
-	productHTTPHandler.RegisterRoutes(router)
+
+	productsRouter := entryporint.ProductManagementRouter{
+		Product: productHTTPHandler,
+	}
+	entryporint.NewProductsRouter(router, productsRouter)
 
 	// Register command handlers
 	bus.AddHandler(
