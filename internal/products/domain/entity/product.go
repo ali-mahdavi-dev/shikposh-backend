@@ -5,6 +5,7 @@ import (
 
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
+	"shikposh-backend/internal/products/domain/events"
 	"shikposh-backend/pkg/framework/adapter"
 
 	"gorm.io/gorm"
@@ -29,7 +30,7 @@ type Product struct {
 	Features    []product_aggregate.ProductFeature `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to array
 	Details     []product_aggregate.ProductDetail  `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to colors and variants maps
 	Specs       []product_aggregate.ProductSpec    `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to map
-	CategoryID  uint64                            `json:"category_id" gorm:"category_id"`
+	CategoryID  uint64                             `json:"category_id" gorm:"category_id"`
 	Category    *Category                          `json:"category,omitempty" gorm:"foreignKey:CategoryID"`
 	Tags        []string                           `json:"tags,omitempty" gorm:"type:jsonb"`
 	Image       string                             `json:"image" gorm:"image"` // Main image (for backward compatibility)
@@ -44,7 +45,7 @@ func (p *Product) TableName() string {
 
 // NewProduct creates a new Product instance using a command
 func NewProduct(cmd *commands.CreateProduct) *Product {
-	return &Product{
+	product := &Product{
 		Name:        cmd.Name,
 		Slug:        cmd.Slug,
 		Brand:       cmd.Brand,
@@ -58,6 +59,16 @@ func NewProduct(cmd *commands.CreateProduct) *Product {
 		Rating:      0,
 		ReviewCount: 0,
 	}
+	product.AddEvent(&events.ProductCreatedEvent{
+		ProductID:   &product.ID,
+		Name:        product.Name,
+		Slug:        product.Slug,
+		Brand:       product.Brand,
+		CategoryID:  product.CategoryID,
+		Description: *product.Description,
+	})
+
+	return product
 }
 
 // BeforeCreate hook to ensure JSON fields are properly initialized

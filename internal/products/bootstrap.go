@@ -6,6 +6,8 @@ import (
 	"shikposh-backend/internal/products/entryporint/handler"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
+	"shikposh-backend/internal/products/service_layer/event_handler"
+
 	"shikposh-backend/pkg/framework/adapter"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	commandeventhandler "shikposh-backend/pkg/framework/service_layer/command_event_handler"
@@ -31,6 +33,9 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 	reviewHandler := command_handler.NewReviewCommandHandler(uow)
 	productHandler := command_handler.NewProductCommandHandler(uow)
 
+	// Initialize event handlers
+	productEventHandler := event_handler.NewProductEventHandler(uow)
+
 	// Initialize handler
 	productHTTPHandler := handler.NewProductHandler(
 		productQueryHandler,
@@ -45,13 +50,18 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 		Product: productHTTPHandler,
 	})
 
-	// Register command handlers
+	// command handlers
 	bus.AddHandler(
 		commandeventhandler.NewCommandHandlerWithResult(reviewHandler.CreateReviewHandler),
 		commandeventhandler.NewCommandHandlerWithResult(reviewHandler.UpdateReviewHelpfulHandler),
 		commandeventhandler.NewCommandHandler(productHandler.CreateProductHandler),
 		commandeventhandler.NewCommandHandler(productHandler.UpdateProductHandler),
 		commandeventhandler.NewCommandHandler(productHandler.DeleteProductHandler),
+	)
+
+	// event handlers
+	bus.AddHandlerEvent(
+		commandeventhandler.NewEventHandler(productEventHandler.ProductCreatedEvent),
 	)
 
 	logging.Info("Products module bootstrapped successfully").Log()
