@@ -41,10 +41,9 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 		bus,
 	)
 
-	productsRouter := entryporint.ProductManagementRouter{
+	entryporint.NewProductsRouter(router, entryporint.ProductManagementRouter{
 		Product: productHTTPHandler,
-	}
-	entryporint.NewProductsRouter(router, productsRouter)
+	})
 
 	// Register command handlers
 	bus.AddHandler(
