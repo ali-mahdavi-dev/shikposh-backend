@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/pkg/framework/adapter"
 )
 
@@ -20,4 +21,18 @@ type Review struct {
 
 func (r *Review) TableName() string {
 	return "reviews"
+}
+
+// NewReview creates a new Review instance using a command
+func NewReview(cmd *commands.CreateReview) *Review {
+	return &Review{
+		ProductID:  cmd.ProductID,
+		UserID:     cmd.UserID,
+		UserName:   cmd.UserName,
+		Rating:     cmd.Rating,
+		Comment:    cmd.Comment,
+		Helpful:    0,
+		NotHelpful: 0,
+		Verified:   false,
+	}
 }

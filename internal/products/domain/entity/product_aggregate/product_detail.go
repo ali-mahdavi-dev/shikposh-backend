@@ -1,6 +1,7 @@
 package product_aggregate
 
 import (
+	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/pkg/framework/adapter"
 )
@@ -22,4 +23,19 @@ type ProductDetail struct {
 
 func (pd *ProductDetail) TableName() string {
 	return "product_details"
+}
+
+// NewProductDetail creates a new ProductDetail instance using command root input
+func NewProductDetail(productID uint64, input commands.ProductDetailInput) ProductDetail {
+	return ProductDetail{
+		ProductID:     productID,
+		ColorKey:      input.ColorKey,
+		ColorName:     input.ColorName,
+		SizeKey:       input.SizeKey,
+		Price:         input.Price,
+		OriginalPrice: input.OriginalPrice,
+		Stock:         input.Stock,
+		Discount:      input.Discount,
+		Images:        []shared.Attachment{},
+	}
 }

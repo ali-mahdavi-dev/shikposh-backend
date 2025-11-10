@@ -1,6 +1,7 @@
 package product_aggregate
 
 import (
+	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/pkg/framework/adapter"
 )
 
@@ -16,4 +17,14 @@ type ProductSpec struct {
 
 func (ps *ProductSpec) TableName() string {
 	return "product_specs"
+}
+
+// NewProductSpec creates a new ProductSpec instance using command root input
+func NewProductSpec(productID uint64, input commands.ProductSpecInput) ProductSpec {
+	return ProductSpec{
+		ProductID: productID,
+		Key:       input.Key,
+		Value:     input.Value,
+		Order:     input.Order,
+	}
 }

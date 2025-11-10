@@ -3,6 +3,7 @@ package entity
 import (
 	"strconv"
 
+	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/pkg/framework/adapter"
 
@@ -24,13 +25,13 @@ type Product struct {
 	Brand       string                             `json:"brand" gorm:"brand"`
 	Rating      float64                            `json:"rating" gorm:"rating;default:0"`
 	ReviewCount int                                `json:"review_count" gorm:"review_count;default:0"`
-	Description string                             `json:"description" gorm:"description;type:text"`
+	Description *string                            `json:"description,omitempty" gorm:"description;type:text"`
 	Features    []product_aggregate.ProductFeature `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to array
 	Details     []product_aggregate.ProductDetail  `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to colors and variants maps
 	Specs       []product_aggregate.ProductSpec    `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to map
-	CategoryID  uint64                             `json:"category_id" gorm:"category_id"`
+	CategoryID  uint64                            `json:"category_id" gorm:"category_id"`
 	Category    *Category                          `json:"category,omitempty" gorm:"foreignKey:CategoryID"`
-	Tags        []string                           `json:"tags" gorm:"type:jsonb"`
+	Tags        []string                           `json:"tags,omitempty" gorm:"type:jsonb"`
 	Image       string                             `json:"image" gorm:"image"` // Main image (for backward compatibility)
 	IsNew       bool                               `json:"is_new" gorm:"is_new;default:false"`
 	IsFeatured  bool                               `json:"is_featured" gorm:"is_featured;default:false"`
@@ -39,6 +40,24 @@ type Product struct {
 
 func (p *Product) TableName() string {
 	return "products"
+}
+
+// NewProduct creates a new Product instance using a command
+func NewProduct(cmd *commands.CreateProduct) *Product {
+	return &Product{
+		Name:        cmd.Name,
+		Slug:        cmd.Slug,
+		Brand:       cmd.Brand,
+		Description: cmd.Description,
+		CategoryID:  cmd.CategoryID,
+		Tags:        cmd.Tags,
+		Sizes:       cmd.Sizes,
+		Image:       cmd.Image,
+		IsNew:       cmd.IsNew,
+		IsFeatured:  cmd.IsFeatured,
+		Rating:      0,
+		ReviewCount: 0,
+	}
 }
 
 // BeforeCreate hook to ensure JSON fields are properly initialized

@@ -28,21 +28,26 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 
 	// Initialize command handlers
 	reviewHandler := command_handler.NewReviewCommandHandler(uow)
+	productHandler := command_handler.NewProductCommandHandler(uow)
 
 	// Initialize handler
-	productHandler := handler.NewProductHandler(
+	productHTTPHandler := handler.NewProductHandler(
 		productQueryHandler,
 		categoryQueryHandler,
 		reviewQueryHandler,
 		reviewHandler,
+		productHandler,
 		bus,
 	)
-	productHandler.RegisterRoutes(router)
+	productHTTPHandler.RegisterRoutes(router)
 
 	// Register command handlers
 	bus.AddHandler(
 		commandeventhandler.NewCommandHandlerWithResult(reviewHandler.CreateReviewHandler),
 		commandeventhandler.NewCommandHandlerWithResult(reviewHandler.UpdateReviewHelpfulHandler),
+		commandeventhandler.NewCommandHandler(productHandler.CreateProductHandler),
+		commandeventhandler.NewCommandHandler(productHandler.UpdateProductHandler),
+		commandeventhandler.NewCommandHandler(productHandler.DeleteProductHandler),
 	)
 
 	logging.Info("Products module bootstrapped successfully").Log()

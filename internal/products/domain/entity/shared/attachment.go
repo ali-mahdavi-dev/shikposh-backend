@@ -19,3 +19,11 @@ type Attachment struct {
 func (a *Attachment) TableName() string {
 	return "attachments"
 }
+
+// NewAttachment creates a new Attachment instance
+func NewAttachment(filePath, fileType string) Attachment {
+	return Attachment{
+		FilePath: filePath,
+		FileType: fileType,
+	}
+}

@@ -31,6 +31,7 @@ type ProductHandler struct {
 	categoryQueryHandler *query.CategoryQueryHandler
 	reviewQueryHandler   *query.ReviewQueryHandler
 	reviewHandler        *command_handler.ReviewCommandHandler
+	productHandler       *command_handler.ProductCommandHandler
 	bus                  messagebus.MessageBus
 }
 
@@ -39,6 +40,7 @@ func NewProductHandler(
 	categoryQueryHandler *query.CategoryQueryHandler,
 	reviewQueryHandler *query.ReviewQueryHandler,
 	reviewHandler *command_handler.ReviewCommandHandler,
+	productHandler *command_handler.ProductCommandHandler,
 	bus messagebus.MessageBus,
 ) *ProductHandler {
 	return &ProductHandler{
@@ -46,6 +48,7 @@ func NewProductHandler(
 		categoryQueryHandler: categoryQueryHandler,
 		reviewQueryHandler:   reviewQueryHandler,
 		reviewHandler:        reviewHandler,
+		productHandler:       productHandler,
 		bus:                  bus,
 	}
 }
@@ -66,6 +69,14 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 		publicRoute.Get("/products/:id/reviews", p.GetReviewsByProductID)
 		publicRoute.Post("/reviews", p.CreateReview)
 		publicRoute.Patch("/reviews/:id", p.UpdateReviewHelpful)
+	}
+
+	// Admin routes for product CRUD
+	adminRoute := r.Group("/api/v1/admin")
+	{
+		adminRoute.Post("/products", p.CreateProduct)
+		adminRoute.Put("/products/:id", p.UpdateProduct)
+		adminRoute.Delete("/products/:id", p.DeleteProduct)
 	}
 }
 
@@ -369,4 +380,99 @@ func (p *ProductHandler) UpdateReviewHelpful(c fiber.Ctx) error {
 	}
 
 	return httpapi.ResSuccess(c, result)
+}
+
+// CreateProduct godoc
+//
+//	@Summary		Create a new product
+//	@Description	Creates a new product with all its details, features, and specs
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		commands.CreateProduct	true	"CreateProduct request"
+//	@Success		201		{object}	httpapi.ResponseResult
+//	@Router			/api/v1/admin/products [post]
+func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
+	ctx := c.Context()
+	cmd := new(commands.CreateProduct)
+
+	if err := httpapi.ParseJSON(c, cmd); err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	_, err := p.bus.Handle(ctx, cmd)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResOK(c)
+}
+
+// UpdateProduct godoc
+//
+//	@Summary		Update a product
+//	@Description	Updates an existing product. Only provided fields will be updated.
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		uint64				true	"Product ID"
+//	@Param			request	body		commands.UpdateProduct	true	"UpdateProduct request"
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Router			/api/v1/admin/products/{id} [put]
+func (p *ProductHandler) UpdateProduct(c fiber.Ctx) error {
+	ctx := c.Context()
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	cmd := new(commands.UpdateProduct)
+	cmd.ID = id
+
+	if err := httpapi.ParseJSON(c, cmd); err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	_, err = p.bus.Handle(ctx, cmd)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResOK(c)
+}
+
+// DeleteProduct godoc
+//
+//	@Summary		Delete a product
+//	@Description	Deletes a product. Can perform soft delete or hard delete.
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		uint64	true	"Product ID"
+//	@Param			soft_delete	query		boolean	false	"Soft delete (default: true)"
+//	@Success		200			{object}	httpapi.ResponseResult
+//	@Router			/api/v1/admin/products/{id} [delete]
+func (p *ProductHandler) DeleteProduct(c fiber.Ctx) error {
+	ctx := c.Context()
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	cmd := &commands.DeleteProduct{
+		ID:         id,
+		SoftDelete: true, // Default to soft delete
+	}
+
+	// Check query parameter for soft_delete
+	if softDelete := c.Query("soft_delete"); softDelete != "" {
+		cmd.SoftDelete = cast.ToBool(softDelete)
+	}
+
+	_, err = p.bus.Handle(ctx, cmd)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResOK(c)
 }

@@ -21,6 +21,10 @@ type ProductRepository interface {
 	FindFeatured(ctx context.Context) ([]*entity.Product, error)
 	Search(ctx context.Context, query string) ([]*entity.Product, error)
 	Filter(ctx context.Context, filters ProductFilters) ([]*entity.Product, error)
+	ClearFeatures(ctx context.Context, product *entity.Product) error
+	ClearDetails(ctx context.Context, product *entity.Product) error
+	ClearSpecs(ctx context.Context, product *entity.Product) error
+	ClearAllAssociations(ctx context.Context, product *entity.Product) error
 }
 
 type ProductFilters struct {
@@ -47,7 +51,12 @@ func NewProductRepository(db *gorm.DB) ProductRepository {
 }
 
 func (r *productGormRepository) Model(ctx context.Context) *gorm.DB {
-	return r.db.WithContext(ctx).Model(&entity.Product{}).
+	return r.db.WithContext(ctx).Model(&entity.Product{})
+}
+
+// withPreloads applies all necessary preloads to the query
+func (r *productGormRepository) withPreloads(query *gorm.DB) *gorm.DB {
+	return query.
 		Preload("Category").
 		Preload("Details").
 		Preload("Details.Images").
@@ -62,7 +71,7 @@ func (r *productGormRepository) Model(ctx context.Context) *gorm.DB {
 
 func (r *productGormRepository) GetAll(ctx context.Context) ([]*entity.Product, error) {
 	var products []*entity.Product
-	err := r.Model(ctx).Find(&products).Error
+	err := r.withPreloads(r.Model(ctx)).Find(&products).Error
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +83,7 @@ func (r *productGormRepository) GetAll(ctx context.Context) ([]*entity.Product, 
 
 func (r *productGormRepository) FindBySlug(ctx context.Context, slug string) (*entity.Product, error) {
 	var product entity.Product
-	err := r.Model(ctx).Where("slug = ?", slug).First(&product).Error
+	err := r.withPreloads(r.Model(ctx)).Where("slug = ?", slug).First(&product).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrProductNotFound
@@ -87,7 +96,7 @@ func (r *productGormRepository) FindBySlug(ctx context.Context, slug string) (*e
 
 func (r *productGormRepository) FindByCategoryID(ctx context.Context, categoryID uint64) ([]*entity.Product, error) {
 	var products []*entity.Product
-	err := r.Model(ctx).Where("category_id = ?", categoryID).Find(&products).Error
+	err := r.withPreloads(r.Model(ctx)).Where("category_id = ?", categoryID).Find(&products).Error
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +108,7 @@ func (r *productGormRepository) FindByCategoryID(ctx context.Context, categoryID
 
 func (r *productGormRepository) FindByCategorySlug(ctx context.Context, categorySlug string) ([]*entity.Product, error) {
 	var products []*entity.Product
-	err := r.Model(ctx).
+	err := r.withPreloads(r.Model(ctx)).
 		Joins("JOIN categories ON products.category_id = categories.id").
 		Where("categories.slug = ?", categorySlug).
 		Find(&products).Error
@@ -114,7 +123,7 @@ func (r *productGormRepository) FindByCategorySlug(ctx context.Context, category
 
 func (r *productGormRepository) FindFeatured(ctx context.Context) ([]*entity.Product, error) {
 	var products []*entity.Product
-	err := r.Model(ctx).Where("is_featured = ?", true).Find(&products).Error
+	err := r.withPreloads(r.Model(ctx)).Where("is_featured = ?", true).Find(&products).Error
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +136,7 @@ func (r *productGormRepository) FindFeatured(ctx context.Context) ([]*entity.Pro
 func (r *productGormRepository) Search(ctx context.Context, query string) ([]*entity.Product, error) {
 	var products []*entity.Product
 	searchPattern := "%" + query + "%"
-	err := r.Model(ctx).
+	err := r.withPreloads(r.Model(ctx)).
 		Where("name ILIKE ? OR description ILIKE ? OR brand ILIKE ?", searchPattern, searchPattern, searchPattern).
 		Find(&products).Error
 	if err != nil {
@@ -140,7 +149,7 @@ func (r *productGormRepository) Search(ctx context.Context, query string) ([]*en
 }
 
 func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilters) ([]*entity.Product, error) {
-	query := r.Model(ctx)
+	query := r.withPreloads(r.Model(ctx))
 
 	if filters.Query != nil && *filters.Query != "" {
 		searchPattern := "%" + *filters.Query + "%"
@@ -201,4 +210,49 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 		r.SetSeen(p)
 	}
 	return products, nil
+}
+
+func (r *productGormRepository) ClearFeatures(ctx context.Context, product *entity.Product) error {
+	return r.Model(ctx).Association("Features").Clear()
+}
+
+func (r *productGormRepository) ClearSpecs(ctx context.Context, product *entity.Product) error {
+	return r.Model(ctx).Association("Specs").Clear()
+}
+
+// clearDetailsAttachments loads details and clears their attachments
+func (r *productGormRepository) clearDetailsAttachments(ctx context.Context, product *entity.Product) error {
+	// Load existing details to delete their attachments
+	if err := r.Model(ctx).Association("Details").Find(&product.Details); err != nil {
+		return err
+	}
+
+	// Delete attachments for existing details
+	for i := range product.Details {
+		if err := r.db.WithContext(ctx).Model(&product.Details[i]).Association("Images").Clear(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *productGormRepository) ClearDetails(ctx context.Context, product *entity.Product) error {
+	// Clear attachments for details
+	if err := r.clearDetailsAttachments(ctx, product); err != nil {
+		return err
+	}
+
+	// Delete existing details
+	return r.Model(ctx).Association("Details").Clear()
+}
+
+func (r *productGormRepository) ClearAllAssociations(ctx context.Context, product *entity.Product) error {
+	// Clear attachments for details
+	if err := r.clearDetailsAttachments(ctx, product); err != nil {
+		return err
+	}
+
+	// Delete all associations using Select
+	return r.Model(ctx).Select("Features", "Details", "Specs").Delete(product).Error
 }

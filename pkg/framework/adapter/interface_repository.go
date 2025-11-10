@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("entity not found")
+	ErrEntityNotFound = errors.New("entity not found")
 )
 
 type SeenedRepository interface {

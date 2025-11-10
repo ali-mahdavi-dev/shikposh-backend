@@ -16,3 +16,12 @@ type ProductFeature struct {
 func (pf *ProductFeature) TableName() string {
 	return "product_features"
 }
+
+// NewProductFeature creates a new ProductFeature instance
+func NewProductFeature(productID uint64, feature string, order int) ProductFeature {
+	return ProductFeature{
+		ProductID: productID,
+		Feature:   feature,
+		Order:     order,
+	}
+}

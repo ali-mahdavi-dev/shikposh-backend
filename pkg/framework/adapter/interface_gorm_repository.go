@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -22,6 +23,7 @@ func NewGormRepository[E Entity](db *gorm.DB) BaseRepository[E] {
 
 func (c *gormRepository[E]) FindByID(ctx context.Context, id uint64) (E, error) {
 	model, err := c.FindByField(ctx, "id", id)
+
 	c.SetSeen(model)
 	return model, err
 }
@@ -29,6 +31,10 @@ func (c *gormRepository[E]) FindByID(ctx context.Context, id uint64) (E, error) 
 func (c *gormRepository[E]) FindByField(ctx context.Context, field string, value interface{}) (E, error) {
 	var e E
 	err := c.db.WithContext(ctx).Model(e).Where(field+"=?", value).First(&e).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return e, ErrEntityNotFound
+	}
+
 	c.SetSeen(e)
 	return e, err
 }
