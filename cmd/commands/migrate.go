@@ -8,7 +8,7 @@ import (
 	"errors"
 	"log"
 
-	"shikposh-backend/internal/account/adapter/migrations"
+	accountMigrations "shikposh-backend/internal/account/adapter/migrations"
 	productsMigrations "shikposh-backend/internal/products/adapter/migrations"
 
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
@@ -38,7 +38,7 @@ func dbmateDB() *dbmate.DB {
 
 	dbConn := dbmate.New(u)
 	// Combine both account and products migrations
-	combinedFS := combineFS(migrations.Migrations, productsMigrations.Migrations)
+	combinedFS := combineFS(accountMigrations.Migrations, productsMigrations.Migrations)
 	dbConn.FS = combinedFS
 	dbConn.MigrationsDir = []string{"./"}
 	dbConn.AutoDumpSchema = false
@@ -155,6 +155,30 @@ func (c *combinedFS) Open(name string) (fs.File, error) {
 		}
 	}
 	return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+}
+
+func (c *combinedFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	var allEntries []fs.DirEntry
+	seen := make(map[string]bool)
+
+	for _, filesystem := range c.filesystems {
+		entries, err := fs.ReadDir(filesystem, name)
+		if err != nil {
+			continue // Skip if this filesystem doesn't have the directory
+		}
+		for _, entry := range entries {
+			if !seen[entry.Name()] {
+				allEntries = append(allEntries, entry)
+				seen[entry.Name()] = true
+			}
+		}
+	}
+
+	if len(allEntries) == 0 {
+		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrNotExist}
+	}
+
+	return allEntries, nil
 }
 
 func makeMigration(name string) error {
