@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"shikposh-backend/config"
-	"shikposh-backend/internal/products/entryporint"
-	"shikposh-backend/internal/products/entryporint/handler"
+	"shikposh-backend/internal/products/entrypoint"
+	"shikposh-backend/internal/products/entrypoint/handler"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
 	"shikposh-backend/internal/products/service_layer/event_handler"
@@ -51,7 +51,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 		bus,
 	)
 
-	entryporint.NewProductsRouter(router, entryporint.ProductManagementRouter{
+	entrypoint.NewProductsRouter(router, entrypoint.ProductManagementRouter{
 		Product: productHTTPHandler,
 	})
 

@@ -1,7 +1,7 @@
-package entryporint
+package entrypoint
 
 import (
-	"shikposh-backend/internal/account/entryporint/handler"
+	"shikposh-backend/internal/account/entrypoint/handler"
 
 	"github.com/gofiber/fiber/v3"
 )

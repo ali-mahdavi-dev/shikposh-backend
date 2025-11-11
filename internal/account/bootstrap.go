@@ -3,8 +3,8 @@ package account
 import (
 	"shikposh-backend/config"
 	accountadapter "shikposh-backend/internal/account/adapter"
-	"shikposh-backend/internal/account/entryporint"
-	"shikposh-backend/internal/account/entryporint/handler"
+	"shikposh-backend/internal/account/entrypoint"
+	"shikposh-backend/internal/account/entrypoint/handler"
 	"shikposh-backend/internal/account/service_layer/command_handler"
 	"shikposh-backend/internal/account/service_layer/event_handler"
 	"shikposh-backend/pkg/framework/adapter"
@@ -33,7 +33,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 	userEventHandler := event_handler.NewUserEventHandler(uow)
 	userController := handler.NewUserController(bus, ag)
 
-	entryporint.NewAccountRouter(router, entryporint.UserManagementRouter{
+	entrypoint.NewAccountRouter(router, entrypoint.UserManagementRouter{
 		User: userController,
 	})
 
