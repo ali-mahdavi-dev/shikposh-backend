@@ -128,6 +128,7 @@ func (p *Product) ToMap() map[string]interface{} {
 		"is_new":       p.IsNew,
 		"is_featured":  p.IsFeatured,
 		"sizes":        p.Sizes,
+		"created_at":   p.CreatedAt,
 	}
 
 	if defaultOriginalPrice != nil {

@@ -30,7 +30,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 	bus := messagebus.NewMessageBus(uow, eventCh)
 
 	// Initialize query handlers
-	productQueryHandler := query.NewProductQueryHandler(uow)
+	productQueryHandler := query.NewProductQueryHandler(uow, elasticsearch)
 	categoryQueryHandler := query.NewCategoryQueryHandler(uow)
 	reviewQueryHandler := query.NewReviewQueryHandler(uow)
 
