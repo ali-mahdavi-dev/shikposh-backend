@@ -20,6 +20,7 @@ import (
 	"shikposh-backend/internal/products"
 	mwF "shikposh-backend/pkg/framework/api/middleware"
 	"shikposh-backend/pkg/framework/infrastructure/databases"
+	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	"shikposh-backend/pkg/framework/infrastructure/tracing"
 
@@ -39,9 +40,10 @@ func runHTTPServerCMD() *cobra.Command {
 }
 
 type serverComponents struct {
-	db     *gorm.DB
-	server *fiber.App
-	tracer *tracing.Tracer
+	db            *gorm.DB
+	server        *fiber.App
+	tracer        *tracing.Tracer
+	elasticsearch elasticsearchx.Connection
 }
 
 func startServer(cfg *config.Config) error {
@@ -54,13 +56,22 @@ func startServer(cfg *config.Config) error {
 
 	tracer := initializeTracing(cfg)
 
+	elasticsearch, err := initializeElasticsearch(cfg)
+	if err != nil {
+		logging.Warn("Failed to initialize Elasticsearch").
+			WithError(err).
+			Log()
+		// Continue without Elasticsearch - it's optional for now
+	}
+
 	// Create Fiber app
 	server := createFiberApp(cfg)
 
 	components := &serverComponents{
-		db:     db,
-		server: server,
-		tracer: tracer,
+		db:            db,
+		server:        server,
+		tracer:        tracer,
+		elasticsearch: elasticsearch,
 	}
 
 	// Setup routes and middleware
@@ -159,6 +170,22 @@ func getEnvironment(cfg *config.Config) string {
 	return cfg.Server.RunMode
 }
 
+func initializeElasticsearch(cfg *config.Config) (elasticsearchx.Connection, error) {
+	esCfg := elasticsearchx.Config{
+		Host:     cfg.Elasticsearch.Host,
+		Port:     cfg.Elasticsearch.Port,
+		Username: cfg.Elasticsearch.Username,
+		Password: cfg.Elasticsearch.Password,
+	}
+
+	conn, err := elasticsearchx.NewElasticsearchConnection(esCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize elasticsearch: %w", err)
+	}
+
+	return conn, nil
+}
+
 func createFiberApp(cfg *config.Config) *fiber.App {
 	return fiber.New(fiber.Config{
 		AppName:      cfg.Server.Name,
@@ -206,7 +233,7 @@ func setupRoutes(components *serverComponents, cfg *config.Config) error {
 		return fmt.Errorf("failed to bootstrap account module: %w", err)
 	}
 
-	if err := products.Bootstrap(components.server, components.db, cfg); err != nil {
+	if err := products.Bootstrap(components.server, components.db, cfg, components.elasticsearch); err != nil {
 		return fmt.Errorf("failed to bootstrap products module: %w", err)
 	}
 

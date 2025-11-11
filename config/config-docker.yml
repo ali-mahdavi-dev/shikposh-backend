@@ -35,6 +35,11 @@ redis:
   poolSize: 10
   poolTimeout: 15
   idleCheckFrequency: 500
+elasticsearch:
+  host: elasticsearch
+  port: 9200
+  username: elastic
+  password: ""
 password:
   includeChars: true
   includeDigits: true

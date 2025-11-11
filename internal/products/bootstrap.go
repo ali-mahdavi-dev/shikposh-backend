@@ -1,14 +1,19 @@
 package products
 
 import (
+	"context"
+
 	"shikposh-backend/config"
 	"shikposh-backend/internal/products/entryporint"
 	"shikposh-backend/internal/products/entryporint/handler"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
 	"shikposh-backend/internal/products/service_layer/event_handler"
+	"shikposh-backend/internal/products/service_layer/outbox"
 
 	"shikposh-backend/pkg/framework/adapter"
+	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
+	kafak "shikposh-backend/pkg/framework/infrastructure/kafak"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	commandeventhandler "shikposh-backend/pkg/framework/service_layer/command_event_handler"
 	"shikposh-backend/pkg/framework/service_layer/messagebus"
@@ -18,7 +23,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
+func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsearch elasticsearchx.Connection) error {
 	// Create event channel and unit of work for this module
 	eventCh := make(chan adapter.EventWithWaitGroup, 100)
 	uow := unit_of_work.New(db, eventCh)
@@ -63,6 +68,26 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 	bus.AddHandlerEvent(
 		commandeventhandler.NewEventHandler(productEventHandler.ProductCreatedEvent),
 	)
+
+	// Initialize outbox processor (reads from outbox and sends to Kafka)
+	kafkaService := kafak.Service
+	outboxProcessor := outbox.NewProcessor(uow, kafkaService)
+	ctx := context.Background()
+	outboxProcessor.Start(ctx)
+
+	// Initialize Kafka consumer (consumes from Kafka and indexes in Elasticsearch)
+	if elasticsearch != nil {
+		outboxConsumer := outbox.NewConsumer(uow, elasticsearch, kafkaService)
+		go func() {
+			if err := outboxConsumer.Start(ctx); err != nil {
+				logging.Error("Failed to start outbox consumer").
+					WithError(err).
+					Log()
+			}
+		}()
+	} else {
+		logging.Warn("Elasticsearch not available, outbox consumer will not start").Log()
+	}
 
 	logging.Info("Products module bootstrapped successfully").Log()
 

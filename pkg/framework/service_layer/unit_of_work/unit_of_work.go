@@ -19,6 +19,7 @@ type PGUnitOfWork interface {
 	Product(ctx context.Context) productrepository.ProductRepository
 	Category(ctx context.Context) productrepository.CategoryRepository
 	Review(ctx context.Context) productrepository.ReviewRepository
+	Outbox(ctx context.Context) productrepository.OutboxRepository
 }
 
 type pgUnitOfWork struct {
@@ -74,4 +75,11 @@ func (uow *pgUnitOfWork) Review(ctx context.Context) productrepository.ReviewRep
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "review", func(session *gorm.DB) adapter.SeenedRepository {
 		return productrepository.NewReviewRepository(session)
 	}).(productrepository.ReviewRepository)
+}
+
+// Outbox returns the OutboxRepository instance for the current transaction.
+func (uow *pgUnitOfWork) Outbox(ctx context.Context) productrepository.OutboxRepository {
+	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "outbox", func(session *gorm.DB) adapter.SeenedRepository {
+		return productrepository.NewOutboxRepository(session)
+	}).(productrepository.OutboxRepository)
 }

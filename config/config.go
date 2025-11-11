@@ -11,15 +11,16 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Postgres PostgresConfig
-	Redis    RedisConfig
-	Password PasswordConfig
-	Cors     CorsConfig
-	Logger   LoggerConfig
-	Otp      OtpConfig
-	JWT      JWTConfig
-	Jaeger   JaegerConfig
+	Server        ServerConfig
+	Postgres      PostgresConfig
+	Redis         RedisConfig
+	Elasticsearch ElasticsearchConfig
+	Password      PasswordConfig
+	Cors          CorsConfig
+	Logger        LoggerConfig
+	Otp           OtpConfig
+	JWT           JWTConfig
+	Jaeger        JaegerConfig
 }
 
 type ServerConfig struct {
@@ -92,6 +93,13 @@ type JaegerConfig struct {
 	ServiceName  string
 	Environment  string
 	SamplingRate float64
+}
+
+type ElasticsearchConfig struct {
+	Host     string
+	Port     string
+	Username string
+	Password string
 }
 
 func GetConfig() *Config {
