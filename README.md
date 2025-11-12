@@ -50,6 +50,7 @@
 - 🔄 **Repository Pattern** - Abstraction layer for data access
 - 💼 **Unit of Work Pattern** - Transaction management and event collection
 - 🚌 **Message Bus Pattern** - Centralized command/event routing
+- 📦 **Outbox Pattern** - Reliable event publishing with transactional guarantees
 
 ### 🚀 Performance & Scalability
 
@@ -158,7 +159,6 @@ graph TD
     style D fill:#fce4ec
 ```
 
-
 **🧩 Modular Architecture:**
 
 The backend is built with a **highly modular architecture** that promotes separation of concerns, maintainability, and scalability. Each module is self-contained and follows a consistent structure:
@@ -206,7 +206,6 @@ Each module has a `Bootstrap()` function that:
 - Configures module-specific dependencies
 
 This modular approach makes the codebase highly maintainable and ready for microservices migration when needed.
-
 
 ### Design Patterns
 
@@ -271,6 +270,102 @@ sequenceDiagram
 - Type-safe routing
 - Async processing
 
+#### 7. Outbox Pattern
+
+The **Outbox Pattern** ensures reliable event publishing by storing events in a database table within the same transaction as the business data. This guarantees **exactly-once delivery** and prevents event loss even if the message broker is temporarily unavailable.
+
+**How it works:**
+
+```mermaid
+sequenceDiagram
+    participant CH as Command Handler
+    participant DB as Database
+    participant OP as Outbox Processor
+    participant K as Kafka
+    participant OC as Outbox Consumer
+    participant ES as Elasticsearch
+
+    CH->>DB: Save Business Data + Outbox Event (Same Transaction)
+    CH->>DB: Commit Transaction
+    Note over OP: Polls every 5 seconds
+    OP->>DB: Get Pending Events (Batch: 10)
+    OP->>DB: Mark as Processing
+    OP->>K: Send to Kafka Topic
+    OP->>DB: Mark as Completed
+    K->>OC: Consume Event
+    OC->>DB: Get Full Product Data
+    OC->>ES: Index in Elasticsearch
+```
+
+**Key Components:**
+
+1. **Outbox Table** - Stores events with status tracking:
+
+   - `status`: pending, processing, completed, failed
+   - `retry_count`: Automatic retry mechanism
+   - `max_retries`: Configurable retry limit (default: 5)
+   - `error_message`: Error tracking for failed events
+
+2. **Outbox Processor** - Background service that:
+
+   - Polls the database every 5 seconds for pending events
+   - Processes events in batches (default: 10 events)
+   - Sends events to Kafka topic (`product.events`)
+   - Handles retries automatically
+   - Marks events as completed or failed
+
+3. **Outbox Consumer** - Kafka consumer that:
+   - Consumes events from Kafka
+   - Retrieves full aggregate data from database
+   - Indexes data in Elasticsearch for search
+   - Handles different event types (ProductCreatedEvent, etc.)
+
+**Benefits:**
+
+- ✅ **Transactional Guarantees** - Events saved in same transaction as business data
+- ✅ **Reliability** - No event loss even if Kafka is down
+- ✅ **Exactly-Once Delivery** - Prevents duplicate events
+- ✅ **Automatic Retries** - Built-in retry mechanism with configurable limits
+- ✅ **Error Handling** - Failed events tracked with error messages
+- ✅ **Scalability** - Can process events asynchronously without blocking business logic
+
+**Implementation Details:**
+
+- **Event Creation**: Events are saved to `outbox_events` table within the same transaction
+- **Processing**: Background processor polls and processes events every 5 seconds
+- **Kafka Integration**: Events are published to `product.events` topic
+- **Elasticsearch Indexing**: Consumer indexes products in Elasticsearch for search functionality
+- **Status Tracking**: Events go through states: `pending` → `processing` → `completed`/`failed`
+
+**Configuration:**
+
+```go
+const (
+    KafkaTopicProductEvents = "product.events"
+    BatchSize               = 10        // Events per batch
+    PollInterval            = 5 seconds // Polling frequency
+)
+```
+
+**Database Schema:**
+
+```sql
+CREATE TABLE outbox_events (
+    id BIGINT PRIMARY KEY,
+    event_type VARCHAR(255) NOT NULL,
+    aggregate_type VARCHAR(255) NOT NULL,
+    aggregate_id VARCHAR(255) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    retry_count INTEGER DEFAULT 0,
+    max_retries INTEGER DEFAULT 5,
+    error_message TEXT,
+    processed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ### Module Structure
 
 Each module follows a consistent structure:
@@ -309,6 +404,8 @@ module/
 - Product reviews and ratings
 - Product aggregates (features, details, specs)
 - Image attachments
+- **Outbox Pattern** - Reliable event publishing to Kafka
+- **Elasticsearch Integration** - Automatic product indexing via Kafka consumer
 
 ---
 
