@@ -57,8 +57,8 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 
 	// command handlers
 	bus.AddHandler(
-		commandeventhandler.NewCommandHandlerWithResult(reviewHandler.CreateReviewHandler),
-		commandeventhandler.NewCommandHandlerWithResult(reviewHandler.UpdateReviewHelpfulHandler),
+		commandeventhandler.NewCommandHandler(reviewHandler.CreateReviewHandler),
+		commandeventhandler.NewCommandHandler(reviewHandler.UpdateReviewHelpfulHandler),
 		commandeventhandler.NewCommandHandler(productHandler.CreateProductHandler),
 		commandeventhandler.NewCommandHandler(productHandler.UpdateProductHandler),
 		commandeventhandler.NewCommandHandler(productHandler.DeleteProductHandler),

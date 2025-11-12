@@ -5,6 +5,7 @@ import (
 
 	"shikposh-backend/internal/account/adapter"
 	"shikposh-backend/internal/account/domain/commands"
+	"shikposh-backend/internal/account/service_layer/command_handler"
 	httpapi "shikposh-backend/pkg/framework/api/http"
 	"shikposh-backend/pkg/framework/errors"
 	"shikposh-backend/pkg/framework/errors/phrases"
@@ -15,14 +16,16 @@ import (
 )
 
 type UserController struct {
-	bus messagebus.MessageBus
-	ag  *adapter.AvatarGenerator
+	bus         messagebus.MessageBus
+	ag          *adapter.AvatarGenerator
+	userHandler *command_handler.UserHandler
 }
 
-func NewUserController(bus messagebus.MessageBus, ag *adapter.AvatarGenerator) *UserController {
+func NewUserController(bus messagebus.MessageBus, ag *adapter.AvatarGenerator, userHandler *command_handler.UserHandler) *UserController {
 	return &UserController{
-		bus: bus,
-		ag:  ag,
+		bus:         bus,
+		ag:          ag,
+		userHandler: userHandler,
 	}
 }
 
@@ -77,16 +80,12 @@ func (u *UserController) Register(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	result, err := u.bus.Handle(ctx, cmd)
+	err := u.bus.Handle(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	if result != nil {
-		return httpapi.ResSuccess(c, result)
-	}
-
-	return httpapi.ResOK(c)
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // Login godoc
@@ -111,12 +110,15 @@ func (u *UserController) Login(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	result, err := u.bus.Handle(ctx, cmd)
+	accessToken, err := u.userHandler.LoginHandler(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	return httpapi.ResSuccess(c, result)
+	// Set token in response header
+	c.Set("Authorization", "Bearer "+accessToken)
+
+	return httpapi.ResSuccess(c, map[string]string{"access": accessToken})
 }
 
 // Logout godoc
@@ -146,10 +148,10 @@ func (u *UserController) Logout(c fiber.Ctx) error {
 	cmd := new(commands.Logout)
 	cmd.UserID = cast.ToUint64(userID)
 
-	_, err := u.bus.Handle(ctx, cmd)
+	err := u.bus.Handle(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	return httpapi.ResOK(c)
+	return c.SendStatus(fiber.StatusNoContent)
 }

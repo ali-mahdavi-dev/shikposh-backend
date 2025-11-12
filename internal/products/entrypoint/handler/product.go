@@ -341,12 +341,12 @@ func (p *ProductHandler) CreateReview(c fiber.Ctx) error {
 		cmd.UserID = cast.ToUint64(userID)
 	}
 
-	result, err := p.bus.Handle(ctx, cmd)
+	err := p.bus.Handle(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	return httpapi.ResSuccess(c, result)
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // UpdateReviewHelpful godoc
@@ -374,12 +374,12 @@ func (p *ProductHandler) UpdateReviewHelpful(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	result, err := p.bus.Handle(ctx, cmd)
+	err = p.bus.Handle(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	return httpapi.ResSuccess(c, result)
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // CreateProduct godoc
@@ -400,12 +400,12 @@ func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	_, err := p.bus.Handle(ctx, cmd)
+	err := p.bus.Handle(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	return httpapi.ResOK(c)
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // UpdateProduct godoc
@@ -433,12 +433,12 @@ func (p *ProductHandler) UpdateProduct(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	_, err = p.bus.Handle(ctx, cmd)
+	err = p.bus.Handle(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	return httpapi.ResOK(c)
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // DeleteProduct godoc
@@ -469,10 +469,10 @@ func (p *ProductHandler) DeleteProduct(c fiber.Ctx) error {
 		cmd.SoftDelete = cast.ToBool(softDelete)
 	}
 
-	_, err = p.bus.Handle(ctx, cmd)
+	err = p.bus.Handle(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	return httpapi.ResOK(c)
+	return c.SendStatus(fiber.StatusNoContent)
 }

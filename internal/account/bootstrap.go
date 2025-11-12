@@ -31,15 +31,14 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 
 	userHandler := command_handler.NewUserHandler(uow, cfg)
 	userEventHandler := event_handler.NewUserEventHandler(uow)
-	userController := handler.NewUserController(bus, ag)
+	userController := handler.NewUserController(bus, ag, userHandler)
 
 	entrypoint.NewAccountRouter(router, entrypoint.UserManagementRouter{
 		User: userController,
 	})
 
 	bus.AddHandler(
-		commandeventhandler.NewCommandHandlerWithResult(userHandler.RegisterHandler),
-		commandeventhandler.NewCommandHandlerWithResult(userHandler.LoginHandler),
+		commandeventhandler.NewCommandHandler(userHandler.RegisterHandler),
 		commandeventhandler.NewCommandHandler(userHandler.LogoutHandler),
 	)
 	bus.AddHandlerEvent(

@@ -16,7 +16,7 @@ import (
 type MessageBus interface {
 	AddHandler(handlers ...commandeventhandler.CommandHandler) error
 	AddHandlerEvent(handlers ...commandeventhandler.EventHandler) error
-	Handle(ctx context.Context, cmd any) (any, error)
+	Handle(ctx context.Context, cmd any) error
 	Uow() unit_of_work.PGUnitOfWork
 	Shutdown(ctx context.Context) error
 	EventChannel() chan<- adapter.EventWithWaitGroup
@@ -118,7 +118,7 @@ func (m *messageBus) AddEvent(handlers ...commandeventhandler.EventHandler) erro
 	return nil
 }
 
-func (m *messageBus) Handle(ctx context.Context, cmd any) (any, error) {
+func (m *messageBus) Handle(ctx context.Context, cmd any) error {
 	cmdName := reflect.TypeOf(cmd).String()
 
 	logging.Info("Handling command").
@@ -132,24 +132,23 @@ func (m *messageBus) Handle(ctx context.Context, cmd any) (any, error) {
 			WithAny("command_name", cmdName).
 			WithError(err).
 			Log()
-		return nil, err
+		return err
 	}
 
-	result, err := handler.Handle(ctx, cmd)
+	err := handler.Handle(ctx, cmd)
 	if err != nil {
 		logging.Error("Command handler failed").
 			WithAny("command_name", cmdName).
 			WithError(err).
 			Log()
-		return nil, err
-
+		return err
 	}
 
 	logging.Info("Command handled successfully").
 		WithAny("command_name", cmdName).
 		Log()
 
-	return result, nil
+	return nil
 }
 
 func (m *messageBus) HandleEvent(ctx context.Context, event any) error {

@@ -34,9 +34,7 @@ func NewUserHandler(uow unit_of_work.PGUnitOfWork, cfg *config.Config) *UserHand
 	return &UserHandler{uow: uow, cfg: cfg}
 }
 
-func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.RegisterUser) (*RegisterResult, error) {
-	var result RegisterResult
-
+func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.RegisterUser) error {
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		// Check if username already exists
 		_, err := h.uow.User(ctx).FindByUserName(ctx, cmd.UserName)
@@ -68,15 +66,14 @@ func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.Registe
 			return fmt.Errorf("UserHandler.Register error saving user: %w", err)
 		}
 
-		result.UserID = user.ID
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &result, nil
+	return nil
 }
 
 func (h *UserHandler) LogoutHandler(ctx context.Context, cmd *commands.Logout) error {
@@ -104,8 +101,8 @@ func (h *UserHandler) LogoutHandler(ctx context.Context, cmd *commands.Logout) e
 	return nil
 }
 
-func (h *UserHandler) LoginHandler(ctx context.Context, cmd *commands.LoginUser) (*LoginResult, error) {
-	var result LoginResult
+func (h *UserHandler) LoginHandler(ctx context.Context, cmd *commands.LoginUser) (string, error) {
+	var accessToken string
 
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		user, err := h.uow.User(ctx).FindByUserName(ctx, cmd.UserName)
@@ -135,7 +132,7 @@ func (h *UserHandler) LoginHandler(ctx context.Context, cmd *commands.LoginUser)
 		}
 
 		// Generate new access token
-		accessToken, err := jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, user.ID)
+		accessToken, err = jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, user.ID)
 		if err != nil {
 			return fmt.Errorf("UserHandler.LoginHandler fail generate token: %w", err)
 		}
@@ -146,13 +143,12 @@ func (h *UserHandler) LoginHandler(ctx context.Context, cmd *commands.LoginUser)
 			return fmt.Errorf("UserHandler.LoginHandler fail save token to db: %w", err)
 		}
 
-		result.Access = accessToken
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &result, nil
+	return accessToken, nil
 }

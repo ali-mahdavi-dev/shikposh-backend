@@ -12,9 +12,7 @@ import (
 	"shikposh-backend/pkg/framework/errors/phrases"
 )
 
-func (h *ReviewCommandHandler) CreateReviewHandler(ctx context.Context, cmd *commands.CreateReview) (*entity.Review, error) {
-	var review *entity.Review
-
+func (h *ReviewCommandHandler) CreateReviewHandler(ctx context.Context, cmd *commands.CreateReview) error {
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		// Verify product exists
 		product, err := h.uow.Product(ctx).FindByID(ctx, cmd.ProductID)
@@ -26,7 +24,7 @@ func (h *ReviewCommandHandler) CreateReviewHandler(ctx context.Context, cmd *com
 		}
 
 		// Create review
-		review = entity.NewReview(cmd)
+		review := entity.NewReview(cmd)
 
 		if err := h.uow.Review(ctx).Save(ctx, review); err != nil {
 			return fmt.Errorf("ReviewCommandHandler.CreateReviewHandler error saving review: %w", err)
@@ -44,8 +42,8 @@ func (h *ReviewCommandHandler) CreateReviewHandler(ctx context.Context, cmd *com
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return review, nil
+	return nil
 }
