@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -10,6 +11,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/cast"
 )
+
+var errFailGetTokenFromDB = errors.New("fail to get token from DB")
+var errTokenDoesNotExist = errors.New("token does not exist")
 
 func (m *Middleware) AuthMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {

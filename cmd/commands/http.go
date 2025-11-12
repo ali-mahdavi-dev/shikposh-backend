@@ -23,6 +23,7 @@ import (
 	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	"shikposh-backend/pkg/framework/infrastructure/tracing"
+	mw "shikposh-backend/pkg/middleware"
 
 	"gorm.io/gorm"
 )
@@ -209,7 +210,11 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 
 func setupMiddleware(components *serverComponents, cfg *config.Config) error {
 	middlewareF := mwF.NewMiddleware(
-		mwF.MiddlewareConfig{JWTSecret: cfg.JWT.Secret},
+		mwF.MiddlewareConfig{},
+		components.db,
+	)
+	middlewareM := mw.NewMiddleware(
+		mw.MiddlewareConfig{JWTSecret: cfg.JWT.Secret},
 		components.db,
 	)
 
@@ -219,6 +224,7 @@ func setupMiddleware(components *serverComponents, cfg *config.Config) error {
 	}
 
 	middlewareF.Register(components.server)
+	middlewareM.Register(components.server)
 	return nil
 }
 

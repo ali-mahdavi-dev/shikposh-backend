@@ -8,8 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// MiddlewareConfig holds configuration for middleware
 type MiddlewareConfig struct {
+	JWTSecret string
 }
 
 type Middleware struct {
@@ -29,8 +29,5 @@ func NewMiddleware(cfg MiddlewareConfig, db *gorm.DB) *Middleware {
 }
 
 func (m *Middleware) Register(app *fiber.App) {
-	// Request ID middleware should be registered first
-	// so it's available for all subsequent middleware and handlers
-	app.Use(m.RequestIDMiddleware())
-	app.Use(m.DefaultStructuredLogger())
+	app.Use(m.AuthMiddleware())
 }
