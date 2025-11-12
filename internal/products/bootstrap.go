@@ -16,6 +16,7 @@ import (
 	kafak "shikposh-backend/pkg/framework/infrastructure/kafak"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	commandeventhandler "shikposh-backend/pkg/framework/service_layer/command_event_handler"
+	commandmiddleware "shikposh-backend/pkg/framework/service_layer/command_event_handler/command_middleware"
 	"shikposh-backend/pkg/framework/service_layer/messagebus"
 	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
 
@@ -55,8 +56,13 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 		Product: productHTTPHandler,
 	})
 
+	// register command middlewares
+	bus.AddCommandMiddleware(
+		commandmiddleware.Logging(),
+	)
+
 	// command handlers
-	bus.AddHandler(
+	bus.AddCommandHandler(
 		commandeventhandler.NewCommandHandler(reviewHandler.CreateReviewHandler),
 		commandeventhandler.NewCommandHandler(reviewHandler.UpdateReviewHelpfulHandler),
 		commandeventhandler.NewCommandHandler(productHandler.CreateProductHandler),
@@ -65,7 +71,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 	)
 
 	// event handlers
-	bus.AddHandlerEvent(
+	bus.AddEventHandler(
 		commandeventhandler.NewEventHandler(productEventHandler.ProductCreatedEvent),
 	)
 

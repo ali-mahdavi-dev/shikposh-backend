@@ -11,14 +11,17 @@ CREATE TABLE outbox_events (
     error_message TEXT,
     processed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE INDEX idx_outbox_events_status ON outbox_events(status, created_at) WHERE status = 'pending';
 CREATE INDEX idx_outbox_events_aggregate ON outbox_events(aggregate_type, aggregate_id);
 CREATE INDEX idx_outbox_events_created_at ON outbox_events(created_at);
+CREATE INDEX idx_outbox_events_deleted_at ON outbox_events(deleted_at);
 
 -- migrate:down
+DROP INDEX IF EXISTS idx_outbox_events_deleted_at;
 DROP INDEX IF EXISTS idx_outbox_events_created_at;
 DROP INDEX IF EXISTS idx_outbox_events_aggregate;
 DROP INDEX IF EXISTS idx_outbox_events_status;

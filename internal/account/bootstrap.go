@@ -10,6 +10,7 @@ import (
 	"shikposh-backend/pkg/framework/adapter"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	commandeventhandler "shikposh-backend/pkg/framework/service_layer/command_event_handler"
+	commandmiddleware "shikposh-backend/pkg/framework/service_layer/command_event_handler/command_middleware"
 	"shikposh-backend/pkg/framework/service_layer/messagebus"
 	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
 
@@ -37,11 +38,19 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 		User: userController,
 	})
 
-	bus.AddHandler(
+	// register command middlewares
+	bus.AddCommandMiddleware(
+		commandmiddleware.Logging(),
+	)
+
+	// register command handlers
+	bus.AddCommandHandler(
 		commandeventhandler.NewCommandHandler(userHandler.RegisterHandler),
 		commandeventhandler.NewCommandHandler(userHandler.LogoutHandler),
 	)
-	bus.AddHandlerEvent(
+
+	// register event handlers
+	bus.AddEventHandler(
 		commandeventhandler.NewEventHandler(userEventHandler.RegisterEvent),
 	)
 

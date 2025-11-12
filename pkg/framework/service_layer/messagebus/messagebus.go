@@ -10,12 +10,14 @@ import (
 	apperrors "shikposh-backend/pkg/framework/errors"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	commandeventhandler "shikposh-backend/pkg/framework/service_layer/command_event_handler"
+	commandmiddleware "shikposh-backend/pkg/framework/service_layer/command_event_handler/command_middleware"
 	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
 )
 
 type MessageBus interface {
-	AddHandler(handlers ...commandeventhandler.CommandHandler) error
-	AddHandlerEvent(handlers ...commandeventhandler.EventHandler) error
+	AddCommandHandler(handlers ...commandeventhandler.CommandHandler) error
+	AddEventHandler(handlers ...commandeventhandler.EventHandler) error
+	AddCommandMiddleware(middlewares ...commandmiddleware.Middleware) error
 	Handle(ctx context.Context, cmd any) error
 	Uow() unit_of_work.PGUnitOfWork
 	Shutdown(ctx context.Context) error
@@ -23,14 +25,15 @@ type MessageBus interface {
 }
 
 type messageBus struct {
-	handledCommands map[any]commandeventhandler.CommandHandler
-	handledEvent    map[any]commandeventhandler.EventHandler
-	uow             unit_of_work.PGUnitOfWork
-	eventCh         chan adapter.EventWithWaitGroup
-	shutdownCh      chan struct{}
-	wg              sync.WaitGroup
-	mu              sync.RWMutex
-	closed          bool
+	handledCommands    map[any]commandeventhandler.CommandHandler
+	handledEvent       map[any]commandeventhandler.EventHandler
+	commandMiddlewares []commandmiddleware.Middleware
+	uow                unit_of_work.PGUnitOfWork
+	eventCh            chan adapter.EventWithWaitGroup
+	shutdownCh         chan struct{}
+	wg                 sync.WaitGroup
+	mu                 sync.RWMutex
+	closed             bool
 }
 
 func NewMessageBus(uow unit_of_work.PGUnitOfWork, eventCh chan adapter.EventWithWaitGroup) MessageBus {
@@ -76,7 +79,7 @@ func (m *messageBus) Uow() unit_of_work.PGUnitOfWork {
 	return m.uow
 }
 
-func (m *messageBus) AddHandler(handlers ...commandeventhandler.CommandHandler) error {
+func (m *messageBus) AddCommandHandler(handlers ...commandeventhandler.CommandHandler) error {
 	for _, handler := range handlers {
 		cmdName := reflect.TypeOf(handler.NewCommand()).String()
 		if _, ok := m.handledCommands[cmdName]; ok {
@@ -91,7 +94,7 @@ func (m *messageBus) AddHandler(handlers ...commandeventhandler.CommandHandler) 
 	return nil
 }
 
-func (m *messageBus) AddHandlerEvent(handlers ...commandeventhandler.EventHandler) error {
+func (m *messageBus) AddEventHandler(handlers ...commandeventhandler.EventHandler) error {
 	for _, handler := range handlers {
 		eventName := reflect.TypeOf(handler.NewEvent()).String()
 		if _, ok := m.handledEvent[eventName]; ok {
@@ -106,28 +109,17 @@ func (m *messageBus) AddHandlerEvent(handlers ...commandeventhandler.EventHandle
 	return nil
 }
 
-func (m *messageBus) AddEvent(handlers ...commandeventhandler.EventHandler) error {
-	for _, handler := range handlers {
-		eventName := reflect.TypeOf(handler.NewEvent()).String()
-		if _, ok := m.handledEvent[eventName]; ok {
-			return apperrors.Conflict("", fmt.Sprintf("event handler for %s already exists", eventName))
-		}
-		m.handledEvent[eventName] = handler
-	}
-
+func (m *messageBus) AddCommandMiddleware(middlewares ...commandmiddleware.Middleware) error {
+	m.commandMiddlewares = append(m.commandMiddlewares, middlewares...)
 	return nil
 }
 
 func (m *messageBus) Handle(ctx context.Context, cmd any) error {
 	cmdName := reflect.TypeOf(cmd).String()
 
-	logging.Info("Handling command").
-		WithAny("command_name", cmdName).
-		Log()
-
 	handler, ok := m.handledCommands[cmdName]
 	if !ok {
-		err := apperrors.NotFound("", fmt.Sprintf("command handler for %s not found", cmdName))
+		err := fmt.Errorf("command handler for %s not found", cmdName)
 		logging.Error("Command handler not found").
 			WithAny("command_name", cmdName).
 			WithError(err).
@@ -135,20 +127,16 @@ func (m *messageBus) Handle(ctx context.Context, cmd any) error {
 		return err
 	}
 
-	err := handler.Handle(ctx, cmd)
-	if err != nil {
-		logging.Error("Command handler failed").
-			WithAny("command_name", cmdName).
-			WithError(err).
-			Log()
-		return err
+	// Create the base handler function
+	baseHandler := func(ctx context.Context, cmd any) error {
+		return handler.Handle(ctx, cmd)
 	}
 
-	logging.Info("Command handled successfully").
-		WithAny("command_name", cmdName).
-		Log()
+	// Apply middlewares using decorator pattern
+	finalHandler := commandmiddleware.ApplyChain(baseHandler, m.commandMiddlewares...)
 
-	return nil
+	// Execute the handler with middlewares applied
+	return finalHandler(ctx, cmd)
 }
 
 func (m *messageBus) HandleEvent(ctx context.Context, event any) error {

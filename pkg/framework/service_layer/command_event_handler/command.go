@@ -6,7 +6,6 @@ import (
 
 type CommandHandler interface {
 	NewCommand() any
-
 	Handle(ctx context.Context, cmd any) error
 }
 
