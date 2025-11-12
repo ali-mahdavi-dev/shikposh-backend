@@ -51,6 +51,7 @@
 - 💼 **Unit of Work Pattern** - Transaction management and event collection
 - 🚌 **Message Bus Pattern** - Centralized command/event routing
 - 📦 **Outbox Pattern** - Reliable event publishing with transactional guarantees
+- 🎨 **Decorator Pattern** - AOP-style middleware for cross-cutting concerns in command handlers
 
 ### 🚀 Performance & Scalability
 
@@ -364,6 +365,210 @@ CREATE TABLE outbox_events (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+```
+
+#### 8. Decorator Pattern (AOP for Command Handlers)
+
+The **Decorator Pattern** is used to add cross-cutting concerns to command handlers in an **Aspect-Oriented Programming (AOP)** style. This allows us to wrap command handlers with additional functionality like logging, validation, metrics, retry logic, and more without modifying the core handler logic.
+
+**How it works:**
+
+```mermaid
+graph TD
+    A[Command Handler] --> B[Middleware Chain]
+    B --> C[Logging Middleware]
+    C --> D[Validation Middleware]
+    D --> E[Metrics Middleware]
+    E --> F[Actual Handler]
+
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
+    style C fill:#e8f5e9
+    style D fill:#e8f5e9
+    style E fill:#e8f5e9
+    style F fill:#ffcdd2
+```
+
+**Architecture:**
+
+```mermaid
+sequenceDiagram
+    participant MB as Message Bus
+    participant MW as Middleware Chain
+    participant LM as Logging Middleware
+    participant CH as Command Handler
+
+    MB->>MW: Handle Command
+    MW->>LM: Execute Middleware
+    LM->>LM: Log Command Received
+    LM->>CH: Call Next Handler
+    CH->>CH: Process Command
+    CH->>LM: Return Result
+    LM->>LM: Log Command Result
+    LM->>MW: Return Result
+    MW->>MB: Return Final Result
+```
+
+**Key Components:**
+
+1. **CommandHandlerFunc** - Base function type for command handlers:
+
+   ```go
+   type CommandHandlerFunc func(ctx context.Context, cmd any) error
+   ```
+
+2. **Middleware** - Function that wraps a handler with additional behavior:
+
+   ```go
+   type Middleware func(next CommandHandlerFunc) CommandHandlerFunc
+   ```
+
+3. **Middleware Chain** - Chains multiple middlewares together:
+   ```go
+   func Chain(middlewares ...Middleware) Middleware
+   ```
+
+**Example Implementation:**
+
+**Creating a Middleware:**
+
+```go
+// Logging middleware example
+func Logging() Middleware {
+    return func(next CommandHandlerFunc) CommandHandlerFunc {
+        return func(ctx context.Context, cmd any) error {
+            cmdName := reflect.TypeOf(cmd).String()
+
+            // Before handler execution
+            logging.Info("Command received").
+                WithAny("command_name", cmdName).
+                WithAny("command", cmd).
+                Log()
+
+            // Execute the actual handler
+            err := next(ctx, cmd)
+
+            // After handler execution
+            if err != nil {
+                logging.Error("Command failed").
+                    WithAny("command_name", cmdName).
+                    WithError(err).
+                    Log()
+                return err
+            }
+
+            logging.Info("Command handled successfully").
+                WithAny("command_name", cmdName).
+                Log()
+
+            return nil
+        }
+    }
+}
+```
+
+**Registering Middlewares:**
+
+```go
+// In bootstrap.go
+bus.AddCommandMiddleware(
+    commandmiddleware.Logging(),
+    // Add more middlewares here:
+    // commandmiddleware.Validation(),
+    // commandmiddleware.Metrics(),
+    // commandmiddleware.Retry(),
+)
+```
+
+**How Middlewares are Applied:**
+
+```go
+// In MessageBus.Handle()
+baseHandler := func(ctx context.Context, cmd any) error {
+    return handler.Handle(ctx, cmd)
+}
+
+// Apply middlewares using decorator pattern
+finalHandler := commandmiddleware.ApplyChain(baseHandler, m.commandMiddlewares...)
+
+// Execute the handler with middlewares applied
+return finalHandler(ctx, cmd)
+```
+
+**Use Cases:**
+
+- ✅ **Logging** - Log all command executions, successes, and failures
+- ✅ **Metrics** - Track command execution times, success rates, and error counts
+- ✅ **Validation** - Validate commands before handler execution
+- ✅ **Retry Logic** - Automatically retry failed commands with exponential backoff
+- ✅ **Authorization** - Check permissions before executing commands
+- ✅ **Rate Limiting** - Limit command execution rate per user/service
+- ✅ **Circuit Breaker** - Prevent cascading failures
+- ✅ **Tracing** - Add distributed tracing spans for commands
+- ✅ **Caching** - Cache command results when appropriate
+- ✅ **Transaction Management** - Wrap commands in transactions
+
+**Benefits:**
+
+- ✅ **Separation of Concerns** - Cross-cutting concerns separated from business logic
+- ✅ **Reusability** - Middlewares can be reused across multiple handlers
+- ✅ **Composability** - Multiple middlewares can be chained together
+- ✅ **Testability** - Handlers can be tested without middleware concerns
+- ✅ **Flexibility** - Easy to add/remove cross-cutting concerns
+- ✅ **AOP Style** - Aspect-Oriented Programming for clean code
+- ✅ **Non-Invasive** - No need to modify existing handler code
+
+**Current Middlewares:**
+
+- **Logging Middleware** - Logs command execution lifecycle (received, success, failure)
+
+**Future Middleware Examples:**
+
+```go
+// Validation Middleware
+func Validation() Middleware {
+    return func(next CommandHandlerFunc) CommandHandlerFunc {
+        return func(ctx context.Context, cmd any) error {
+            // Validate command before execution
+            if err := validateCommand(cmd); err != nil {
+                return err
+            }
+            return next(ctx, cmd)
+        }
+    }
+}
+
+// Metrics Middleware
+func Metrics() Middleware {
+    return func(next CommandHandlerFunc) CommandHandlerFunc {
+        return func(ctx context.Context, cmd any) error {
+            start := time.Now()
+            err := next(ctx, cmd)
+            duration := time.Since(start)
+
+            // Record metrics
+            recordCommandMetrics(cmd, duration, err)
+            return err
+        }
+    }
+}
+
+// Retry Middleware
+func Retry(maxRetries int) Middleware {
+    return func(next CommandHandlerFunc) CommandHandlerFunc {
+        return func(ctx context.Context, cmd any) error {
+            var err error
+            for i := 0; i < maxRetries; i++ {
+                err = next(ctx, cmd)
+                if err == nil {
+                    return nil
+                }
+                time.Sleep(time.Duration(i+1) * time.Second)
+            }
+            return err
+        }
+    }
+}
 ```
 
 ### Module Structure
