@@ -9,6 +9,7 @@ import (
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/domain/entity/shared"
+	"shikposh-backend/internal/products/domain/types"
 	appadapter "shikposh-backend/pkg/framework/adapter"
 	apperrors "shikposh-backend/pkg/framework/errors"
 	"shikposh-backend/pkg/framework/errors/phrases"
@@ -52,7 +53,7 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 		product.Name = cmd.Name
 		product.Slug = cmd.Slug
 		product.Brand = cmd.Brand
-		product.CategoryID = cmd.CategoryID
+		product.CategoryID = types.CategoryID(cmd.CategoryID)
 
 		product.Description = cmd.Description
 		if cmd.Tags != nil {

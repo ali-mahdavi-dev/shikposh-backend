@@ -25,7 +25,7 @@ func (h *UserEventHandler) RegisterEvent(ctx context.Context, event *events.Regi
 		return fmt.Errorf("UserEventHandler.RegisterEvent: UserID is nil")
 	}
 
-	userID := *event.UserID
+	userID := entity.UserID(*event.UserID)
 	logging.Info("Processing RegisterUserEvent").
 		WithInt64("user_id", int64(userID)).
 		WithString("username", event.UserName).

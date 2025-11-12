@@ -1,12 +1,22 @@
 package shared
 
 import (
+	"time"
+
 	"shikposh-backend/pkg/framework/adapter"
+
+	"gorm.io/gorm"
 )
+
+type AttachmentID uint64
 
 type Attachment struct {
 	adapter.BaseEntity
-	AttachableType string `json:"attachable_type" gorm:"attachable_type"` // e.g., "ProductDetail", "Product"
+	ID             AttachmentID `gorm:"primaryKey"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     gorm.DeletedAt `gorm:"index"`
+	AttachableType string        `json:"attachable_type" gorm:"attachable_type"` // e.g., "ProductDetail", "Product"
 	AttachableID   string `json:"attachable_id" gorm:"attachable_id"`
 	FileType       string `json:"file_type" gorm:"file_type"` // e.g., "image", "document"
 	FileName       string `json:"file_name" gorm:"file_name"`

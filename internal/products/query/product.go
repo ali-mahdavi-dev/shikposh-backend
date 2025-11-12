@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"shikposh-backend/internal/products/adapter/repository"
-	"shikposh-backend/internal/products/domain/entity"
+	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
 	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
@@ -26,8 +26,8 @@ func NewProductQueryHandler(uow unit_of_work.PGUnitOfWork, elasticsearch elastic
 	}
 }
 
-func (h *ProductQueryHandler) GetAllProducts(ctx context.Context) ([]*entity.Product, error) {
-	var products []*entity.Product
+func (h *ProductQueryHandler) GetAllProducts(ctx context.Context) ([]*productaggregate.Product, error) {
+	var products []*productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
 		products, err = h.uow.Product(ctx).GetAll(ctx)
@@ -39,7 +39,7 @@ func (h *ProductQueryHandler) GetAllProducts(ctx context.Context) ([]*entity.Pro
 	return products, err
 }
 
-func (h *ProductQueryHandler) GetProductByID(ctx context.Context, id uint64) (*entity.Product, error) {
+func (h *ProductQueryHandler) GetProductByID(ctx context.Context, id uint64) (*productaggregate.Product, error) {
 	// Try Elasticsearch first if available
 	if h.elasticsearch != nil {
 		productID := strconv.FormatUint(id, 10)
@@ -72,7 +72,7 @@ func (h *ProductQueryHandler) GetProductByID(ctx context.Context, id uint64) (*e
 	}
 
 	// Fallback to database
-	var product *entity.Product
+	var product *productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
 		product, err = h.uow.Product(ctx).FindByID(ctx, id)
@@ -84,8 +84,8 @@ func (h *ProductQueryHandler) GetProductByID(ctx context.Context, id uint64) (*e
 	return product, err
 }
 
-func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string) (*entity.Product, error) {
-	var product *entity.Product
+func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string) (*productaggregate.Product, error) {
+	var product *productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
 		product, err = h.uow.Product(ctx).FindBySlug(ctx, slug)
@@ -97,8 +97,8 @@ func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string)
 	return product, err
 }
 
-func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*entity.Product, error) {
-	var products []*entity.Product
+func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*productaggregate.Product, error) {
+	var products []*productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
 		products, err = h.uow.Product(ctx).FindFeatured(ctx)
@@ -110,8 +110,8 @@ func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*entit
 	return products, err
 }
 
-func (h *ProductQueryHandler) GetProductsByCategory(ctx context.Context, categorySlug string) ([]*entity.Product, error) {
-	var products []*entity.Product
+func (h *ProductQueryHandler) GetProductsByCategory(ctx context.Context, categorySlug string) ([]*productaggregate.Product, error) {
+	var products []*productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
 		products, err = h.uow.Product(ctx).FindByCategorySlug(ctx, categorySlug)
@@ -123,7 +123,7 @@ func (h *ProductQueryHandler) GetProductsByCategory(ctx context.Context, categor
 	return products, err
 }
 
-func (h *ProductQueryHandler) SearchProducts(ctx context.Context, searchQuery string) ([]*entity.Product, error) {
+func (h *ProductQueryHandler) SearchProducts(ctx context.Context, searchQuery string) ([]*productaggregate.Product, error) {
 	// Try Elasticsearch first if available
 	if h.elasticsearch != nil {
 		products, err := h.searchInElasticsearch(ctx, searchQuery)
@@ -141,7 +141,7 @@ func (h *ProductQueryHandler) SearchProducts(ctx context.Context, searchQuery st
 	}
 
 	// Fallback to database
-	var products []*entity.Product
+	var products []*productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
 		products, err = h.uow.Product(ctx).Search(ctx, searchQuery)
@@ -153,7 +153,7 @@ func (h *ProductQueryHandler) SearchProducts(ctx context.Context, searchQuery st
 	return products, err
 }
 
-func (h *ProductQueryHandler) GetFilteredProducts(ctx context.Context, filters repository.ProductFilters) ([]*entity.Product, error) {
+func (h *ProductQueryHandler) GetFilteredProducts(ctx context.Context, filters repository.ProductFilters) ([]*productaggregate.Product, error) {
 	// Try Elasticsearch first if available
 	if h.elasticsearch != nil {
 		products, err := h.searchInElasticsearchWithFilters(ctx, filters)
@@ -169,7 +169,7 @@ func (h *ProductQueryHandler) GetFilteredProducts(ctx context.Context, filters r
 	}
 
 	// Fallback to database
-	var products []*entity.Product
+	var products []*productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
 		products, err = h.uow.Product(ctx).Filter(ctx, filters)
@@ -182,7 +182,7 @@ func (h *ProductQueryHandler) GetFilteredProducts(ctx context.Context, filters r
 }
 
 // searchInElasticsearch performs a search query in Elasticsearch
-func (h *ProductQueryHandler) searchInElasticsearch(ctx context.Context, query string) ([]*entity.Product, error) {
+func (h *ProductQueryHandler) searchInElasticsearch(ctx context.Context, query string) ([]*productaggregate.Product, error) {
 	searchQuery := map[string]interface{}{
 		"query": map[string]interface{}{
 			"multi_match": map[string]interface{}{
@@ -199,7 +199,7 @@ func (h *ProductQueryHandler) searchInElasticsearch(ctx context.Context, query s
 }
 
 // searchInElasticsearchWithFilters performs a search with all filters applied in Elasticsearch
-func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Context, filters repository.ProductFilters) ([]*entity.Product, error) {
+func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Context, filters repository.ProductFilters) ([]*productaggregate.Product, error) {
 	// Build bool query with must, should, and filter clauses
 	boolQuery := map[string]interface{}{
 		"must":   []interface{}{},
@@ -327,7 +327,7 @@ func (h *ProductQueryHandler) buildSortClause(sort string) []map[string]interfac
 }
 
 // executeElasticsearchQuery executes the Elasticsearch query and converts results to products
-func (h *ProductQueryHandler) executeElasticsearchQuery(ctx context.Context, query map[string]interface{}) ([]*entity.Product, error) {
+func (h *ProductQueryHandler) executeElasticsearchQuery(ctx context.Context, query map[string]interface{}) ([]*productaggregate.Product, error) {
 	result, err := h.elasticsearch.Search(ctx, h.indexName, query)
 	if err != nil {
 		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
@@ -344,7 +344,7 @@ func (h *ProductQueryHandler) executeElasticsearchQuery(ctx context.Context, que
 		return nil, fmt.Errorf("invalid hits format")
 	}
 
-	products := make([]*entity.Product, 0, len(hitsArray))
+	products := make([]*productaggregate.Product, 0, len(hitsArray))
 	for _, hit := range hitsArray {
 		hitMap, ok := hit.(map[string]interface{})
 		if !ok {
@@ -371,7 +371,7 @@ func (h *ProductQueryHandler) executeElasticsearchQuery(ctx context.Context, que
 }
 
 // mapToProduct converts a map (from Elasticsearch) to Product entity
-func (h *ProductQueryHandler) mapToProduct(ctx context.Context, data map[string]interface{}) (*entity.Product, error) {
+func (h *ProductQueryHandler) mapToProduct(ctx context.Context, data map[string]interface{}) (*productaggregate.Product, error) {
 	// Get product ID
 	idStr, ok := data["id"].(string)
 	if !ok {
@@ -384,7 +384,7 @@ func (h *ProductQueryHandler) mapToProduct(ctx context.Context, data map[string]
 	}
 
 	// Get product from database to get full entity with relationships
-	var product *entity.Product
+	var product *productaggregate.Product
 	err = h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
 		product, err = h.uow.Product(ctx).FindByID(ctx, id)

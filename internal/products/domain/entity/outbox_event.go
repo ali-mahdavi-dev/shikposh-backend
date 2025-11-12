@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"shikposh-backend/pkg/framework/adapter"
+
+	"gorm.io/gorm"
 )
 
 type OutboxEventStatus string
@@ -15,8 +17,14 @@ const (
 	OutboxStatusFailed     OutboxEventStatus = "failed"
 )
 
+type OutboxEventID uint64
+
 type OutboxEvent struct {
 	adapter.BaseEntity
+	ID            OutboxEventID `gorm:"primaryKey"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     gorm.DeletedAt         `gorm:"index"`
 	EventType     string                 `json:"event_type" gorm:"event_type"`
 	AggregateType string                 `json:"aggregate_type" gorm:"aggregate_type"`
 	AggregateID   string                 `json:"aggregate_id" gorm:"aggregate_id"`

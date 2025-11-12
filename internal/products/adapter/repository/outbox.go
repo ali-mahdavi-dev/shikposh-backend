@@ -14,10 +14,10 @@ type OutboxRepository interface {
 	adapter.BaseRepository[*entity.OutboxEvent]
 	Create(ctx context.Context, event *entity.OutboxEvent) error
 	GetPendingEvents(ctx context.Context, limit int) ([]*entity.OutboxEvent, error)
-	MarkAsProcessing(ctx context.Context, id uint64) error
-	MarkAsCompleted(ctx context.Context, id uint64) error
-	MarkAsFailed(ctx context.Context, id uint64, errorMsg string) error
-	IncrementRetry(ctx context.Context, id uint64) error
+	MarkAsProcessing(ctx context.Context, id entity.OutboxEventID) error
+	MarkAsCompleted(ctx context.Context, id entity.OutboxEventID) error
+	MarkAsFailed(ctx context.Context, id entity.OutboxEventID, errorMsg string) error
+	IncrementRetry(ctx context.Context, id entity.OutboxEventID) error
 }
 
 type outboxGormRepository struct {
@@ -51,19 +51,19 @@ func (r *outboxGormRepository) GetPendingEvents(ctx context.Context, limit int) 
 	return events, err
 }
 
-func (r *outboxGormRepository) MarkAsProcessing(ctx context.Context, id uint64) error {
+func (r *outboxGormRepository) MarkAsProcessing(ctx context.Context, id entity.OutboxEventID) error {
 	return r.Model(ctx).
-		Where("id = ?", id).
+		Where("id = ?", uint64(id)).
 		Updates(map[string]interface{}{
 			"status":     entity.OutboxStatusProcessing,
 			"updated_at": time.Now(),
 		}).Error
 }
 
-func (r *outboxGormRepository) MarkAsCompleted(ctx context.Context, id uint64) error {
+func (r *outboxGormRepository) MarkAsCompleted(ctx context.Context, id entity.OutboxEventID) error {
 	now := time.Now()
 	return r.Model(ctx).
-		Where("id = ?", id).
+		Where("id = ?", uint64(id)).
 		Updates(map[string]interface{}{
 			"status":       entity.OutboxStatusCompleted,
 			"processed_at": now,
@@ -71,9 +71,9 @@ func (r *outboxGormRepository) MarkAsCompleted(ctx context.Context, id uint64) e
 		}).Error
 }
 
-func (r *outboxGormRepository) MarkAsFailed(ctx context.Context, id uint64, errorMsg string) error {
+func (r *outboxGormRepository) MarkAsFailed(ctx context.Context, id entity.OutboxEventID, errorMsg string) error {
 	return r.Model(ctx).
-		Where("id = ?", id).
+		Where("id = ?", uint64(id)).
 		Updates(map[string]interface{}{
 			"status":        entity.OutboxStatusFailed,
 			"error_message": errorMsg,
@@ -81,8 +81,8 @@ func (r *outboxGormRepository) MarkAsFailed(ctx context.Context, id uint64, erro
 		}).Error
 }
 
-func (r *outboxGormRepository) IncrementRetry(ctx context.Context, id uint64) error {
+func (r *outboxGormRepository) IncrementRetry(ctx context.Context, id entity.OutboxEventID) error {
 	return r.Model(ctx).
-		Where("id = ?", id).
+		Where("id = ?", uint64(id)).
 		Update("retry_count", gorm.Expr("retry_count + 1")).Error
 }

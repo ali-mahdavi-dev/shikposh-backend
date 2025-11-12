@@ -7,7 +7,6 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/entity"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/domain/entity/shared"
 	appadapter "shikposh-backend/pkg/framework/adapter"
@@ -37,7 +36,7 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 
 		// Create product
 		cmd.Slug = GenerateSlug(cmd.Name)
-		product := entity.NewProduct(cmd)
+		product := product_aggregate.NewProduct(cmd)
 
 		// Convert Features
 		if len(cmd.Features) > 0 {

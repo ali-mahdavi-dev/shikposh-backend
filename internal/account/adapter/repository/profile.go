@@ -14,7 +14,7 @@ var ErrProfileNotFound = errors.New("profile not found")
 
 type ProfileRepository interface {
 	adapter.BaseRepository[*entity.Profile]
-	FindByUserID(ctx context.Context, userID uint64) (*entity.Profile, error)
+	FindByUserID(ctx context.Context, userID entity.UserID) (*entity.Profile, error)
 }
 
 type profileGormRepository struct {
@@ -33,8 +33,8 @@ func (p *profileGormRepository) Model(ctx context.Context) *gorm.DB {
 	return p.db.WithContext(ctx).Model(&entity.Profile{})
 }
 
-func (p *profileGormRepository) FindByUserID(ctx context.Context, userID uint64) (*entity.Profile, error) {
-	profile, err := p.FindByField(ctx, "user_id", userID)
+func (p *profileGormRepository) FindByUserID(ctx context.Context, userID entity.UserID) (*entity.Profile, error) {
+	profile, err := p.FindByField(ctx, "user_id", uint64(userID))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrProfileNotFound

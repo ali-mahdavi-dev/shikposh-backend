@@ -1,16 +1,27 @@
 package product_aggregate
 
 import (
+	"time"
+
 	"shikposh-backend/internal/products/domain/commands"
+	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/pkg/framework/adapter"
+
+	"gorm.io/gorm"
 )
+
+type ProductDetailID uint64
 
 // ProductDetail is an Aggregate Entity within the Product Aggregate.
 // It should only be accessed through the Product aggregate root.
 type ProductDetail struct {
 	adapter.BaseEntity
-	ProductID     uint64              `json:"product_id" gorm:"product_id"`
+	ID            ProductDetailID `gorm:"primaryKey"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     gorm.DeletedAt  `gorm:"index"`
+	ProductID     types.ProductID `json:"product_id" gorm:"product_id"`
 	ColorKey      *string             `json:"color_key,omitempty" gorm:"color_key"`           // e.g., "red", "blue" - nullable for size-only details
 	ColorName     *string             `json:"color_name,omitempty" gorm:"color_name"`         // e.g., "قرمز", "آبی" - nullable
 	SizeKey       *string             `json:"size_key,omitempty" gorm:"size_key"`             // e.g., "M", "L" - nullable for color-only details
@@ -26,7 +37,7 @@ func (pd *ProductDetail) TableName() string {
 }
 
 // NewProductDetail creates a new ProductDetail instance using command root input
-func NewProductDetail(productID uint64, input commands.ProductDetailInput) ProductDetail {
+func NewProductDetail(productID types.ProductID, input commands.ProductDetailInput) ProductDetail {
 	return ProductDetail{
 		ProductID:     productID,
 		ColorKey:      input.ColorKey,

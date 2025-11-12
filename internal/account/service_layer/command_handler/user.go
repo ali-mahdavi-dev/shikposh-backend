@@ -78,7 +78,7 @@ func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.Registe
 
 func (h *UserHandler) LogoutHandler(ctx context.Context, cmd *commands.Logout) error {
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
-		token, err := h.uow.Token(ctx).FindByUserID(ctx, cmd.UserID)
+		token, err := h.uow.Token(ctx).FindByUserID(ctx, entity.UserID(cmd.UserID))
 		if err != nil {
 			if errors.Is(err, repository.ErrTokenNotFound) {
 				return apperrors.NotFound(phrases.UserNotFound)
@@ -132,7 +132,7 @@ func (h *UserHandler) LoginHandler(ctx context.Context, cmd *commands.LoginUser)
 		}
 
 		// Generate new access token
-		accessToken, err = jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, user.ID)
+		accessToken, err = jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, uint64(user.ID))
 		if err != nil {
 			return fmt.Errorf("UserHandler.LoginHandler fail generate token: %w", err)
 		}

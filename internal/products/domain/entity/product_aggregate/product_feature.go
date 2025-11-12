@@ -1,16 +1,27 @@
 package product_aggregate
 
 import (
+	"time"
+
+	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/pkg/framework/adapter"
+
+	"gorm.io/gorm"
 )
+
+type ProductFeatureID uint64
 
 // ProductFeature is an Aggregate Entity within the Product Aggregate.
 // It should only be accessed through the Product aggregate root.
 type ProductFeature struct {
 	adapter.BaseEntity
-	ProductID uint64 `json:"product_id" gorm:"product_id"`
-	Feature   string `json:"feature" gorm:"feature"`       // e.g., "ضد آب", "قابل شستشو"
-	Order     int    `json:"order" gorm:"order;default:0"` // For ordering features
+	ID        ProductFeatureID `gorm:"primaryKey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt  `gorm:"index"`
+	ProductID types.ProductID `json:"product_id" gorm:"product_id"`
+	Feature   string          `json:"feature" gorm:"feature"`       // e.g., "ضد آب", "قابل شستشو"
+	Order     int             `json:"order" gorm:"order;default:0"` // For ordering features
 }
 
 func (pf *ProductFeature) TableName() string {
@@ -18,7 +29,7 @@ func (pf *ProductFeature) TableName() string {
 }
 
 // NewProductFeature creates a new ProductFeature instance
-func NewProductFeature(productID uint64, feature string, order int) ProductFeature {
+func NewProductFeature(productID types.ProductID, feature string, order int) ProductFeature {
 	return ProductFeature{
 		ProductID: productID,
 		Feature:   feature,

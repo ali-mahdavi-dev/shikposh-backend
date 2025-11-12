@@ -1,15 +1,28 @@
 package entity
 
 import (
+	"time"
+
+	accountentity "shikposh-backend/internal/account/domain/entity"
 	"shikposh-backend/internal/products/domain/commands"
+	"shikposh-backend/internal/products/domain/entity/product_aggregate"
+	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/pkg/framework/adapter"
+
+	"gorm.io/gorm"
 )
+
+type ReviewID uint64
 
 type Review struct {
 	adapter.BaseEntity
-	ProductID  uint64   `json:"product_id" gorm:"product_id"`
-	Product    *Product `json:"product,omitempty" gorm:"foreignKey:ProductID"`
-	UserID     uint64   `json:"user_id" gorm:"user_id"`
+	ID         ReviewID `gorm:"primaryKey"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  gorm.DeletedAt `gorm:"index"`
+	ProductID  types.ProductID                `json:"product_id" gorm:"product_id"`
+	Product    *product_aggregate.Product     `json:"product,omitempty" gorm:"foreignKey:ProductID"`
+	UserID     accountentity.UserID `json:"user_id" gorm:"user_id"`
 	UserName   string   `json:"user_name" gorm:"user_name"`
 	UserAvatar *string  `json:"user_avatar,omitempty" gorm:"user_avatar"`
 	Rating     int      `json:"rating" gorm:"rating"`
@@ -26,8 +39,8 @@ func (r *Review) TableName() string {
 // NewReview creates a new Review instance using a command
 func NewReview(cmd *commands.CreateReview) *Review {
 	return &Review{
-		ProductID:  cmd.ProductID,
-		UserID:     cmd.UserID,
+		ProductID:  types.ProductID(cmd.ProductID),
+		UserID:     accountentity.UserID(cmd.UserID),
 		UserName:   cmd.UserName,
 		Rating:     cmd.Rating,
 		Comment:    cmd.Comment,

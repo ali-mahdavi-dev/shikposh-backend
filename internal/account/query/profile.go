@@ -28,7 +28,7 @@ func (h *ProfileQueryHandler) GetProfileByID(ctx context.Context, id uint64) (*e
 	return profile, err
 }
 
-func (h *ProfileQueryHandler) GetProfileByUserID(ctx context.Context, userID uint64) (*entity.Profile, error) {
+func (h *ProfileQueryHandler) GetProfileByUserID(ctx context.Context, userID entity.UserID) (*entity.Profile, error) {
 	var profile *entity.Profile
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error

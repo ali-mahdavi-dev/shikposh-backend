@@ -7,7 +7,8 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/entity"
+	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
+	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
 	httpapi "shikposh-backend/pkg/framework/api/http"
@@ -18,7 +19,7 @@ import (
 )
 
 // convertProductsToMap converts a slice of products to map format for JSON response
-func convertProductsToMap(products []*entity.Product) []map[string]interface{} {
+func convertProductsToMap(products []*productaggregate.Product) []map[string]interface{} {
 	result := make([]map[string]interface{}, len(products))
 	for i, product := range products {
 		result[i] = product.ToMap()
@@ -145,7 +146,7 @@ func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
 	}
 
 	// Use filter if any filters are set, otherwise get all
-	var productsList []*entity.Product
+	var productsList []*productaggregate.Product
 	var err error
 	if filters.Query != nil || filters.Category != nil || filters.MinPrice != nil ||
 		filters.MaxPrice != nil || filters.Rating != nil || filters.Featured != nil ||
@@ -300,7 +301,7 @@ func (p *ProductHandler) GetReviewsByProductID(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	reviews, err := p.reviewQueryHandler.GetReviewsByProductID(ctx, productID)
+	reviews, err := p.reviewQueryHandler.GetReviewsByProductID(ctx, types.ProductID(productID))
 	if err != nil {
 		if errors.Is(err, repository.ErrProductNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))

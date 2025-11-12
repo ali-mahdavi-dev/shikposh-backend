@@ -1,16 +1,26 @@
 package entity
 
 import (
+	"time"
+
 	"shikposh-backend/pkg/framework/adapter"
+
+	"gorm.io/gorm"
 )
+
+type TokenID uint64
 
 type Token struct {
 	adapter.BaseEntity
-	Token  string `json:"token" gorm:"token"`
-	UserID uint64 `json:"user_id" gorm:"user_id"`
+	ID        TokenID `gorm:"primaryKey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	Token     string         `json:"token" gorm:"token"`
+	UserID    UserID         `json:"user_id" gorm:"user_id"`
 }
 
-func NewToken(token string, userID uint64) *Token {
+func NewToken(token string, userID UserID) *Token {
 	return &Token{
 		Token:  token,
 		UserID: userID,

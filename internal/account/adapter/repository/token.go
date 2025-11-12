@@ -14,7 +14,7 @@ var ErrTokenNotFound = errors.New("Token not found")
 
 type TokenRepository interface {
 	adapter.BaseRepository[*entity.Token]
-	FindByUserID(ctx context.Context, userID uint64) (*entity.Token, error)
+	FindByUserID(ctx context.Context, userID entity.UserID) (*entity.Token, error)
 }
 
 type tokenGormRepository struct {
@@ -33,8 +33,8 @@ func (u *tokenGormRepository) Model(ctx context.Context) *gorm.DB {
 	return u.db.WithContext(ctx).Model(&entity.Token{})
 }
 
-func (u *tokenGormRepository) FindByUserID(ctx context.Context, userID uint64) (*entity.Token, error) {
-	token, err := u.FindByField(ctx, "user_id", userID)
+func (u *tokenGormRepository) FindByUserID(ctx context.Context, userID entity.UserID) (*entity.Token, error) {
+	token, err := u.FindByField(ctx, "user_id", uint64(userID))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrTokenNotFound

@@ -2,28 +2,16 @@ package adapter
 
 import (
 	"sync"
-	"time"
-
-	"gorm.io/gorm"
 )
 
 type Entity interface {
-	GetID() uint64
 	Event() []any
 	AddEvent(event any)
 }
 
 type BaseEntity struct {
-	ID        uint64 `gorm:"primaryKey"`
-	Events    []any  `gorm:"-"`
-	eventsMu  sync.Mutex
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
-}
-
-func (u *BaseEntity) GetID() uint64 {
-	return u.ID
+	Events   []any `gorm:"-"`
+	eventsMu sync.Mutex
 }
 
 // Event returns all events and clears them atomically
