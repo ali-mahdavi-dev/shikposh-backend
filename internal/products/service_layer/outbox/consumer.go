@@ -2,100 +2,54 @@ package outbox
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
 	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
 	"shikposh-backend/pkg/framework/infrastructure/logging"
+	frameworkoutbox "shikposh-backend/pkg/framework/service_layer/outbox"
 	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
-
-	"github.com/IBM/sarama"
 )
 
+// Consumer wraps the framework outbox consumer for products module
 type Consumer struct {
+	*frameworkoutbox.Consumer
+}
+
+// ProductEventHandler implements frameworkoutbox.EventHandler for products
+type ProductEventHandler struct {
 	uow           unit_of_work.PGUnitOfWork
 	elasticsearch elasticsearchx.Connection
-	kafka         interface {
-		ConsumeMessages(topic string, fn func(pc sarama.PartitionConsumer)) error
-	}
-	indexName string
-	stopChan  chan struct{}
+	indexName     string
 }
 
 func NewConsumer(
 	uow unit_of_work.PGUnitOfWork,
 	elasticsearch elasticsearchx.Connection,
-	kafkaService interface {
-		ConsumeMessages(topic string, fn func(pc sarama.PartitionConsumer)) error
-	},
+	kafkaService frameworkoutbox.MessageConsumer,
 ) *Consumer {
-	return &Consumer{
+	if elasticsearch == nil {
+		logging.Warn("Elasticsearch not available, consumer will not start").Log()
+		return nil
+	}
+
+	handler := &ProductEventHandler{
 		uow:           uow,
 		elasticsearch: elasticsearch,
-		kafka:         kafkaService,
 		indexName:     "products",
-		stopChan:      make(chan struct{}),
+	}
+
+	frameworkConsumer := frameworkoutbox.NewConsumer(kafkaService, handler, "product.events")
+	return &Consumer{
+		Consumer: frameworkConsumer,
 	}
 }
 
-// Start starts the Kafka consumer
-func (c *Consumer) Start(ctx context.Context) error {
-	if c.elasticsearch == nil {
-		logging.Warn("Elasticsearch not available, consumer will not start").Log()
-		return fmt.Errorf("elasticsearch connection is nil")
-	}
-
-	handler := func(pc sarama.PartitionConsumer) {
-		for {
-			select {
-			case <-ctx.Done():
-				logging.Info("Kafka consumer stopped: context cancelled").Log()
-				return
-			case <-c.stopChan:
-				logging.Info("Kafka consumer stopped: stop signal received").Log()
-				return
-			case message := <-pc.Messages():
-				if err := c.handleMessage(ctx, message); err != nil {
-					logging.Error("Failed to handle Kafka message").
-						WithError(err).
-						WithInt("partition", int(message.Partition)).
-						WithInt64("offset", message.Offset).
-						Log()
-				}
-			case err := <-pc.Errors():
-				if err != nil {
-					logging.Error("Kafka consumer error").
-						WithError(err.Err).
-						Log()
-				}
-			}
-		}
-	}
-
-	return c.kafka.ConsumeMessages(KafkaTopicProductEvents, handler)
-}
-
-// Stop stops the Kafka consumer
-func (c *Consumer) Stop() {
-	close(c.stopChan)
-}
-
-func (c *Consumer) handleMessage(ctx context.Context, message *sarama.ConsumerMessage) error {
-	var kafkaMessage map[string]interface{}
-	if err := json.Unmarshal(message.Value, &kafkaMessage); err != nil {
-		return fmt.Errorf("failed to unmarshal kafka message: %w", err)
-	}
-
-	eventType, ok := kafkaMessage["event_type"].(string)
-	if !ok {
-		return fmt.Errorf("event_type is missing or invalid")
-	}
-
-	// Handle different event types
+// HandleEvent implements frameworkoutbox.EventHandler
+func (h *ProductEventHandler) HandleEvent(ctx context.Context, eventType string, payload map[string]interface{}) error {
 	switch eventType {
 	case "ProductCreatedEvent":
-		return c.handleProductCreatedEvent(ctx, kafkaMessage)
+		return h.handleProductCreatedEvent(ctx, payload)
 	default:
 		logging.Warn("Unknown event type, skipping").
 			WithString("event_type", eventType).
@@ -104,12 +58,7 @@ func (c *Consumer) handleMessage(ctx context.Context, message *sarama.ConsumerMe
 	}
 }
 
-func (c *Consumer) handleProductCreatedEvent(ctx context.Context, kafkaMessage map[string]interface{}) error {
-	payload, ok := kafkaMessage["payload"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("payload is missing or invalid")
-	}
-
+func (h *ProductEventHandler) handleProductCreatedEvent(ctx context.Context, payload map[string]interface{}) error {
 	// Extract product_id from payload
 	productIDRaw, ok := payload["product_id"]
 	if !ok {
@@ -132,8 +81,8 @@ func (c *Consumer) handleProductCreatedEvent(ctx context.Context, kafkaMessage m
 
 	// Get full product from database
 	var productMap map[string]interface{}
-	err := c.uow.Do(ctx, func(ctx context.Context) error {
-		product, err := c.uow.Product(ctx).FindByID(ctx, productID)
+	err := h.uow.Do(ctx, func(ctx context.Context) error {
+		product, err := h.uow.Product(ctx).FindByID(ctx, productID)
 		if err != nil {
 			return fmt.Errorf("failed to get product from database: %w", err)
 		}
@@ -149,15 +98,14 @@ func (c *Consumer) handleProductCreatedEvent(ctx context.Context, kafkaMessage m
 
 	// Index product in Elasticsearch
 	productIDStr := strconv.FormatUint(productID, 10)
-	if err := c.elasticsearch.IndexDocument(ctx, c.indexName, productIDStr, productMap); err != nil {
+	if err := h.elasticsearch.IndexDocument(ctx, h.indexName, productIDStr, productMap); err != nil {
 		return fmt.Errorf("failed to index product in elasticsearch: %w", err)
 	}
 
 	logging.Info("Product indexed in Elasticsearch from Kafka").
 		WithInt64("product_id", int64(productID)).
-		WithString("index", c.indexName).
+		WithString("index", h.indexName).
 		Log()
 
 	return nil
 }
-

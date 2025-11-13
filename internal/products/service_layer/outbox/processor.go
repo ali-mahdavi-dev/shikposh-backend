@@ -2,151 +2,167 @@ package outbox
 
 import (
 	"context"
-	"fmt"
-	"time"
 
+	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/entity"
-	"shikposh-backend/pkg/framework/infrastructure/logging"
+	"shikposh-backend/pkg/framework/adapter"
+	frameworkoutbox "shikposh-backend/pkg/framework/service_layer/outbox"
 	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+
+	"gorm.io/gorm"
 )
 
-const (
-	KafkaTopicProductEvents = "product.events"
-	BatchSize               = 10
-	PollInterval            = 5 * time.Second
-)
-
-type KafkaProducer interface {
-	SendMessage(topic string, message interface{}) error
-}
-
+// Processor wraps the framework outbox processor for products module
 type Processor struct {
-	uow      unit_of_work.PGUnitOfWork
-	kafka    KafkaProducer
-	stopChan chan struct{}
+	*frameworkoutbox.Processor
 }
 
-func NewProcessor(uow unit_of_work.PGUnitOfWork, kafkaProducer KafkaProducer) *Processor {
+// NewProcessor creates a new outbox processor using the framework processor
+func NewProcessor(uow unit_of_work.PGUnitOfWork, kafkaProducer frameworkoutbox.MessagePublisher) *Processor {
+	// Get the outbox repository from UoW
+	repo := uow.Outbox(context.Background())
+
+	// Create a wrapper repository that implements frameworkoutbox.Repository
+	frameworkRepo := &repositoryWrapper{repo: repo}
+
+	// Create framework processor config
+	config := frameworkoutbox.DefaultProcessorConfig("product.events")
+
+	// Create framework processor
+	frameworkProcessor := frameworkoutbox.NewProcessor(frameworkRepo, kafkaProducer, config)
+
 	return &Processor{
-		uow:      uow,
-		kafka:    kafkaProducer,
-		stopChan: make(chan struct{}),
+		Processor: frameworkProcessor,
 	}
 }
 
-// Start starts the outbox processor in a background goroutine
-func (p *Processor) Start(ctx context.Context) {
-	go p.run(ctx)
+// repositoryWrapper wraps products OutboxRepository to implement frameworkoutbox.Repository
+type repositoryWrapper struct {
+	repo repository.OutboxRepository
 }
 
-// Stop stops the outbox processor
-func (p *Processor) Stop() {
-	close(p.stopChan)
+// BaseRepository methods
+func (w *repositoryWrapper) FindByID(ctx context.Context, id uint64) (*frameworkoutbox.OutboxEvent, error) {
+	event, err := w.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return convertToFrameworkEvent(event), nil
 }
 
-func (p *Processor) run(ctx context.Context) {
-	ticker := time.NewTicker(PollInterval)
-	defer ticker.Stop()
+func (w *repositoryWrapper) FindByField(ctx context.Context, field string, value interface{}) (*frameworkoutbox.OutboxEvent, error) {
+	event, err := w.repo.FindByField(ctx, field, value)
+	if err != nil {
+		return nil, err
+	}
+	return convertToFrameworkEvent(event), nil
+}
 
-	for {
-		select {
-		case <-ctx.Done():
-			logging.Info("Outbox processor stopped: context cancelled").Log()
-			return
-		case <-p.stopChan:
-			logging.Info("Outbox processor stopped: stop signal received").Log()
-			return
-		case <-ticker.C:
-			if err := p.processBatch(ctx); err != nil {
-				logging.Error("Failed to process outbox batch").
-					WithError(err).
-					Log()
-			}
+func (w *repositoryWrapper) Remove(ctx context.Context, model *frameworkoutbox.OutboxEvent, softDelete bool) error {
+	productsEvent := convertFromFrameworkEvent(model)
+	return w.repo.Remove(ctx, productsEvent, softDelete)
+}
+
+func (w *repositoryWrapper) Modify(ctx context.Context, model *frameworkoutbox.OutboxEvent) error {
+	productsEvent := convertFromFrameworkEvent(model)
+	return w.repo.Modify(ctx, productsEvent)
+}
+
+func (w *repositoryWrapper) Save(ctx context.Context, model *frameworkoutbox.OutboxEvent) error {
+	productsEvent := convertFromFrameworkEvent(model)
+	return w.repo.Save(ctx, productsEvent)
+}
+
+func (w *repositoryWrapper) Seen() []adapter.Entity {
+	seen := w.repo.Seen()
+	result := make([]adapter.Entity, len(seen))
+	for i, e := range seen {
+		if outboxEvent, ok := e.(*entity.OutboxEvent); ok {
+			result[i] = convertToFrameworkEvent(outboxEvent)
 		}
 	}
+	return result
 }
 
-func (p *Processor) processBatch(ctx context.Context) error {
-	return p.uow.Do(ctx, func(ctx context.Context) error {
-		// Get pending events
-		events, err := p.uow.Outbox(ctx).GetPendingEvents(ctx, BatchSize)
-		if err != nil {
-			return fmt.Errorf("failed to get pending events: %w", err)
-		}
-
-		if len(events) == 0 {
-			return nil // No events to process
-		}
-
-		logging.Info("Processing outbox batch").
-			WithInt("count", len(events)).
-			Log()
-
-		for _, event := range events {
-			if err := p.processEvent(ctx, event); err != nil {
-				logging.Error("Failed to process outbox event").
-					WithInt64("event_id", int64(event.ID)).
-					WithString("event_type", event.EventType).
-					WithError(err).
-					Log()
-
-				// Increment retry count
-				if incErr := p.uow.Outbox(ctx).IncrementRetry(ctx, event.ID); incErr != nil {
-					logging.Error("Failed to increment retry count").
-						WithInt64("event_id", int64(event.ID)).
-						WithError(incErr).
-						Log()
-				}
-
-				// Mark as failed if max retries reached
-				if event.RetryCount+1 >= event.MaxRetries {
-					if markErr := p.uow.Outbox(ctx).MarkAsFailed(ctx, event.ID, err.Error()); markErr != nil {
-						logging.Error("Failed to mark event as failed").
-							WithInt64("event_id", int64(event.ID)).
-							WithError(markErr).
-							Log()
-					}
-				}
-
-				continue // Continue with next event
-			}
-		}
-
-		return nil
-	})
+func (w *repositoryWrapper) SetSeen(model adapter.Entity) {
+	if fe, ok := model.(*frameworkoutbox.OutboxEvent); ok {
+		productsEvent := convertFromFrameworkEvent(fe)
+		w.repo.SetSeen(productsEvent)
+	}
 }
 
-func (p *Processor) processEvent(ctx context.Context, event *entity.OutboxEvent) error {
-	// Mark as processing
-	if err := p.uow.Outbox(ctx).MarkAsProcessing(ctx, event.ID); err != nil {
-		return fmt.Errorf("failed to mark event as processing: %w", err)
+// Outbox-specific methods
+func (w *repositoryWrapper) Create(ctx context.Context, event *frameworkoutbox.OutboxEvent) error {
+	productsEvent := convertFromFrameworkEvent(event)
+	return w.repo.Create(ctx, productsEvent)
+}
+
+func (w *repositoryWrapper) GetPendingEvents(ctx context.Context, limit int) ([]*frameworkoutbox.OutboxEvent, error) {
+	events, err := w.repo.GetPendingEvents(ctx, limit)
+	if err != nil {
+		return nil, err
 	}
 
-	// Prepare Kafka message
-	message := map[string]interface{}{
-		"event_id":       event.ID,
-		"event_type":     event.EventType,
-		"aggregate_type": event.AggregateType,
-		"aggregate_id":   event.AggregateID,
-		"payload":        event.Payload,
-		"created_at":     event.CreatedAt,
+	frameworkEvents := make([]*frameworkoutbox.OutboxEvent, len(events))
+	for i, e := range events {
+		frameworkEvents[i] = convertToFrameworkEvent(e)
 	}
+	return frameworkEvents, nil
+}
 
-	// Send to Kafka
-	if err := p.kafka.SendMessage(KafkaTopicProductEvents, message); err != nil {
-		return fmt.Errorf("failed to send message to kafka: %w", err)
+func (w *repositoryWrapper) MarkAsProcessing(ctx context.Context, id frameworkoutbox.OutboxEventID) error {
+	return w.repo.MarkAsProcessing(ctx, entity.OutboxEventID(id))
+}
+
+func (w *repositoryWrapper) MarkAsCompleted(ctx context.Context, id frameworkoutbox.OutboxEventID) error {
+	return w.repo.MarkAsCompleted(ctx, entity.OutboxEventID(id))
+}
+
+func (w *repositoryWrapper) MarkAsFailed(ctx context.Context, id frameworkoutbox.OutboxEventID, errorMsg string) error {
+	return w.repo.MarkAsFailed(ctx, entity.OutboxEventID(id), errorMsg)
+}
+
+func (w *repositoryWrapper) IncrementRetry(ctx context.Context, id frameworkoutbox.OutboxEventID) error {
+	return w.repo.IncrementRetry(ctx, entity.OutboxEventID(id))
+}
+
+func (w *repositoryWrapper) Model(ctx context.Context) *gorm.DB {
+	return w.repo.Model(ctx)
+}
+
+// Helper functions for conversion
+func convertToFrameworkEvent(e *entity.OutboxEvent) *frameworkoutbox.OutboxEvent {
+	return &frameworkoutbox.OutboxEvent{
+		ID:            frameworkoutbox.OutboxEventID(e.ID),
+		CreatedAt:     e.CreatedAt,
+		UpdatedAt:     e.UpdatedAt,
+		DeletedAt:     e.DeletedAt,
+		EventType:     e.EventType,
+		AggregateType: e.AggregateType,
+		AggregateID:   e.AggregateID,
+		Payload:       e.Payload,
+		Status:        frameworkoutbox.OutboxEventStatus(e.Status),
+		RetryCount:    e.RetryCount,
+		MaxRetries:    e.MaxRetries,
+		ErrorMessage:  e.ErrorMessage,
+		ProcessedAt:   e.ProcessedAt,
 	}
+}
 
-	// Mark as completed
-	if err := p.uow.Outbox(ctx).MarkAsCompleted(ctx, event.ID); err != nil {
-		return fmt.Errorf("failed to mark event as completed: %w", err)
+func convertFromFrameworkEvent(e *frameworkoutbox.OutboxEvent) *entity.OutboxEvent {
+	return &entity.OutboxEvent{
+		ID:            entity.OutboxEventID(e.ID),
+		CreatedAt:     e.CreatedAt,
+		UpdatedAt:     e.UpdatedAt,
+		DeletedAt:     e.DeletedAt,
+		EventType:     e.EventType,
+		AggregateType: e.AggregateType,
+		AggregateID:   e.AggregateID,
+		Payload:       e.Payload,
+		Status:        entity.OutboxEventStatus(e.Status),
+		RetryCount:    e.RetryCount,
+		MaxRetries:    e.MaxRetries,
+		ErrorMessage:  e.ErrorMessage,
+		ProcessedAt:   e.ProcessedAt,
 	}
-
-	logging.Info("Outbox event sent to Kafka successfully").
-		WithInt64("event_id", int64(event.ID)).
-		WithString("event_type", event.EventType).
-		WithString("aggregate_id", event.AggregateID).
-		Log()
-
-	return nil
 }

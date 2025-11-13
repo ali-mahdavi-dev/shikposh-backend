@@ -84,13 +84,15 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 	// Initialize Kafka consumer (consumes from Kafka and indexes in Elasticsearch)
 	if elasticsearch != nil {
 		outboxConsumer := outbox.NewConsumer(uow, elasticsearch, kafkaService)
-		go func() {
-			if err := outboxConsumer.Start(ctx); err != nil {
-				logging.Error("Failed to start outbox consumer").
-					WithError(err).
-					Log()
-			}
-		}()
+		if outboxConsumer != nil {
+			go func() {
+				if err := outboxConsumer.Start(ctx); err != nil {
+					logging.Error("Failed to start outbox consumer").
+						WithError(err).
+						Log()
+				}
+			}()
+		}
 	} else {
 		logging.Warn("Elasticsearch not available, outbox consumer will not start").Log()
 	}

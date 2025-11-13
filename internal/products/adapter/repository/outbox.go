@@ -2,16 +2,17 @@ package repository
 
 import (
 	"context"
-	"time"
 
 	"shikposh-backend/internal/products/domain/entity"
 	"shikposh-backend/pkg/framework/adapter"
+	frameworkoutbox "shikposh-backend/pkg/framework/service_layer/outbox"
 
 	"gorm.io/gorm"
 )
 
 type OutboxRepository interface {
 	adapter.BaseRepository[*entity.OutboxEvent]
+	Model(ctx context.Context) *gorm.DB
 	Create(ctx context.Context, event *entity.OutboxEvent) error
 	GetPendingEvents(ctx context.Context, limit int) ([]*entity.OutboxEvent, error)
 	MarkAsProcessing(ctx context.Context, id entity.OutboxEventID) error
@@ -22,67 +23,89 @@ type OutboxRepository interface {
 
 type outboxGormRepository struct {
 	adapter.BaseRepository[*entity.OutboxEvent]
-	db *gorm.DB
+	frameworkRepo frameworkoutbox.Repository
 }
 
 func NewOutboxRepository(db *gorm.DB) OutboxRepository {
+	frameworkRepo := frameworkoutbox.NewGormRepository(db, "")
 	return &outboxGormRepository{
 		BaseRepository: adapter.NewGormRepository[*entity.OutboxEvent](db),
-		db:             db,
+		frameworkRepo:  frameworkRepo,
 	}
 }
 
 func (r *outboxGormRepository) Model(ctx context.Context) *gorm.DB {
-	return r.db.WithContext(ctx).Model(&entity.OutboxEvent{})
+	return r.frameworkRepo.Model(ctx)
+}
+
+// convertToFramework converts products entity to framework entity
+func convertToFramework(event *entity.OutboxEvent) *frameworkoutbox.OutboxEvent {
+	return &frameworkoutbox.OutboxEvent{
+		ID:            frameworkoutbox.OutboxEventID(event.ID),
+		CreatedAt:     event.CreatedAt,
+		UpdatedAt:     event.UpdatedAt,
+		DeletedAt:     event.DeletedAt,
+		EventType:     event.EventType,
+		AggregateType: event.AggregateType,
+		AggregateID:   event.AggregateID,
+		Payload:       event.Payload,
+		Status:        frameworkoutbox.OutboxEventStatus(event.Status),
+		RetryCount:    event.RetryCount,
+		MaxRetries:    event.MaxRetries,
+		ErrorMessage:  event.ErrorMessage,
+		ProcessedAt:   event.ProcessedAt,
+	}
+}
+
+// convertFromFramework converts framework entity to products entity
+func convertFromFramework(event *frameworkoutbox.OutboxEvent) *entity.OutboxEvent {
+	return &entity.OutboxEvent{
+		ID:            entity.OutboxEventID(event.ID),
+		CreatedAt:     event.CreatedAt,
+		UpdatedAt:     event.UpdatedAt,
+		DeletedAt:     event.DeletedAt,
+		EventType:     event.EventType,
+		AggregateType: event.AggregateType,
+		AggregateID:   event.AggregateID,
+		Payload:       event.Payload,
+		Status:        entity.OutboxEventStatus(event.Status),
+		RetryCount:    event.RetryCount,
+		MaxRetries:    event.MaxRetries,
+		ErrorMessage:  event.ErrorMessage,
+		ProcessedAt:   event.ProcessedAt,
+	}
 }
 
 func (r *outboxGormRepository) Create(ctx context.Context, event *entity.OutboxEvent) error {
-	return r.Model(ctx).Create(event).Error
+	frameworkEvent := convertToFramework(event)
+	return r.frameworkRepo.Create(ctx, frameworkEvent)
 }
 
 func (r *outboxGormRepository) GetPendingEvents(ctx context.Context, limit int) ([]*entity.OutboxEvent, error) {
-	var events []*entity.OutboxEvent
-	err := r.Model(ctx).
-		Where("status = ?", entity.OutboxStatusPending).
-		Where("retry_count < max_retries").
-		Order("created_at ASC").
-		Limit(limit).
-		Find(&events).Error
-	return events, err
+	frameworkEvents, err := r.frameworkRepo.GetPendingEvents(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	events := make([]*entity.OutboxEvent, len(frameworkEvents))
+	for i, fe := range frameworkEvents {
+		events[i] = convertFromFramework(fe)
+	}
+	return events, nil
 }
 
 func (r *outboxGormRepository) MarkAsProcessing(ctx context.Context, id entity.OutboxEventID) error {
-	return r.Model(ctx).
-		Where("id = ?", uint64(id)).
-		Updates(map[string]interface{}{
-			"status":     entity.OutboxStatusProcessing,
-			"updated_at": time.Now(),
-		}).Error
+	return r.frameworkRepo.MarkAsProcessing(ctx, frameworkoutbox.OutboxEventID(id))
 }
 
 func (r *outboxGormRepository) MarkAsCompleted(ctx context.Context, id entity.OutboxEventID) error {
-	now := time.Now()
-	return r.Model(ctx).
-		Where("id = ?", uint64(id)).
-		Updates(map[string]interface{}{
-			"status":       entity.OutboxStatusCompleted,
-			"processed_at": now,
-			"updated_at":   now,
-		}).Error
+	return r.frameworkRepo.MarkAsCompleted(ctx, frameworkoutbox.OutboxEventID(id))
 }
 
 func (r *outboxGormRepository) MarkAsFailed(ctx context.Context, id entity.OutboxEventID, errorMsg string) error {
-	return r.Model(ctx).
-		Where("id = ?", uint64(id)).
-		Updates(map[string]interface{}{
-			"status":        entity.OutboxStatusFailed,
-			"error_message": errorMsg,
-			"updated_at":    time.Now(),
-		}).Error
+	return r.frameworkRepo.MarkAsFailed(ctx, frameworkoutbox.OutboxEventID(id), errorMsg)
 }
 
 func (r *outboxGormRepository) IncrementRetry(ctx context.Context, id entity.OutboxEventID) error {
-	return r.Model(ctx).
-		Where("id = ?", uint64(id)).
-		Update("retry_count", gorm.Expr("retry_count + 1")).Error
+	return r.frameworkRepo.IncrementRetry(ctx, frameworkoutbox.OutboxEventID(id))
 }
