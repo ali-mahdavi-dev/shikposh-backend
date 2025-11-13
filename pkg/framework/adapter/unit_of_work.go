@@ -26,7 +26,7 @@ type EventWithWaitGroup struct {
 
 type BaseUnitOfWork struct {
 	db           *gorm.DB
-	repositories map[string]SeenedRepository
+	repositories map[context.Context]map[string]SeenedRepository
 	ctxMap       map[context.Context]context.Context
 	eventCh      chan<- EventWithWaitGroup
 	mu           sync.RWMutex
@@ -35,7 +35,7 @@ type BaseUnitOfWork struct {
 func NewBaseUnitOfWork(db *gorm.DB, eventCh chan<- EventWithWaitGroup) UnitOfWork {
 	return &BaseUnitOfWork{
 		db:           db,
-		repositories: make(map[string]SeenedRepository),
+		repositories: make(map[context.Context]map[string]SeenedRepository),
 		ctxMap:       make(map[context.Context]context.Context),
 		eventCh:      eventCh,
 	}
@@ -55,7 +55,10 @@ func (uow *BaseUnitOfWork) Do(ctx context.Context, fc types.UowUseCase) error {
 		return fc(ctx)
 	}
 
-	return uow.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	// Collect events during transaction, but don't publish them yet
+	var collectedEvents []interface{}
+
+	err := uow.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Store transaction in context so GetSession can retrieve it
 		txCtx := context.WithValue(ctx, txKey{}, tx)
 		err := fc(txCtx)
@@ -63,10 +66,13 @@ func (uow *BaseUnitOfWork) Do(ctx context.Context, fc types.UowUseCase) error {
 			return err
 		}
 
+		// Collect events from repositories during transaction
 		uow.mu.RLock()
-		repos := make([]SeenedRepository, 0, len(uow.repositories))
-		for _, repo := range uow.repositories {
-			repos = append(repos, repo)
+		repos := make([]SeenedRepository, 0)
+		if ctxRepos, ok := uow.repositories[txCtx]; ok {
+			for _, repo := range ctxRepos {
+				repos = append(repos, repo)
+			}
 		}
 		uow.mu.RUnlock()
 
@@ -74,33 +80,54 @@ func (uow *BaseUnitOfWork) Do(ctx context.Context, fc types.UowUseCase) error {
 			return nil
 		}
 
-		var wg sync.WaitGroup
+		// Collect all events but don't publish them yet
 		for _, repo := range repos {
 			entities := repo.Seen()
 			for _, entity := range entities {
 				events := entity.Event()
-				for _, event := range events {
-					wg.Add(1)
-					select {
-					case uow.eventCh <- EventWithWaitGroup{Event: event, Ctx: txCtx, Wg: &wg}:
-						// Event sent with WaitGroup and transaction context, will be done when handled
-					case <-txCtx.Done():
-						wg.Done()
-						return txCtx.Err()
-					}
-				}
+				collectedEvents = append(collectedEvents, events...)
+			}
+		}
+
+		return nil
+	})
+
+	// If transaction failed, don't publish events
+	if err != nil {
+		uow.clearRepositories()
+		return err
+	}
+
+	// Transaction committed successfully, now publish events
+	// Each event gets its own context (derived from original context, without transaction)
+	if len(collectedEvents) > 0 {
+		var wg sync.WaitGroup
+		for _, event := range collectedEvents {
+			wg.Add(1)
+			// Create a new independent context for each event
+			// Derive from original context to preserve important values (request ID, user info, etc.)
+			// but create a fresh context instance for each event
+			eventCtx := context.WithValue(ctx, txKey{}, nil)
+			select {
+			case uow.eventCh <- EventWithWaitGroup{Event: event, Ctx: eventCtx, Wg: &wg}:
+				// Event sent with WaitGroup and its own context, will be done when handled
+			case <-ctx.Done():
+				wg.Done()
+				uow.clearRepositories()
+				return ctx.Err()
 			}
 		}
 		wg.Wait()
-		uow.clearRepositories()
-		return nil
-	})
+	}
+
+	uow.clearRepositories()
+	return nil
 }
 
 func (uow *BaseUnitOfWork) clearRepositories() {
 	uow.mu.Lock()
 	defer uow.mu.Unlock()
-	uow.repositories = make(map[string]SeenedRepository)
+	uow.repositories = make(map[context.Context]map[string]SeenedRepository)
 }
 
 func (uow *BaseUnitOfWork) GetOrCreateRepository(
@@ -109,16 +136,22 @@ func (uow *BaseUnitOfWork) GetOrCreateRepository(
 	factory func(*gorm.DB) SeenedRepository,
 ) SeenedRepository {
 	uow.mu.RLock()
-	if repo, ok := uow.repositories[key]; ok {
-		uow.mu.RUnlock()
-		return repo
+	ctxRepos, ctxExists := uow.repositories[ctx]
+	if ctxExists {
+		if repo, ok := ctxRepos[key]; ok {
+			uow.mu.RUnlock()
+			return repo
+		}
 	}
 	uow.mu.RUnlock()
 
-	// Create new repository instance
+	// Create new repository instance for this context
+	uow.mu.Lock()
+	defer uow.mu.Unlock()
+
 	session := uow.GetSession(ctx)
 	repo := factory(session)
-	uow.repositories[key] = repo
+	ctxRepos[key] = repo
 
 	return repo
 }
