@@ -9,6 +9,7 @@ import (
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/domain/entity/shared"
+	"shikposh-backend/internal/products/domain/specification"
 	"shikposh-backend/internal/products/domain/types"
 	appadapter "shikposh-backend/pkg/framework/adapter"
 	apperrors "shikposh-backend/pkg/framework/errors"
@@ -132,6 +133,12 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 			} else {
 				product.Specs = []product_aggregate.ProductSpec{}
 			}
+		}
+
+		// Validate product using specification pattern
+		canBePublishedSpec := specification.NewProductCanBePublishedSpecification()
+		if !canBePublishedSpec.IsSatisfiedBy(product) {
+			return apperrors.Validation("", "Product must have a name, slug, category, and at least one detail with price to be updated")
 		}
 
 		// Save product

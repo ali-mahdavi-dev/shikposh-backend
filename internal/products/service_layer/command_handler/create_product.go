@@ -9,6 +9,7 @@ import (
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/domain/entity/shared"
+	"shikposh-backend/internal/products/domain/specification"
 	appadapter "shikposh-backend/pkg/framework/adapter"
 	apperrors "shikposh-backend/pkg/framework/errors"
 	"shikposh-backend/pkg/framework/errors/phrases"
@@ -68,6 +69,12 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 			for i, s := range cmd.Specs {
 				product.Specs[i] = product_aggregate.NewProductSpec(0, s)
 			}
+		}
+
+		// Validate product using specification pattern
+		canBePublishedSpec := specification.NewProductCanBePublishedSpecification()
+		if !canBePublishedSpec.IsSatisfiedBy(product) {
+			return apperrors.Validation("", "Product must have a name, slug, category, and at least one detail with price to be created")
 		}
 
 		// Save product (GORM will handle associations)

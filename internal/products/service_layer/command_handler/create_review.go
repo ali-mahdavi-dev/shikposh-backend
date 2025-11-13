@@ -7,6 +7,7 @@ import (
 
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity"
+	"shikposh-backend/internal/products/domain/specification"
 	appadapter "shikposh-backend/pkg/framework/adapter"
 	apperrors "shikposh-backend/pkg/framework/errors"
 	"shikposh-backend/pkg/framework/errors/phrases"
@@ -25,6 +26,12 @@ func (h *ReviewCommandHandler) CreateReviewHandler(ctx context.Context, cmd *com
 
 		// Create review
 		review := entity.NewReview(cmd)
+
+		// Validate review using specification pattern
+		canBePublishedSpec := specification.NewReviewCanBePublishedSpecification()
+		if !canBePublishedSpec.IsSatisfiedBy(review) {
+			return apperrors.Validation("", "Review must have a valid rating (1-5), a comment, and a valid user")
+		}
 
 		if err := h.uow.Review(ctx).Save(ctx, review); err != nil {
 			return fmt.Errorf("ReviewCommandHandler.CreateReviewHandler error saving review: %w", err)
