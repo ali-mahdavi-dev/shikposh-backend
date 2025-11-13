@@ -72,6 +72,9 @@ func (k *kafkaService) ConsumeMessages(topic string, fn func(pc sarama.Partition
 	config := sarama.NewConfig()
 	config.Consumer.Return.Errors = true
 	consumer, err := sarama.NewConsumer(k.Brokers, config)
+	if err != nil {
+		return fmt.Errorf("failed to create consumer: %v", err)
+	}
 	defer func(consumer sarama.Consumer) {
 		if consumer != nil {
 			_ = consumer.Close()
@@ -80,13 +83,13 @@ func (k *kafkaService) ConsumeMessages(topic string, fn func(pc sarama.Partition
 	}(consumer)
 	partitions, err := consumer.Partitions(topic)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get partitions: %v", err)
 	}
 
 	for _, partition := range partitions {
 		pc, err := consumer.ConsumePartition(topic, partition, sarama.OffsetNewest)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to consume partition: %v", err)
 		}
 		k.waitGroup.Add(1)
 		go func(fc func(pc sarama.PartitionConsumer), pc sarama.PartitionConsumer) {

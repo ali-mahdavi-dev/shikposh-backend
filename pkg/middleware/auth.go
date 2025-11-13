@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"shikposh-backend/internal/account/domain/entity"
 	httpapi "shikposh-backend/pkg/framework/api/http"
 
 	"github.com/gofiber/fiber/v3"
@@ -46,7 +47,7 @@ func (m *Middleware) AuthMiddleware() fiber.Handler {
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			userID := cast.ToUint64(claims["user_id"])
 			ctx := c.Context()
-			user, err := m.Uow.Token(ctx).FindByUserID(ctx, userID)
+			user, err := m.Uow.Token(ctx).FindByUserID(ctx, entity.UserID(userID))
 			if err != nil {
 				return httpapi.ResError(c, errFailGetTokenFromDB)
 			}
