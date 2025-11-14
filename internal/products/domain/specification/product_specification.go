@@ -1,8 +1,8 @@
 package specification
 
 import (
+	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/pkg/framework/specification"
 )
 
@@ -62,12 +62,12 @@ func (s *ProductHasMinimumReviewCountSpecification) IsSatisfiedBy(product *produ
 
 // ProductInCategorySpecification checks if a product belongs to a specific category
 type ProductInCategorySpecification struct {
-	categoryID types.CategoryID
+	categoryID uint64
 }
 
-func NewProductInCategorySpecification(categoryID types.CategoryID) specification.Specification[*productaggregate.Product] {
+func NewProductInCategorySpecification(categoryID entity.CategoryID) specification.Specification[*productaggregate.Product] {
 	return &ProductInCategorySpecification{
-		categoryID: categoryID,
+		categoryID: uint64(categoryID),
 	}
 }
 

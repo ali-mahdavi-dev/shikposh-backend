@@ -6,7 +6,6 @@ import (
 
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/events"
-	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/pkg/framework/adapter"
 
 	"gorm.io/gorm"
@@ -20,22 +19,24 @@ import (
 //   - ProductSpec (Aggregate Entity)
 //
 // All operations on aggregate entities must go through the Product aggregate root.
+type ProductID uint64
+
 type Product struct {
 	adapter.BaseEntity
-	ID          types.ProductID `gorm:"primaryKey"`
+	ID          ProductID `gorm:"primaryKey"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
-	Name        string          `json:"name" gorm:"name"`
-	Slug        string          `json:"slug" gorm:"slug;uniqueIndex"`
-	Brand       string          `json:"brand" gorm:"brand"`
-	Rating      float64         `json:"rating" gorm:"rating;default:0"`
-	ReviewCount int             `json:"review_count" gorm:"review_count;default:0"`
-	Description *string         `json:"description,omitempty" gorm:"description;type:text"`
+	DeletedAt   gorm.DeletedAt   `gorm:"index"`
+	Name        string           `json:"name" gorm:"name"`
+	Slug        string           `json:"slug" gorm:"slug;uniqueIndex"`
+	Brand       string           `json:"brand" gorm:"brand"`
+	Rating      float64          `json:"rating" gorm:"rating;default:0"`
+	ReviewCount int              `json:"review_count" gorm:"review_count;default:0"`
+	Description *string          `json:"description,omitempty" gorm:"description;type:text"`
 	Features    []ProductFeature `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to array
 	Details     []ProductDetail  `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to colors and variants maps
 	Specs       []ProductSpec    `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to map
-	CategoryID  types.CategoryID `json:"category_id" gorm:"category_id"`
+	CategoryID  uint64           `json:"category_id" gorm:"category_id"`
 	Tags        []string         `json:"tags,omitempty" gorm:"type:jsonb"`
 	Image       string           `json:"image" gorm:"image"` // Main image (for backward compatibility)
 	IsNew       bool             `json:"is_new" gorm:"is_new;default:false"`
@@ -54,7 +55,7 @@ func NewProduct(cmd *commands.CreateProduct) *Product {
 		Slug:        cmd.Slug,
 		Brand:       cmd.Brand,
 		Description: cmd.Description,
-		CategoryID:  types.CategoryID(cmd.CategoryID),
+		CategoryID:  cmd.CategoryID,
 		Tags:        cmd.Tags,
 		Sizes:       cmd.Sizes,
 		Image:       cmd.Image,
@@ -218,4 +219,3 @@ func (p *Product) ToMap() map[string]interface{} {
 
 	return result
 }
-

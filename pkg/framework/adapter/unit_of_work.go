@@ -149,6 +149,20 @@ func (uow *BaseUnitOfWork) GetOrCreateRepository(
 	uow.mu.Lock()
 	defer uow.mu.Unlock()
 
+	// Double-check after acquiring write lock (another goroutine might have created it)
+	ctxRepos, ctxExists = uow.repositories[ctx]
+	if ctxExists {
+		if repo, ok := ctxRepos[key]; ok {
+			return repo
+		}
+	}
+
+	// Initialize map if it doesn't exist
+	if !ctxExists {
+		uow.repositories[ctx] = make(map[string]SeenedRepository)
+		ctxRepos = uow.repositories[ctx]
+	}
+
 	session := uow.GetSession(ctx)
 	repo := factory(session)
 	ctxRepos[key] = repo

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/pkg/framework/adapter"
 
@@ -20,8 +19,8 @@ type ProductDetail struct {
 	ID            ProductDetailID `gorm:"primaryKey"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
-	DeletedAt     gorm.DeletedAt  `gorm:"index"`
-	ProductID     types.ProductID `json:"product_id" gorm:"product_id"`
+	DeletedAt     gorm.DeletedAt      `gorm:"index"`
+	ProductID     ProductID           `json:"product_id" gorm:"product_id"`
 	ColorKey      *string             `json:"color_key,omitempty" gorm:"color_key"`           // e.g., "red", "blue" - nullable for size-only details
 	ColorName     *string             `json:"color_name,omitempty" gorm:"color_name"`         // e.g., "قرمز", "آبی" - nullable
 	SizeKey       *string             `json:"size_key,omitempty" gorm:"size_key"`             // e.g., "M", "L" - nullable for color-only details
@@ -37,7 +36,7 @@ func (pd *ProductDetail) TableName() string {
 }
 
 // NewProductDetail creates a new ProductDetail instance using command root input
-func NewProductDetail(productID types.ProductID, input commands.ProductDetailInput) ProductDetail {
+func NewProductDetail(productID ProductID, input commands.ProductDetailInput) ProductDetail {
 	return ProductDetail{
 		ProductID:     productID,
 		ColorKey:      input.ColorKey,

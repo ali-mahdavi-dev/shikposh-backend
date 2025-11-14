@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/pkg/framework/adapter"
 
 	"gorm.io/gorm"
@@ -17,7 +17,7 @@ type ProductRepository interface {
 	adapter.BaseRepository[*productaggregate.Product]
 	GetAll(ctx context.Context) ([]*productaggregate.Product, error)
 	FindBySlug(ctx context.Context, slug string) (*productaggregate.Product, error)
-	FindByCategoryID(ctx context.Context, categoryID types.CategoryID) ([]*productaggregate.Product, error)
+	FindByCategoryID(ctx context.Context, categoryID entity.CategoryID) ([]*productaggregate.Product, error)
 	FindByCategorySlug(ctx context.Context, categorySlug string) ([]*productaggregate.Product, error)
 	FindFeatured(ctx context.Context) ([]*productaggregate.Product, error)
 	Search(ctx context.Context, query string) ([]*productaggregate.Product, error)
@@ -95,7 +95,7 @@ func (r *productGormRepository) FindBySlug(ctx context.Context, slug string) (*p
 	return &product, nil
 }
 
-func (r *productGormRepository) FindByCategoryID(ctx context.Context, categoryID types.CategoryID) ([]*productaggregate.Product, error) {
+func (r *productGormRepository) FindByCategoryID(ctx context.Context, categoryID entity.CategoryID) ([]*productaggregate.Product, error) {
 	var products []*productaggregate.Product
 	err := r.withPreloads(r.Model(ctx)).Where("category_id = ?", uint64(categoryID)).Find(&products).Error
 	if err != nil {

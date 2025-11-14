@@ -211,9 +211,9 @@ services:
     networks:
       - webapi_network
     restart: unless-stopped
-  bunny-go-api1:
+  shikposh-backend-api1:
     build: ../
-    image: bunny-go:1.0.1
+    image: shikposh-backend:1.0.1
     container_name: web-api1
     environment:
       - PORT=9003

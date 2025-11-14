@@ -8,7 +8,6 @@ import (
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/internal/products/domain/types"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
 	httpapi "shikposh-backend/pkg/framework/api/http"
@@ -301,7 +300,7 @@ func (p *ProductHandler) GetReviewsByProductID(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	reviews, err := p.reviewQueryHandler.GetReviewsByProductID(ctx, types.ProductID(productID))
+	reviews, err := p.reviewQueryHandler.GetReviewsByProductID(ctx, productaggregate.ProductID(productID))
 	if err != nil {
 		if errors.Is(err, repository.ErrProductNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))

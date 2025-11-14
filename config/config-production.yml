@@ -3,7 +3,7 @@ server:
   externalPort: 5010
   runMode: release
   domain: localhost
-  name: bunny-go
+  name: shikposh-backend
   lang: fa
   WriteTimeout: 10s
   ReadTimeout: 10s
