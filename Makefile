@@ -8,8 +8,11 @@ test:
 test-unit:
 	go test ./test/unit/... -v
 
-test-integration:
+test-integration: docker-test-up
+	@echo "Waiting for PostgreSQL to be ready..."
+	@sleep 5
 	go test ./test/integration/... -v
+	@$(MAKE) docker-test-down
 
 test-e2e:
 	go test ./test/e2e/... -v
@@ -20,6 +23,13 @@ test-acceptance:
 test-coverage:
 	go test ./test/... -coverprofile=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
+
+# Docker Test Commands
+docker-test-up:
+	cd docker && docker-compose -f docker-compose.test.yml up -d
+
+docker-test-down:
+	cd docker && docker-compose -f docker-compose.test.yml down -v
 
 # Database Migrations
 migrate-up:

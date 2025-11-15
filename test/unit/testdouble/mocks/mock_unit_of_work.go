@@ -19,7 +19,6 @@ type MockPGUnitOfWork struct {
 
 func (m *MockPGUnitOfWork) Do(ctx context.Context, fc types.UowUseCase) error {
 	args := m.Called(ctx, fc)
-	// If no error is set, execute the function
 	if args.Error(0) == nil {
 		return fc(ctx)
 	}
@@ -80,4 +79,3 @@ func (m *MockPGUnitOfWork) Outbox(ctx context.Context) productrepository.OutboxR
 }
 
 var _ unit_of_work.PGUnitOfWork = (*MockPGUnitOfWork)(nil)
-

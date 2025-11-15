@@ -4,30 +4,28 @@ import (
 	"context"
 	"errors"
 
-	"shikposh-backend/config"
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/commands"
 	"shikposh-backend/internal/account/domain/entity"
 	"shikposh-backend/internal/account/service_layer/command_handler"
 	apperrors "shikposh-backend/pkg/framework/errors"
-	"shikposh-backend/pkg/framework/service_layer/types"
-	"shikposh-backend/test/unit/mocks"
+	"shikposh-backend/test/unit/testdouble/builders"
+	"shikposh-backend/test/unit/testdouble/factories"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var _ = Describe("UserHandler", func() {
 	var (
-		builder *TestBuilder
+		builder *builders.UserTestBuilder
 		handler *command_handler.UserHandler
 		ctx     context.Context
 	)
 
 	BeforeEach(func() {
-		builder = NewTestBuilder().
+		builder = builders.NewUserTestBuilder().
 			WithUserRepo().
 			WithTokenRepo().
 			WithSuccessfulTransaction()
@@ -38,11 +36,11 @@ var _ = Describe("UserHandler", func() {
 	Describe("RegisterHandler", func() {
 		Context("when registering a new user", func() {
 			It("should register successfully", func() {
-				cmd := createRegisterCommand("newuser", "newuser@example.com", "password123")
+				cmd := factories.CreateRegisterCommand("newuser", "newuser@example.com", "password123")
 
-				builder.mockUserRepo.On("FindByUserName", mock.Anything, "newuser").
+				builder.MockUserRepo.On("FindByUserName", mock.Anything, "newuser").
 					Return(nil, repository.ErrUserNotFound).Maybe()
-				builder.mockUserRepo.On("Save", mock.Anything, mock.AnythingOfType("*entity.User")).
+				builder.MockUserRepo.On("Save", mock.Anything, mock.AnythingOfType("*entity.User")).
 					Return(nil).Maybe()
 
 				err := handler.RegisterHandler(ctx, cmd)
@@ -52,10 +50,10 @@ var _ = Describe("UserHandler", func() {
 
 		Context("when username already exists", func() {
 			It("should return conflict error", func() {
-				cmd := createRegisterCommand("existinguser", "existing@example.com", "password123")
-				existingUser := createUser("existinguser", "existing@example.com", "password123")
+				cmd := factories.CreateRegisterCommand("existinguser", "existing@example.com", "password123")
+				existingUser := factories.CreateUser("existinguser", "existing@example.com", "password123")
 
-				builder.mockUserRepo.On("FindByUserName", mock.Anything, "existinguser").
+				builder.MockUserRepo.On("FindByUserName", mock.Anything, "existinguser").
 					Return(existingUser, nil).Maybe()
 
 				err := handler.RegisterHandler(ctx, cmd)
@@ -70,14 +68,14 @@ var _ = Describe("UserHandler", func() {
 	Describe("LoginHandler", func() {
 		Context("when credentials are valid", func() {
 			It("should login successfully and return access token", func() {
-				cmd := createLoginCommand("existinguser", "password123")
-				user := createUser("existinguser", "user@example.com", "password123")
+				cmd := factories.CreateLoginCommand("existinguser", "password123")
+				user := factories.CreateUser("existinguser", "user@example.com", "password123")
 
-				builder.mockUserRepo.On("FindByUserName", mock.Anything, "existinguser").
+				builder.MockUserRepo.On("FindByUserName", mock.Anything, "existinguser").
 					Return(user, nil).Maybe()
-				builder.mockTokenRepo.On("FindByUserID", mock.Anything, entity.UserID(1)).
+				builder.MockTokenRepo.On("FindByUserID", mock.Anything, entity.UserID(1)).
 					Return(nil, repository.ErrTokenNotFound).Maybe()
-				builder.mockTokenRepo.On("Save", mock.Anything, mock.AnythingOfType("*entity.Token")).
+				builder.MockTokenRepo.On("Save", mock.Anything, mock.AnythingOfType("*entity.Token")).
 					Return(nil).Maybe()
 
 				token, err := handler.LoginHandler(ctx, cmd)
@@ -88,9 +86,9 @@ var _ = Describe("UserHandler", func() {
 
 		Context("when username does not exist", func() {
 			It("should return not found error", func() {
-				cmd := createLoginCommand("nonexistentuser", "password123")
+				cmd := factories.CreateLoginCommand("nonexistentuser", "password123")
 
-				builder.mockUserRepo.On("FindByUserName", mock.Anything, "nonexistentuser").
+				builder.MockUserRepo.On("FindByUserName", mock.Anything, "nonexistentuser").
 					Return(nil, repository.ErrUserNotFound).Maybe()
 
 				token, err := handler.LoginHandler(ctx, cmd)
@@ -104,10 +102,10 @@ var _ = Describe("UserHandler", func() {
 
 		Context("when password is incorrect", func() {
 			It("should return unauthorized error", func() {
-				cmd := createLoginCommand("existinguser", "wrongpassword")
-				user := createUser("existinguser", "user@example.com", "password123")
+				cmd := factories.CreateLoginCommand("existinguser", "wrongpassword")
+				user := factories.CreateUser("existinguser", "user@example.com", "password123")
 
-				builder.mockUserRepo.On("FindByUserName", mock.Anything, "existinguser").
+				builder.MockUserRepo.On("FindByUserName", mock.Anything, "existinguser").
 					Return(user, nil).Maybe()
 
 				token, err := handler.LoginHandler(ctx, cmd)
@@ -130,9 +128,9 @@ var _ = Describe("UserHandler", func() {
 					Token:  "test-token",
 				}
 
-				builder.mockTokenRepo.On("FindByUserID", mock.Anything, entity.UserID(1)).
+				builder.MockTokenRepo.On("FindByUserID", mock.Anything, entity.UserID(1)).
 					Return(token, nil).Maybe()
-				builder.mockTokenRepo.On("Remove", mock.Anything, token, false).
+				builder.MockTokenRepo.On("Remove", mock.Anything, token, false).
 					Return(nil).Maybe()
 
 				err := handler.LogoutHandler(ctx, cmd)
@@ -144,95 +142,18 @@ var _ = Describe("UserHandler", func() {
 			It("should return not found error", func() {
 				cmd := &commands.Logout{UserID: 999}
 
-				builder.mockTokenRepo.On("FindByUserID", mock.Anything, entity.UserID(999)).
+				builder.MockTokenRepo.On("FindByUserID", mock.Anything, entity.UserID(999)).
 					Return(nil, repository.ErrTokenNotFound).Maybe()
 
 				err := handler.LogoutHandler(ctx, cmd)
 				Expect(err).To(HaveOccurred())
-				// Check if error is apperrors.Error or wrapped error
 				var appErr apperrors.Error
 				if errors.As(err, &appErr) {
 					Expect(appErr.Type()).To(Equal(apperrors.ErrorTypeNotFound))
 				} else {
-					// If not apperrors.Error, check error message contains "not found"
 					Expect(err.Error()).To(ContainSubstring("not found"))
 				}
 			})
 		})
 	})
 })
-
-// TestBuilder helps build test scenarios with mocks
-type TestBuilder struct {
-	mockUOW       *mocks.MockPGUnitOfWork
-	mockUserRepo  *mocks.MockUserRepository
-	mockTokenRepo *mocks.MockTokenRepository
-	cfg           *config.Config
-}
-
-func NewTestBuilder() *TestBuilder {
-	return &TestBuilder{
-		mockUOW:       new(mocks.MockPGUnitOfWork),
-		mockUserRepo:  new(mocks.MockUserRepository),
-		mockTokenRepo: new(mocks.MockTokenRepository),
-		cfg: &config.Config{
-			JWT: config.JWTConfig{
-				Secret:                    "test-secret-key-for-jwt-token-generation",
-				AccessTokenExpireDuration: 3600,
-			},
-		},
-	}
-}
-
-func (b *TestBuilder) BuildHandler() *command_handler.UserHandler {
-	return command_handler.NewUserHandler(b.mockUOW, b.cfg)
-}
-
-func (b *TestBuilder) WithUserRepo() *TestBuilder {
-	b.mockUOW.On("User", mock.Anything).Return(b.mockUserRepo).Maybe()
-	return b
-}
-
-func (b *TestBuilder) WithTokenRepo() *TestBuilder {
-	b.mockUOW.On("Token", mock.Anything).Return(b.mockTokenRepo).Maybe()
-	return b
-}
-
-func (b *TestBuilder) WithSuccessfulTransaction() *TestBuilder {
-	b.mockUOW.On("Do", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-		fc := args.Get(1).(types.UowUseCase)
-		fc(args.Get(0).(context.Context))
-	}).Maybe()
-	return b
-}
-
-func createRegisterCommand(username, email, password string) *commands.RegisterUser {
-	return &commands.RegisterUser{
-		AvatarIdentifier: "avatar123",
-		UserName:         username,
-		FirstName:        "John",
-		LastName:         "Doe",
-		Email:            email,
-		Password:         password,
-	}
-}
-
-func createLoginCommand(username, password string) *commands.LoginUser {
-	return &commands.LoginUser{
-		UserName: username,
-		Password: password,
-	}
-}
-
-func createUser(username, email, password string) *entity.User {
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return &entity.User{
-		ID:               1,
-		AvatarIdentifier: "avatar123",
-		UserName:         username,
-		FirstName:        "John",
-		LastName:         "Doe",
-		Email:            email,
-		Password:         string(hashedPassword),
-	}
-}

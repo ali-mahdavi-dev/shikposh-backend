@@ -3,30 +3,29 @@ package integration_test
 import (
 	"context"
 
-	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/entity"
-	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/service_layer/command_handler"
 	appadapter "shikposh-backend/pkg/framework/adapter"
 	apperrors "shikposh-backend/pkg/framework/errors"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"shikposh-backend/test/integration/testdouble/builders"
+	"shikposh-backend/test/integration/testdouble/factories"
+	"shikposh-backend/test/integration/testdouble/helpers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 var _ = Describe("ProductCommandHandler Integration", func() {
 	var (
-		builder *ProductIntegrationTestBuilder
+		builder *builders.ProductIntegrationTestBuilder
 		handler *command_handler.ProductCommandHandler
 		ctx     context.Context
 	)
 
 	BeforeEach(func() {
-		builder = NewProductIntegrationTestBuilder(nil)
+		var err error
+		builder, err = builders.NewProductIntegrationTestBuilder()
+		Expect(err).NotTo(HaveOccurred())
 		handler = builder.BuildHandler()
 		ctx = context.Background()
 	})
@@ -38,48 +37,71 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 	Describe("CreateProductHandler", func() {
 		Context("when creating a new product", func() {
 			It("should create product with all associations in database", func() {
-				category := createTestCategory(nil, builder.db, "Clothing", "clothing")
-				cmd := createTestProductCommand("Men's T-Shirt", "Test Brand", uint64(category.ID))
-
-				cmd.Features = []commands.ProductFeatureInput{
+				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
+				productCmd := factories.CreateProductCommand("Men's T-Shirt", "Test Brand", uint64(category.ID))
+				productCmd.Features = []commands.ProductFeatureInput{
 					{Feature: "Waterproof", Order: 1},
 					{Feature: "Washable", Order: 2},
 				}
-				cmd.Specs = []commands.ProductSpecInput{
+				productCmd.Specs = []commands.ProductSpecInput{
 					{Key: "Material", Value: "100% Cotton", Order: 1},
 				}
 
-				err := handler.CreateProductHandler(ctx, cmd)
+				err := handler.CreateProductHandler(ctx, productCmd)
 				Expect(err).NotTo(HaveOccurred())
 
-				// Verify product was persisted with associations
-				productRepo := repository.NewProductRepository(builder.db)
-				product, err := productRepo.FindBySlug(ctx, cmd.Slug)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(product).NotTo(BeNil())
+				product := helpers.FindProductBySlug(builder.DB, command_handler.GenerateSlug(productCmd.Name))
 				Expect(product.Name).To(Equal("Men's T-Shirt"))
 				Expect(product.Features).To(HaveLen(2))
 				Expect(product.Details).To(HaveLen(1))
 				Expect(product.Specs).To(HaveLen(1))
+				Expect(product.Tags).To(Equal([]string{"tag1"}))
+				Expect(product.Sizes).To(Equal([]string{"M", "L"}))
 			})
 		})
 
 		Context("when slug already exists", func() {
-			It("should enforce unique slug constraint", func() {
-				category := createTestCategory(nil, builder.db, "Clothing", "clothing")
-
-				// Create first product
-				cmd1 := createTestProductCommand("First Product", "Brand", uint64(category.ID))
-				err := handler.CreateProductHandler(ctx, cmd1)
+			It("should return conflict error", func() {
+				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
+				firstProduct := factories.CreateProductCommand("First Product", "Brand", uint64(category.ID))
+				err := handler.CreateProductHandler(ctx, firstProduct)
 				Expect(err).NotTo(HaveOccurred())
 
-				// Try to create product with same slug
-				cmd2 := createTestProductCommand("First Product", "Other Brand", uint64(category.ID))
-				err = handler.CreateProductHandler(ctx, cmd2)
+				duplicateProduct := factories.CreateProductCommand("First Product", "Other Brand", uint64(category.ID))
+				err = handler.CreateProductHandler(ctx, duplicateProduct)
 				Expect(err).To(HaveOccurred())
-				appErr, ok := err.(apperrors.Error)
-				Expect(ok).To(BeTrue())
-				Expect(appErr.Type()).To(Equal(apperrors.ErrorTypeConflict))
+				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeConflict))
+			})
+		})
+
+		Context("when category does not exist", func() {
+			It("should return not found error", func() {
+				nonExistentCategoryID := uint64(99999)
+				productCmd := factories.CreateProductCommand("Product", "Brand", nonExistentCategoryID)
+
+				err := handler.CreateProductHandler(ctx, productCmd)
+				Expect(err).To(HaveOccurred())
+				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeNotFound))
+			})
+		})
+
+		Context("when product validation fails", func() {
+			It("should return validation error when name is empty", func() {
+				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
+				productCmd := factories.CreateProductCommandWithEmptyName(uint64(category.ID))
+
+				err := handler.CreateProductHandler(ctx, productCmd)
+				Expect(err).To(HaveOccurred())
+				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeValidation))
+			})
+
+			It("should return validation error when no details provided", func() {
+				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
+				productCmd := factories.CreateProductCommandWithoutDetails("Product", "Brand", uint64(category.ID))
+
+				err := handler.CreateProductHandler(ctx, productCmd)
+				Expect(err).To(HaveOccurred())
+				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeValidation))
 			})
 		})
 	})
@@ -87,47 +109,57 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 	Describe("UpdateProductHandler", func() {
 		Context("when updating an existing product", func() {
 			It("should update product and replace associations", func() {
-				category := createTestCategory(nil, builder.db, "Clothing", "clothing")
-
-				// Create product
-				createCmd := createTestProductCommand("Old Product", "Old Brand", uint64(category.ID))
-				createCmd.Features = []commands.ProductFeatureInput{
+				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
+				existingProduct := factories.CreateProductCommand("Old Product", "Old Brand", uint64(category.ID))
+				existingProduct.Features = []commands.ProductFeatureInput{
 					{Feature: "Old Feature", Order: 1},
 				}
-				err := handler.CreateProductHandler(ctx, createCmd)
+				err := handler.CreateProductHandler(ctx, existingProduct)
 				Expect(err).NotTo(HaveOccurred())
 
-				productRepo := repository.NewProductRepository(builder.db)
-				product, err := productRepo.FindBySlug(ctx, createCmd.Slug)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Update product
-				desc := "New description"
-				updateCmd := &commands.UpdateProduct{
-					ID:          uint64(product.ID),
-					Name:        "New Product",
-					Slug:        "new-product",
-					Brand:       "New Brand",
-					Description: &desc,
-					CategoryID:  uint64(category.ID),
-					Features: []commands.ProductFeatureInput{
-						{Feature: "New Feature", Order: 1},
-					},
-					Details: []commands.ProductDetailInput{
-						{Price: 150000.0},
-					},
-				}
+				product := helpers.FindProductBySlug(builder.DB, command_handler.GenerateSlug(existingProduct.Name))
+				updateCmd := factories.CreateUpdateCommand(uint64(product.ID), "New Product", "New Brand", uint64(category.ID))
 
 				err = handler.UpdateProductHandler(ctx, updateCmd)
 				Expect(err).NotTo(HaveOccurred())
 
-				// Verify update
-				updated, err := productRepo.FindByID(ctx, uint64(product.ID))
+				updatedProduct := helpers.FindProductByID(builder.DB, uint64(product.ID))
+				Expect(updatedProduct.Name).To(Equal("New Product"))
+				Expect(updatedProduct.Brand).To(Equal("New Brand"))
+				Expect(updatedProduct.Features).To(HaveLen(1))
+				Expect(updatedProduct.Features[0].Feature).To(Equal("New Feature"))
+			})
+		})
+
+		Context("when product does not exist", func() {
+			It("should return not found error", func() {
+				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
+				nonExistentProductID := uint64(99999)
+				updateCmd := factories.CreateUpdateCommand(nonExistentProductID, "Product", "Brand", uint64(category.ID))
+
+				err := handler.UpdateProductHandler(ctx, updateCmd)
+				Expect(err).To(HaveOccurred())
+				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeNotFound))
+			})
+		})
+
+		Context("when updating with duplicate slug", func() {
+			It("should return conflict error", func() {
+				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
+				firstProduct := factories.CreateProductCommand("Product One", "Brand1", uint64(category.ID))
+				err := handler.CreateProductHandler(ctx, firstProduct)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(updated.Name).To(Equal("New Product"))
-				Expect(updated.Brand).To(Equal("New Brand"))
-				Expect(updated.Features).To(HaveLen(1))
-				Expect(updated.Features[0].Feature).To(Equal("New Feature"))
+
+				secondProduct := factories.CreateProductCommand("Product Two", "Brand2", uint64(category.ID))
+				err = handler.CreateProductHandler(ctx, secondProduct)
+				Expect(err).NotTo(HaveOccurred())
+
+				product2 := helpers.FindProductBySlug(builder.DB, command_handler.GenerateSlug(secondProduct.Name))
+				updateCmd := factories.CreateUpdateCommandWithDuplicateSlug(uint64(product2.ID), command_handler.GenerateSlug(firstProduct.Name), uint64(category.ID))
+
+				err = handler.UpdateProductHandler(ctx, updateCmd)
+				Expect(err).To(HaveOccurred())
+				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeConflict))
 			})
 		})
 	})
@@ -135,15 +167,12 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 	Describe("DeleteProductHandler", func() {
 		Context("when soft deleting a product", func() {
 			It("should soft delete product and keep associations", func() {
-				category := createTestCategory(nil, builder.db, "Clothing", "clothing")
-				cmd := createTestProductCommand("Product To Delete", "Brand", uint64(category.ID))
-				err := handler.CreateProductHandler(ctx, cmd)
+				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
+				productCmd := factories.CreateProductCommand("Product To Delete", "Brand", uint64(category.ID))
+				err := handler.CreateProductHandler(ctx, productCmd)
 				Expect(err).NotTo(HaveOccurred())
 
-				productRepo := repository.NewProductRepository(builder.db)
-				product, err := productRepo.FindBySlug(ctx, cmd.Slug)
-				Expect(err).NotTo(HaveOccurred())
-
+				product := helpers.FindProductBySlug(builder.DB, command_handler.GenerateSlug(productCmd.Name))
 				deleteCmd := &commands.DeleteProduct{
 					ID:         uint64(product.ID),
 					SoftDelete: true,
@@ -152,79 +181,24 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 				err = handler.DeleteProductHandler(ctx, deleteCmd)
 				Expect(err).NotTo(HaveOccurred())
 
-				// Verify soft delete (product should not be found)
-				_, err = productRepo.FindByID(ctx, uint64(product.ID))
+				_, err = helpers.FindProductByIDWithError(builder.DB, uint64(product.ID))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(appadapter.ErrEntityNotFound))
 			})
 		})
+
+		Context("when product does not exist", func() {
+			It("should return not found error", func() {
+				nonExistentProductID := uint64(99999)
+				deleteCmd := &commands.DeleteProduct{
+					ID:         nonExistentProductID,
+					SoftDelete: true,
+				}
+
+				err := handler.DeleteProductHandler(ctx, deleteCmd)
+				Expect(err).To(HaveOccurred())
+				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeNotFound))
+			})
+		})
 	})
 })
-
-// ProductIntegrationTestBuilder helps build integration test scenarios
-type ProductIntegrationTestBuilder struct {
-	db  *gorm.DB
-	uow unit_of_work.PGUnitOfWork
-}
-
-func NewProductIntegrationTestBuilder(t GinkgoTInterface) *ProductIntegrationTestBuilder {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	Expect(err).NotTo(HaveOccurred())
-
-	err = db.AutoMigrate(
-		&entity.Category{},
-		&productaggregate.Product{},
-		&productaggregate.ProductFeature{},
-		&productaggregate.ProductDetail{},
-		&productaggregate.ProductSpec{},
-	)
-	Expect(err).NotTo(HaveOccurred())
-
-	eventCh := make(chan appadapter.EventWithWaitGroup, 100)
-	uow := unit_of_work.New(db, eventCh)
-
-	return &ProductIntegrationTestBuilder{
-		db:  db,
-		uow: uow,
-	}
-}
-
-func (b *ProductIntegrationTestBuilder) BuildHandler() *command_handler.ProductCommandHandler {
-	return command_handler.NewProductCommandHandler(b.uow)
-}
-
-func (b *ProductIntegrationTestBuilder) Cleanup() {
-	b.db.Exec("DELETE FROM products")
-	b.db.Exec("DELETE FROM categories")
-	b.db.Exec("DELETE FROM product_features")
-	b.db.Exec("DELETE FROM product_details")
-	b.db.Exec("DELETE FROM product_specs")
-}
-
-// Helper functions
-func createTestCategory(t GinkgoTInterface, db *gorm.DB, name, slug string) *entity.Category {
-	category := &entity.Category{
-		Name: name,
-		Slug: slug,
-	}
-	categoryRepo := repository.NewCategoryRepository(db)
-	err := categoryRepo.Save(context.Background(), category)
-	Expect(err).NotTo(HaveOccurred())
-	return category
-}
-
-func createTestProductCommand(name, brand string, categoryID uint64) *commands.CreateProduct {
-	desc := "Product description"
-	return &commands.CreateProduct{
-		Name:        name,
-		Slug:        "",
-		Brand:       brand,
-		Description: &desc,
-		CategoryID:  categoryID,
-		Tags:        []string{"tag1"},
-		Sizes:       []string{"M", "L"},
-		Details: []commands.ProductDetailInput{
-			{Price: 100000.0, Stock: 10},
-		},
-	}
-}
