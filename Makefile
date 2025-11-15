@@ -1,18 +1,33 @@
 run:
 	go run cmd/main.go
+
+# Testing Commands
 test:
-	go test ./tests/... -v
+	go test ./test/... -v
+
+test-unit:
+	go test ./test/unit/... -v
+
 test-integration:
-	TEST_TYPE=integration go test ./tests/integration/... -v
+	go test ./test/integration/... -v
 
-run:
-	go run cmd/main.go
+test-e2e:
+	go test ./test/e2e/... -v
 
+test-acceptance:
+	go test ./test/acceptance/... -v
+
+test-coverage:
+	go test ./test/... -coverprofile=coverage.out
+	go tool cover -html=coverage.out -o coverage.html
+
+# Database Migrations
 migrate-up:
 	go run ./cmd/main.go migrate up
 
 migrate-down:
 	go run ./cmd/main.go migrate down
 
+# Documentation
 swagger:
 	swag fmt && swag init -g ./cmd/main.go -o ./docs --parseInternal=true --parseDependency=true

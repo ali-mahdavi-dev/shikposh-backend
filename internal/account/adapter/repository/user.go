@@ -51,7 +51,7 @@ func (u *userGormRepository) FindByUsernameExcludingID(ctx context.Context, user
 func (u *userGormRepository) FindByUserName(ctx context.Context, username string) (*entity.User, error) {
 	user, err := u.FindByField(ctx, "user_name", username)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, adapter.ErrEntityNotFound) {
 			return nil, ErrUserNotFound
 		}
 

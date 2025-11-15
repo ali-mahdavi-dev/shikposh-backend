@@ -791,11 +791,27 @@ go run cmd/main.go migrate down
 ```bash
 # Run all tests
 make test
-go test ./tests/... -v
+go test ./test/... -v
 
-# Run integration tests
+# Run unit tests only
+make test-unit
+go test ./test/unit/... -v
+
+# Run integration tests only
 make test-integration
-TEST_TYPE=integration go test ./tests/integration/... -v
+go test ./test/integration/... -v
+
+# Run E2E tests only
+make test-e2e
+go test ./test/e2e/... -v
+
+# Run acceptance tests only
+make test-acceptance
+go test ./test/acceptance/... -v
+
+# Run tests with coverage
+make test-coverage
+go test ./test/... -coverprofile=coverage.out
 ```
 
 ### API Documentation
@@ -984,33 +1000,147 @@ Pre-configured dashboards for:
 
 ## 🧪 Testing
 
-### Running Tests
-
-```bash
-# Run all unit tests
-make test
-
-# Run integration tests
-make test-integration
-
-# Run with coverage
-go test ./... -cover
-```
+This project uses **Ginkgo** (BDD testing framework) and **Gomega** (matcher library) for comprehensive testing across four test categories.
 
 ### Test Structure
 
 ```
-tests/
-├── unit/              # Unit tests
-└── integration/       # Integration tests
+test/
+├── unit/              # Unit Tests - Isolated component tests with mocks
+│   ├── account/       # Account module unit tests
+│   ├── products/      # Products module unit tests
+│   └── mocks/         # Mock implementations for unit tests
+├── integration/       # Integration Tests - Component interaction with real database
+│   ├── account/       # Account module integration tests
+│   └── products/      # Products module integration tests
+├── e2e/               # End-to-End Tests - Full HTTP API tests
+│   └── api/           # HTTP API endpoint tests
+└── acceptance/        # Acceptance Tests - Business scenario tests
+    └── scenarios/     # Complete business flow scenarios
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run unit tests only
+make test-unit
+
+# Run integration tests only
+make test-integration
+
+# Run E2E tests only
+make test-e2e
+
+# Run acceptance tests only
+make test-acceptance
+
+# Run tests with coverage
+make test-coverage
+
+# Run tests with verbose output
+go test ./test/... -v
+```
+
+### Test Categories
+
+#### 1. Unit Tests
+
+- **Purpose**: Test individual components in isolation using mocks
+- **Location**: `test/unit/`
+- **Run**: `make test-unit` or `go test ./test/unit/... -v`
+- **Features**:
+  - Mock-based testing with `testify/mock`
+  - Builder pattern for test setup
+  - Isolated component testing
+  - Fast execution
+
+#### 2. Integration Tests
+
+- **Purpose**: Test component interactions with a real database (SQLite in-memory)
+- **Location**: `test/integration/`
+- **Run**: `make test-integration` or `go test ./test/integration/... -v`
+- **Features**:
+  - Real database interactions
+  - Transaction testing
+  - Data persistence verification
+
+#### 3. E2E Tests
+
+- **Purpose**: Test complete HTTP API endpoints with a running server
+- **Location**: `test/e2e/`
+- **Run**: `make test-e2e` or `go test ./test/e2e/... -v`
+- **Features**:
+  - Full HTTP request/response testing
+  - Server bootstrap testing
+  - API contract validation
+
+#### 4. Acceptance Tests
+
+- **Purpose**: Test complete business scenarios and user flows
+- **Location**: `test/acceptance/`
+- **Run**: `make test-acceptance` or `go test ./test/acceptance/... -v`
+- **Features**:
+  - Multi-step business flows
+  - Scenario-based testing
+  - Business requirement validation
+
+### Using Ginkgo and Gomega
+
+This project uses **Ginkgo** (BDD testing framework) and **Gomega** (matcher library):
+
+- **Ginkgo**: BDD structure with `Describe`, `Context`, `It`, `BeforeEach`, `AfterEach`
+- **Gomega**: Assertions with `Expect`, `Should`, `To`, `NotTo`, and rich matchers
+
+#### Example Test Structure
+
+```go
+var _ = Describe("UserHandler", func() {
+    var (
+        builder *TestBuilder
+        handler *command_handler.UserHandler
+        ctx     context.Context
+    )
+
+    BeforeEach(func() {
+        builder = NewTestBuilder().
+            WithUserRepo().
+            WithTokenRepo().
+            WithSuccessfulTransaction()
+        handler = builder.BuildHandler()
+        ctx = context.Background()
+    })
+
+    Describe("RegisterHandler", func() {
+        Context("when registering a new user", func() {
+            It("should register successfully", func() {
+                cmd := createRegisterCommand("newuser", "newuser@example.com", "password123")
+
+                builder.mockUserRepo.On("FindByUserName", mock.Anything, "newuser").
+                    Return(nil, repository.ErrUserNotFound).Maybe()
+                builder.mockUserRepo.On("Save", mock.Anything, mock.AnythingOfType("*entity.User")).
+                    Return(nil).Maybe()
+
+                err := handler.RegisterHandler(ctx, cmd)
+                Expect(err).NotTo(HaveOccurred())
+            })
+        })
+    })
+})
 ```
 
 ### Testing Best Practices
 
-- Unit tests for business logic
-- Integration tests for API endpoints
-- Mock repositories for isolation
-- Test fixtures for consistent data
+- ✅ **Unit Tests**: Mock dependencies for isolated testing
+- ✅ **Integration Tests**: Use real database (SQLite in-memory) for interaction testing
+- ✅ **E2E Tests**: Test complete HTTP API flows
+- ✅ **Acceptance Tests**: Test business scenarios end-to-end
+- ✅ **Builder Pattern**: Use builders for test setup (readable and maintainable)
+- ✅ **Clear Test Names**: Use descriptive, non-technical test names
+- ✅ **Ginkgo Structure**: Use BDD-style structure for better readability
+- ✅ **Gomega Matchers**: Use rich matchers for expressive assertions
 
 ---
 
