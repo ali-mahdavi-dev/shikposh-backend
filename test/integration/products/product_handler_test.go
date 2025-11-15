@@ -8,7 +8,6 @@ import (
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	"shikposh-backend/pkg/framework/adapter"
 	appadapter "shikposh-backend/pkg/framework/adapter"
 	apperrors "shikposh-backend/pkg/framework/errors"
 	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
@@ -181,7 +180,7 @@ func NewProductIntegrationTestBuilder(t GinkgoTInterface) *ProductIntegrationTes
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	eventCh := make(chan adapter.EventWithWaitGroup, 100)
+	eventCh := make(chan appadapter.EventWithWaitGroup, 100)
 	uow := unit_of_work.New(db, eventCh)
 
 	return &ProductIntegrationTestBuilder{
