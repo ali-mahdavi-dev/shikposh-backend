@@ -11,6 +11,8 @@ import (
 	"shikposh-backend/internal/products/service_layer/event_handler"
 	"shikposh-backend/internal/products/service_layer/outbox"
 
+	"shikposh-backend/internal/unit_of_work"
+
 	"github.com/ali-mahdavi-dev/framework/adapter"
 	elasticsearchx "github.com/ali-mahdavi-dev/framework/infrastructure/elasticsearch"
 	kafak "github.com/ali-mahdavi-dev/framework/infrastructure/kafak"
@@ -18,14 +20,12 @@ import (
 	commandeventhandler "github.com/ali-mahdavi-dev/framework/service_layer/command_event_handler"
 	commandmiddleware "github.com/ali-mahdavi-dev/framework/service_layer/command_event_handler/command_middleware"
 	"github.com/ali-mahdavi-dev/framework/service_layer/messagebus"
-	"shikposh-backend/internal/unit_of_work"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
 
 func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsearch elasticsearchx.Connection) error {
-	// Create event channel and unit of work for this module
 	eventCh := make(chan adapter.EventWithWaitGroup, 100)
 	uow := unitofwork.New(db, eventCh)
 	bus := messagebus.NewMessageBus(uow, eventCh)

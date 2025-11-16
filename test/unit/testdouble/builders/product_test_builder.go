@@ -4,8 +4,9 @@ import (
 	"context"
 
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	"github.com/ali-mahdavi-dev/framework/service_layer/types"
 	"shikposh-backend/test/unit/testdouble/mocks"
+
+	"github.com/ali-mahdavi-dev/framework/service_layer/types"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -46,4 +47,3 @@ func (b *ProductTestBuilder) WithSuccessfulTransaction() *ProductTestBuilder {
 	}).Maybe()
 	return b
 }
-
