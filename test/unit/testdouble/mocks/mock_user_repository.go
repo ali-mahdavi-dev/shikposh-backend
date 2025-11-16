@@ -5,7 +5,7 @@ import (
 
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/entity"
-	"shikposh-backend/pkg/framework/adapter"
+	"github.com/shikposh/framework/adapter"
 
 	"github.com/stretchr/testify/mock"
 )

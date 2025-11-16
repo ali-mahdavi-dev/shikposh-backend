@@ -5,7 +5,7 @@ import (
 
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	apperrors "shikposh-backend/pkg/framework/errors"
+	apperrors "github.com/shikposh/framework/errors"
 	"shikposh-backend/test/acceptance/testdouble/builders"
 	"shikposh-backend/test/acceptance/testdouble/factories"
 	"shikposh-backend/test/acceptance/testdouble/helpers"

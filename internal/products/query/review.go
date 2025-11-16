@@ -5,14 +5,14 @@ import (
 
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"shikposh-backend/internal/unit_of_work"
 )
 
 type ReviewQueryHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 }
 
-func NewReviewQueryHandler(uow unit_of_work.PGUnitOfWork) *ReviewQueryHandler {
+func NewReviewQueryHandler(uow unitofwork.PGUnitOfWork) *ReviewQueryHandler {
 	return &ReviewQueryHandler{uow: uow}
 }
 

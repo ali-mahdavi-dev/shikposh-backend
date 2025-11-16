@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"shikposh-backend/internal/account/domain/entity"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"shikposh-backend/internal/unit_of_work"
 )
 
 type ProfileQueryHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 }
 
-func NewProfileQueryHandler(uow unit_of_work.PGUnitOfWork) *ProfileQueryHandler {
+func NewProfileQueryHandler(uow unitofwork.PGUnitOfWork) *ProfileQueryHandler {
 	return &ProfileQueryHandler{uow: uow}
 }
 

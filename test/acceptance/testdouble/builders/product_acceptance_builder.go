@@ -4,8 +4,8 @@ import (
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	appadapter "shikposh-backend/pkg/framework/adapter"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	appadapter "github.com/shikposh/framework/adapter"
+	"shikposh-backend/internal/unit_of_work"
 
 	. "github.com/onsi/gomega"
 	"gorm.io/driver/sqlite"
@@ -15,7 +15,7 @@ import (
 // ProductAcceptanceTestBuilder helps build acceptance test scenarios for products
 type ProductAcceptanceTestBuilder struct {
 	DB  *gorm.DB
-	UOW unit_of_work.PGUnitOfWork
+	UOW unitofwork.PGUnitOfWork
 }
 
 func NewProductAcceptanceTestBuilder() *ProductAcceptanceTestBuilder {
@@ -32,7 +32,7 @@ func NewProductAcceptanceTestBuilder() *ProductAcceptanceTestBuilder {
 	Expect(err).NotTo(HaveOccurred())
 
 	eventCh := make(chan appadapter.EventWithWaitGroup, 100)
-	uow := unit_of_work.New(db, eventCh)
+	uow := unitofwork.New(db, eventCh)
 
 	return &ProductAcceptanceTestBuilder{
 		DB:  db,

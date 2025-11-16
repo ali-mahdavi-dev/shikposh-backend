@@ -18,12 +18,13 @@ import (
 	config "shikposh-backend/config"
 	"shikposh-backend/internal/account"
 	"shikposh-backend/internal/products"
-	mwF "shikposh-backend/pkg/framework/api/middleware"
-	"shikposh-backend/pkg/framework/infrastructure/databases"
-	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
-	"shikposh-backend/pkg/framework/infrastructure/logging"
-	"shikposh-backend/pkg/framework/infrastructure/tracing"
 	mw "shikposh-backend/pkg/middleware"
+
+	frameworkmiddleware "github.com/shikposh/framework/api/middleware"
+	"github.com/shikposh/framework/infrastructure/databases"
+	elasticsearchx "github.com/shikposh/framework/infrastructure/elasticsearch"
+	"github.com/shikposh/framework/infrastructure/logging"
+	"github.com/shikposh/framework/infrastructure/tracing"
 
 	"gorm.io/gorm"
 )
@@ -209,22 +210,17 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 }
 
 func setupMiddleware(components *serverComponents, cfg *config.Config) error {
-	middlewareF := mwF.NewMiddleware(
-		mwF.MiddlewareConfig{},
-		components.db,
-	)
-	middlewareM := mw.NewMiddleware(
+	middleware := mw.NewMiddleware(
 		mw.MiddlewareConfig{JWTSecret: cfg.JWT.Secret},
 		components.db,
 	)
 
 	// Register tracing middleware first (if enabled)
 	if components.tracer != nil && cfg.Jaeger.Enabled {
-		components.server.Use(middlewareF.TracingMiddleware())
+		components.server.Use(frameworkmiddleware.TracingMiddleware())
 	}
 
-	middlewareF.Register(components.server)
-	middlewareM.Register(components.server)
+	middleware.Register(components.server)
 	return nil
 }
 

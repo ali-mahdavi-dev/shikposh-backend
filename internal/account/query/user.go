@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"shikposh-backend/internal/account/domain/entity"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"shikposh-backend/internal/unit_of_work"
 )
 
 type UserQueryHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 }
 
-func NewUserQueryHandler(uow unit_of_work.PGUnitOfWork) *UserQueryHandler {
+func NewUserQueryHandler(uow unitofwork.PGUnitOfWork) *UserQueryHandler {
 	return &UserQueryHandler{uow: uow}
 }
 

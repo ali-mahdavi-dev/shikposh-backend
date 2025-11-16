@@ -15,7 +15,7 @@ import (
 
 	"github.com/disintegration/imaging"
 
-	"shikposh-backend/pkg/framework/infrastructure/logging"
+	"github.com/shikposh/framework/infrastructure/logging"
 )
 
 type AvatarGenerator struct {

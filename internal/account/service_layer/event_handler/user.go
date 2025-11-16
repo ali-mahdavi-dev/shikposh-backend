@@ -7,15 +7,15 @@ import (
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/entity"
 	"shikposh-backend/internal/account/domain/events"
-	"shikposh-backend/pkg/framework/infrastructure/logging"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"github.com/shikposh/framework/infrastructure/logging"
+	"shikposh-backend/internal/unit_of_work"
 )
 
 type UserEventHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 }
 
-func NewUserEventHandler(uow unit_of_work.PGUnitOfWork) *UserEventHandler {
+func NewUserEventHandler(uow unitofwork.PGUnitOfWork) *UserEventHandler {
 	return &UserEventHandler{uow: uow}
 }
 

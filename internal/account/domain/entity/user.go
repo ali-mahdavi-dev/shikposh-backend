@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"shikposh-backend/internal/account/domain/events"
-	"shikposh-backend/pkg/framework/adapter"
+	"github.com/shikposh/framework/adapter"
 
 	"gorm.io/gorm"
 )

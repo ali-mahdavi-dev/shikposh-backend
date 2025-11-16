@@ -4,8 +4,8 @@ import (
 	"shikposh-backend/config"
 	"shikposh-backend/internal/account/domain/entity"
 	"shikposh-backend/internal/account/service_layer/command_handler"
-	"shikposh-backend/pkg/framework/adapter"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"github.com/shikposh/framework/adapter"
+	"shikposh-backend/internal/unit_of_work"
 
 	. "github.com/onsi/gomega"
 	"gorm.io/driver/sqlite"
@@ -15,7 +15,7 @@ import (
 // UserAcceptanceTestBuilder helps build acceptance test scenarios
 type UserAcceptanceTestBuilder struct {
 	DB  *gorm.DB
-	UOW unit_of_work.PGUnitOfWork
+	UOW unitofwork.PGUnitOfWork
 	Cfg *config.Config
 }
 
@@ -31,7 +31,7 @@ func NewUserAcceptanceTestBuilder() *UserAcceptanceTestBuilder {
 	Expect(err).NotTo(HaveOccurred())
 
 	eventCh := make(chan adapter.EventWithWaitGroup, 100)
-	uow := unit_of_work.New(db, eventCh)
+	uow := unitofwork.New(db, eventCh)
 
 	cfg := &config.Config{
 		JWT: config.JWTConfig{

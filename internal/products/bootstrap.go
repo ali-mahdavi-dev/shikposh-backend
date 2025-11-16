@@ -11,14 +11,14 @@ import (
 	"shikposh-backend/internal/products/service_layer/event_handler"
 	"shikposh-backend/internal/products/service_layer/outbox"
 
-	"shikposh-backend/pkg/framework/adapter"
-	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
-	kafak "shikposh-backend/pkg/framework/infrastructure/kafak"
-	"shikposh-backend/pkg/framework/infrastructure/logging"
-	commandeventhandler "shikposh-backend/pkg/framework/service_layer/command_event_handler"
-	commandmiddleware "shikposh-backend/pkg/framework/service_layer/command_event_handler/command_middleware"
-	"shikposh-backend/pkg/framework/service_layer/messagebus"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"github.com/shikposh/framework/adapter"
+	elasticsearchx "github.com/shikposh/framework/infrastructure/elasticsearch"
+	kafak "github.com/shikposh/framework/infrastructure/kafak"
+	"github.com/shikposh/framework/infrastructure/logging"
+	commandeventhandler "github.com/shikposh/framework/service_layer/command_event_handler"
+	commandmiddleware "github.com/shikposh/framework/service_layer/command_event_handler/command_middleware"
+	"github.com/shikposh/framework/service_layer/messagebus"
+	"shikposh-backend/internal/unit_of_work"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -27,7 +27,7 @@ import (
 func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsearch elasticsearchx.Connection) error {
 	// Create event channel and unit of work for this module
 	eventCh := make(chan adapter.EventWithWaitGroup, 100)
-	uow := unit_of_work.New(db, eventCh)
+	uow := unitofwork.New(db, eventCh)
 	bus := messagebus.NewMessageBus(uow, eventCh)
 
 	// Initialize query handlers

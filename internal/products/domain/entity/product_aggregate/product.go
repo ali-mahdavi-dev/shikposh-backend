@@ -6,7 +6,7 @@ import (
 
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/events"
-	"shikposh-backend/pkg/framework/adapter"
+	"github.com/shikposh/framework/adapter"
 
 	"gorm.io/gorm"
 )

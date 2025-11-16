@@ -1,7 +1,7 @@
 package command_handler
 
 import (
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"shikposh-backend/internal/unit_of_work"
 
 	"github.com/gosimple/slug"
 )
@@ -13,17 +13,17 @@ func GenerateSlug(name string) string {
 }
 
 type ProductCommandHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 }
 
-func NewProductCommandHandler(uow unit_of_work.PGUnitOfWork) *ProductCommandHandler {
+func NewProductCommandHandler(uow unitofwork.PGUnitOfWork) *ProductCommandHandler {
 	return &ProductCommandHandler{uow: uow}
 }
 
 type ReviewCommandHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 }
 
-func NewReviewCommandHandler(uow unit_of_work.PGUnitOfWork) *ReviewCommandHandler {
+func NewReviewCommandHandler(uow unitofwork.PGUnitOfWork) *ReviewCommandHandler {
 	return &ReviewCommandHandler{uow: uow}
 }

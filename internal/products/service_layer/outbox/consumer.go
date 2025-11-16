@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
-	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
-	"shikposh-backend/pkg/framework/infrastructure/logging"
-	frameworkoutbox "shikposh-backend/pkg/framework/service_layer/outbox"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	elasticsearchx "github.com/shikposh/framework/infrastructure/elasticsearch"
+	"github.com/shikposh/framework/infrastructure/logging"
+	frameworkoutbox "github.com/shikposh/framework/service_layer/outbox"
+	"shikposh-backend/internal/unit_of_work"
 )
 
 // Consumer wraps the framework outbox consumer for products module
@@ -18,13 +18,13 @@ type Consumer struct {
 
 // ProductEventHandler implements frameworkoutbox.EventHandler for products
 type ProductEventHandler struct {
-	uow           unit_of_work.PGUnitOfWork
+	uow           unitofwork.PGUnitOfWork
 	elasticsearch elasticsearchx.Connection
 	indexName     string
 }
 
 func NewConsumer(
-	uow unit_of_work.PGUnitOfWork,
+	uow unitofwork.PGUnitOfWork,
 	elasticsearch elasticsearchx.Connection,
 	kafkaService frameworkoutbox.MessageConsumer,
 ) *Consumer {

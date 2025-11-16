@@ -5,8 +5,8 @@ import (
 
 	"shikposh-backend/internal/account/adapter/repository"
 	productrepository "shikposh-backend/internal/products/adapter/repository"
-	"shikposh-backend/pkg/framework/service_layer/types"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"github.com/shikposh/framework/service_layer/types"
+	"shikposh-backend/internal/unit_of_work"
 
 	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
@@ -78,4 +78,4 @@ func (m *MockPGUnitOfWork) Outbox(ctx context.Context) productrepository.OutboxR
 	return args.Get(0).(productrepository.OutboxRepository)
 }
 
-var _ unit_of_work.PGUnitOfWork = (*MockPGUnitOfWork)(nil)
+var _ unitofwork.PGUnitOfWork = (*MockPGUnitOfWork)(nil)

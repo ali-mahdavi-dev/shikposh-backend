@@ -8,15 +8,15 @@ import (
 
 	"shikposh-backend/internal/products/domain/entity"
 	"shikposh-backend/internal/products/domain/events"
-	"shikposh-backend/pkg/framework/infrastructure/logging"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"github.com/shikposh/framework/infrastructure/logging"
+	"shikposh-backend/internal/unit_of_work"
 )
 
 type ProductEventHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 }
 
-func NewProductEventHandler(uow unit_of_work.PGUnitOfWork) *ProductEventHandler {
+func NewProductEventHandler(uow unitofwork.PGUnitOfWork) *ProductEventHandler {
 	return &ProductEventHandler{
 		uow: uow,
 	}

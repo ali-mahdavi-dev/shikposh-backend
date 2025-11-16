@@ -8,17 +8,17 @@ import (
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/commands"
 	"shikposh-backend/internal/account/domain/entity"
-	"shikposh-backend/pkg/framework/api/jwt"
-	apperrors "shikposh-backend/pkg/framework/errors"
-	"shikposh-backend/pkg/framework/errors/phrases"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"github.com/shikposh/framework/api/jwt"
+	apperrors "github.com/shikposh/framework/errors"
+	"github.com/shikposh/framework/errors/phrases"
+	"shikposh-backend/internal/unit_of_work"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 	cfg *config.Config
 }
 
@@ -30,7 +30,7 @@ type LoginResult struct {
 	Access string `json:"access"`
 }
 
-func NewUserHandler(uow unit_of_work.PGUnitOfWork, cfg *config.Config) *UserHandler {
+func NewUserHandler(uow unitofwork.PGUnitOfWork, cfg *config.Config) *UserHandler {
 	return &UserHandler{uow: uow, cfg: cfg}
 }
 

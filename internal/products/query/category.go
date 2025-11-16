@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"shikposh-backend/internal/products/domain/entity"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"shikposh-backend/internal/unit_of_work"
 )
 
 type CategoryQueryHandler struct {
-	uow unit_of_work.PGUnitOfWork
+	uow unitofwork.PGUnitOfWork
 }
 
-func NewCategoryQueryHandler(uow unit_of_work.PGUnitOfWork) *CategoryQueryHandler {
+func NewCategoryQueryHandler(uow unitofwork.PGUnitOfWork) *CategoryQueryHandler {
 	return &CategoryQueryHandler{uow: uow}
 }
 

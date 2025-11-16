@@ -3,7 +3,7 @@ package product_aggregate
 import (
 	"time"
 
-	"shikposh-backend/pkg/framework/adapter"
+	"github.com/shikposh/framework/adapter"
 
 	"gorm.io/gorm"
 )

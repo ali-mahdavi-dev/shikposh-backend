@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	apperrors "shikposh-backend/pkg/framework/errors"
+	apperrors "github.com/shikposh/framework/errors"
 
 	. "github.com/onsi/gomega"
 )

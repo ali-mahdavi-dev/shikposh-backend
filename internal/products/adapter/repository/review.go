@@ -7,7 +7,7 @@ import (
 	accountentity "shikposh-backend/internal/account/domain/entity"
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/pkg/framework/adapter"
+	"github.com/shikposh/framework/adapter"
 
 	"gorm.io/gorm"
 )

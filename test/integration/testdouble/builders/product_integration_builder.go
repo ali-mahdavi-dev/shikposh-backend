@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	appadapter "shikposh-backend/pkg/framework/adapter"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	appadapter "github.com/shikposh/framework/adapter"
+	"shikposh-backend/internal/unit_of_work"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -15,7 +15,7 @@ import (
 // ProductIntegrationTestBuilder helps build integration test scenarios with PostgreSQL
 type ProductIntegrationTestBuilder struct {
 	DB  *gorm.DB
-	UOW unit_of_work.PGUnitOfWork
+	UOW unitofwork.PGUnitOfWork
 }
 
 func NewProductIntegrationTestBuilder() (*ProductIntegrationTestBuilder, error) {
@@ -47,7 +47,7 @@ func NewProductIntegrationTestBuilder() (*ProductIntegrationTestBuilder, error) 
 	}
 
 	eventCh := make(chan appadapter.EventWithWaitGroup, 100)
-	uow := unit_of_work.New(db, eventCh)
+	uow := unitofwork.New(db, eventCh)
 
 	return &ProductIntegrationTestBuilder{
 		DB:  db,

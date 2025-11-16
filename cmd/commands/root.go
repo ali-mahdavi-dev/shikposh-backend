@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	config "shikposh-backend/config"
-	"shikposh-backend/pkg/framework/infrastructure/logging"
+	"github.com/shikposh/framework/infrastructure/logging"
 )
 
 var (

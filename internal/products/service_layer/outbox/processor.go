@@ -5,9 +5,9 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/entity"
-	"shikposh-backend/pkg/framework/adapter"
-	frameworkoutbox "shikposh-backend/pkg/framework/service_layer/outbox"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"github.com/shikposh/framework/adapter"
+	frameworkoutbox "github.com/shikposh/framework/service_layer/outbox"
+	"shikposh-backend/internal/unit_of_work"
 
 	"gorm.io/gorm"
 )
@@ -18,7 +18,7 @@ type Processor struct {
 }
 
 // NewProcessor creates a new outbox processor using the framework processor
-func NewProcessor(uow unit_of_work.PGUnitOfWork, kafkaProducer frameworkoutbox.MessagePublisher) *Processor {
+func NewProcessor(uow unitofwork.PGUnitOfWork, kafkaProducer frameworkoutbox.MessagePublisher) *Processor {
 	// Get the outbox repository from UoW
 	repo := uow.Outbox(context.Background())
 

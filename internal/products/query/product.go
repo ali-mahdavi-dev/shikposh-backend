@@ -7,18 +7,18 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	elasticsearchx "shikposh-backend/pkg/framework/infrastructure/elasticsearch"
-	"shikposh-backend/pkg/framework/infrastructure/logging"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	elasticsearchx "github.com/shikposh/framework/infrastructure/elasticsearch"
+	"github.com/shikposh/framework/infrastructure/logging"
+	"shikposh-backend/internal/unit_of_work"
 )
 
 type ProductQueryHandler struct {
-	uow           unit_of_work.PGUnitOfWork
+	uow           unitofwork.PGUnitOfWork
 	elasticsearch elasticsearchx.Connection
 	indexName     string
 }
 
-func NewProductQueryHandler(uow unit_of_work.PGUnitOfWork, elasticsearch elasticsearchx.Connection) *ProductQueryHandler {
+func NewProductQueryHandler(uow unitofwork.PGUnitOfWork, elasticsearch elasticsearchx.Connection) *ProductQueryHandler {
 	return &ProductQueryHandler{
 		uow:           uow,
 		elasticsearch: elasticsearch,
