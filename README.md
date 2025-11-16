@@ -11,6 +11,7 @@
 ### 🔗 Related Projects
 
 - **Frontend Repository**: [shikposh](https://github.com/ali-mahdavi-dev/shikposh) - Modern e-commerce frontend built with Next.js 15, React 19, and TypeScript
+- **Framework Module**: [framework](https://github.com/ali-mahdavi-dev/framework) - Reusable framework components extracted as a separate Go module
 
 ---
 
@@ -100,11 +101,12 @@ _System Architecture & Technology Stack_
 
 ### Core Framework
 
-| Technology | Version     | Purpose                               |
-| ---------- | ----------- | ------------------------------------- |
-| **Go**     | 1.25        | High-performance programming language |
-| **Fiber**  | v3.0.0-rc.2 | Fast HTTP web framework               |
-| **GORM**   | 1.31.0      | Powerful ORM for database operations  |
+| Technology    | Version     | Purpose                                      |
+| ------------- | ----------- | -------------------------------------------- |
+| **Go**        | 1.25.1      | High-performance programming language        |
+| **Fiber**     | v3.0.0-rc.2 | Fast HTTP web framework                      |
+| **GORM**      | 1.31.1      | Powerful ORM for database operations         |
+| **Framework** | v0.0.0      | Reusable framework module (separate package) |
 
 ### Database & Cache
 
@@ -197,6 +199,22 @@ module/
 
 - 👤 **Account Module** - User management, authentication, profiles, and avatar generation
 - 🛍️ **Products Module** - Product management, categories, reviews, and product aggregates
+
+**Framework Module:**
+
+The project uses a **separate framework module** (`github.com/ali-mahdavi-dev/framework`) that contains reusable components:
+
+- **Adapters** - Base repository and unit of work interfaces
+- **API Utilities** - HTTP error handling, validation, JWT, middleware
+- **Infrastructure** - Database connections, logging, tracing, caching, message bus
+- **Service Layer** - Command/event handlers, outbox pattern, specifications
+
+This separation allows the framework to be:
+
+- ✅ **Reusable** - Can be used in other projects
+- ✅ **Maintainable** - Framework updates don't affect business logic
+- ✅ **Versioned** - Independent versioning and release cycle
+- ✅ **Packaged** - Can be published as a Go module
 
 **Module Initialization:**
 Each module has a `Bootstrap()` function that:
@@ -631,28 +649,24 @@ backend/
 │   ├── config-production.yml  # Production config
 │   └── config.go             # Config loader
 │
-├── 📂 internal/               # Application code
+├── 📂 internal/               # Application-specific code
 │   ├── account/              # User management module
 │   │   ├── adapter/          # Infrastructure adapters
 │   │   ├── domain/           # Domain layer
 │   │   ├── entrypoint/       # HTTP handlers
 │   │   ├── query/            # Read operations
 │   │   └── service_layer/    # Application services
-│   └── products/             # Product management module
-│       ├── adapter/          # Infrastructure adapters
-│       ├── domain/           # Domain layer
-│       ├── entrypoint/       # HTTP handlers
-│       ├── query/            # Read operations
-│       └── service_layer/   # Application services
+│   ├── products/             # Product management module
+│   │   ├── adapter/          # Infrastructure adapters
+│   │   ├── domain/           # Domain layer
+│   │   ├── entrypoint/       # HTTP handlers
+│   │   ├── query/            # Read operations
+│   │   └── service_layer/   # Application services
+│   └── unit_of_work/         # Domain-specific Unit of Work
+│       └── unit_of_work.go   # PostgreSQL Unit of Work implementation
 │
 ├── 📂 pkg/                    # Reusable packages
-│   └── framework/            # Framework components
-│       ├── adapter/          # Base adapters
-│       ├── api/              # API utilities
-│       ├── errors/           # Error handling
-│       ├── helpers/          # Helper functions
-│       ├── infrastructure/   # Infrastructure services
-│       └── service_layer/    # Service layer utilities
+│   └── middleware/           # HTTP middleware (RequestID, Logger, Auth)
 │
 ├── 📂 docker/                 # Docker configurations
 │   ├── docker-compose.yml    # Multi-container setup
@@ -699,6 +713,8 @@ cd shikposh/backend
 ```bash
 go mod download
 ```
+
+**Note:** This project uses a separate framework module located at `../framework`. The framework is referenced via a `replace` directive in `go.mod` for local development. For production, you can publish the framework module or use a different import path.
 
 #### 3️⃣ Configure the Application
 
