@@ -20,11 +20,11 @@ import (
 	"shikposh-backend/internal/products"
 	mw "shikposh-backend/pkg/middleware"
 
-	frameworkmiddleware "github.com/shikposh/framework/api/middleware"
-	"github.com/shikposh/framework/infrastructure/databases"
-	elasticsearchx "github.com/shikposh/framework/infrastructure/elasticsearch"
-	"github.com/shikposh/framework/infrastructure/logging"
-	"github.com/shikposh/framework/infrastructure/tracing"
+	frameworkmiddleware "github.com/ali-mahdavi-dev/framework/api/middleware"
+	"github.com/ali-mahdavi-dev/framework/infrastructure/databases"
+	elasticsearchx "github.com/ali-mahdavi-dev/framework/infrastructure/elasticsearch"
+	"github.com/ali-mahdavi-dev/framework/infrastructure/logging"
+	"github.com/ali-mahdavi-dev/framework/infrastructure/tracing"
 
 	"gorm.io/gorm"
 )

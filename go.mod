@@ -3,6 +3,7 @@ module shikposh-backend
 go 1.25.1
 
 require (
+	github.com/ali-mahdavi-dev/framework v0.0.0
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/gofiber/fiber/v3 v3.0.0-rc.2
@@ -13,7 +14,6 @@ require (
 	github.com/onsi/gomega v1.38.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
-	github.com/shikposh/framework v0.0.0
 	github.com/spf13/cast v1.10.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
@@ -25,8 +25,6 @@ require (
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
 )
-
-replace github.com/shikposh/framework => ../framework
 
 require (
 	github.com/IBM/sarama v1.46.3 // indirect
@@ -130,3 +128,6 @@ require (
 	google.golang.org/protobuf v1.36.9 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// برای توسعه محلی - بعد از پابلیش روی GitHub می‌توانید این خط را حذف کنید
+replace github.com/ali-mahdavi-dev/framework => ../framework

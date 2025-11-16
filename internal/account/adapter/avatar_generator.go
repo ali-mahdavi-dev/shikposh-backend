@@ -15,7 +15,7 @@ import (
 
 	"github.com/disintegration/imaging"
 
-	"github.com/shikposh/framework/infrastructure/logging"
+	"github.com/ali-mahdavi-dev/framework/infrastructure/logging"
 )
 
 type AvatarGenerator struct {

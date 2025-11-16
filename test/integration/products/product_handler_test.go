@@ -5,8 +5,8 @@ import (
 
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	appadapter "github.com/shikposh/framework/adapter"
-	apperrors "github.com/shikposh/framework/errors"
+	appadapter "github.com/ali-mahdavi-dev/framework/adapter"
+	apperrors "github.com/ali-mahdavi-dev/framework/errors"
 	"shikposh-backend/test/integration/testdouble/builders"
 	"shikposh-backend/test/integration/testdouble/factories"
 	"shikposh-backend/test/integration/testdouble/helpers"

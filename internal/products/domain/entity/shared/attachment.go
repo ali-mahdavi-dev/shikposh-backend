@@ -3,7 +3,7 @@ package shared
 import (
 	"time"
 
-	"github.com/shikposh/framework/adapter"
+	"github.com/ali-mahdavi-dev/framework/adapter"
 
 	"gorm.io/gorm"
 )

@@ -8,7 +8,7 @@ import (
 	accountrepository "shikposh-backend/internal/account/adapter/repository"
 	productrepository "shikposh-backend/internal/products/adapter/repository"
 
-	"github.com/shikposh/framework/adapter"
+	"github.com/ali-mahdavi-dev/framework/adapter"
 )
 
 // PGUnitOfWork extends the base UnitOfWork with PostgreSQL-specific functionality.

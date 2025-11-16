@@ -7,8 +7,8 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
-	apperrors "github.com/shikposh/framework/errors"
-	"github.com/shikposh/framework/errors/phrases"
+	apperrors "github.com/ali-mahdavi-dev/framework/errors"
+	"github.com/ali-mahdavi-dev/framework/errors/phrases"
 
 	"gorm.io/gorm"
 )

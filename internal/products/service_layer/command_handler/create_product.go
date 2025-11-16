@@ -10,9 +10,9 @@ import (
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/internal/products/domain/specification"
-	appadapter "github.com/shikposh/framework/adapter"
-	apperrors "github.com/shikposh/framework/errors"
-	"github.com/shikposh/framework/errors/phrases"
+	appadapter "github.com/ali-mahdavi-dev/framework/adapter"
+	apperrors "github.com/ali-mahdavi-dev/framework/errors"
+	"github.com/ali-mahdavi-dev/framework/errors/phrases"
 )
 
 func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *commands.CreateProduct) error {

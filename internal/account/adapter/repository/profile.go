@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"shikposh-backend/internal/account/domain/entity"
-	"github.com/shikposh/framework/adapter"
+	"github.com/ali-mahdavi-dev/framework/adapter"
 
 	"gorm.io/gorm"
 )

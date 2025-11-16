@@ -8,8 +8,8 @@ import (
 	"shikposh-backend/internal/products/domain/commands"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	appadapter "github.com/shikposh/framework/adapter"
-	apperrors "github.com/shikposh/framework/errors"
+	appadapter "github.com/ali-mahdavi-dev/framework/adapter"
+	apperrors "github.com/ali-mahdavi-dev/framework/errors"
 	"shikposh-backend/test/unit/testdouble/builders"
 	"shikposh-backend/test/unit/testdouble/factories"
 

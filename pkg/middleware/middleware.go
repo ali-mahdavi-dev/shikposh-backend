@@ -3,8 +3,8 @@ package middleware
 import (
 	"shikposh-backend/internal/unit_of_work"
 
-	"github.com/shikposh/framework/adapter"
-	frameworkmiddleware "github.com/shikposh/framework/api/middleware"
+	"github.com/ali-mahdavi-dev/framework/adapter"
+	frameworkmiddleware "github.com/ali-mahdavi-dev/framework/api/middleware"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"

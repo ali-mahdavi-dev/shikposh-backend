@@ -7,7 +7,7 @@ import (
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/entity"
 	"shikposh-backend/internal/account/domain/events"
-	"github.com/shikposh/framework/infrastructure/logging"
+	"github.com/ali-mahdavi-dev/framework/infrastructure/logging"
 	"shikposh-backend/internal/unit_of_work"
 )
 

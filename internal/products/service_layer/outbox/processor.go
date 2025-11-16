@@ -5,8 +5,8 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/entity"
-	"github.com/shikposh/framework/adapter"
-	frameworkoutbox "github.com/shikposh/framework/service_layer/outbox"
+	"github.com/ali-mahdavi-dev/framework/adapter"
+	frameworkoutbox "github.com/ali-mahdavi-dev/framework/service_layer/outbox"
 	"shikposh-backend/internal/unit_of_work"
 
 	"gorm.io/gorm"

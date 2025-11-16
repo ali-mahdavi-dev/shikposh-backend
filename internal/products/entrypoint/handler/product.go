@@ -10,8 +10,8 @@ import (
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	httpapi "github.com/shikposh/framework/api/http"
-	"github.com/shikposh/framework/service_layer/messagebus"
+	httpapi "github.com/ali-mahdavi-dev/framework/api/http"
+	"github.com/ali-mahdavi-dev/framework/service_layer/messagebus"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/spf13/cast"

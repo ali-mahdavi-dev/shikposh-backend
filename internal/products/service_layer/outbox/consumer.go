@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	elasticsearchx "github.com/shikposh/framework/infrastructure/elasticsearch"
-	"github.com/shikposh/framework/infrastructure/logging"
-	frameworkoutbox "github.com/shikposh/framework/service_layer/outbox"
+	elasticsearchx "github.com/ali-mahdavi-dev/framework/infrastructure/elasticsearch"
+	"github.com/ali-mahdavi-dev/framework/infrastructure/logging"
+	frameworkoutbox "github.com/ali-mahdavi-dev/framework/service_layer/outbox"
 	"shikposh-backend/internal/unit_of_work"
 )
 

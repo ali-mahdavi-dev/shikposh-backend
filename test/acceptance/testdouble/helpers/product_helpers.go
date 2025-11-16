@@ -5,7 +5,7 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	appadapter "github.com/shikposh/framework/adapter"
+	appadapter "github.com/ali-mahdavi-dev/framework/adapter"
 
 	. "github.com/onsi/gomega"
 	"gorm.io/gorm"

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	appadapter "github.com/shikposh/framework/adapter"
+	appadapter "github.com/ali-mahdavi-dev/framework/adapter"
 	"shikposh-backend/internal/unit_of_work"
 
 	"gorm.io/driver/postgres"
