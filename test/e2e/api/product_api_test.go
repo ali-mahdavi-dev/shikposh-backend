@@ -37,11 +37,15 @@ var _ = Describe("Product API E2E", func() {
 	Describe("GET /api/v1/public/products", func() {
 		Context("when requesting all products", func() {
 			It("should return all products via HTTP API", func() {
+				// Phase 1: Setup (Arrange)
 				req := httptest.NewRequest(http.MethodGet, "/api/v1/public/products", nil)
+
+				// Phase 2: Exercise (Act)
 				resp, err := builder.app.Test(req)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
 				var result map[string]interface{}
 				err = json.NewDecoder(resp.Body).Decode(&result)
 				Expect(err).NotTo(HaveOccurred())
@@ -53,7 +57,7 @@ var _ = Describe("Product API E2E", func() {
 	Describe("POST /api/v1/admin/products", func() {
 		Context("when creating a new product", func() {
 			It("should create product via HTTP API", func() {
-				// First create category
+				// Phase 1: Setup (Arrange) - Create category
 				categoryRepo := repository.NewCategoryRepository(builder.db)
 				category := &entity.Category{
 					Name: "Clothing",
@@ -72,14 +76,15 @@ var _ = Describe("Product API E2E", func() {
 						{Price: 100000.0, Stock: 10},
 					},
 				}
-
 				body, err := json.Marshal(cmd)
 				Expect(err).NotTo(HaveOccurred())
-
 				req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/products", bytes.NewBuffer(body))
 				req.Header.Set("Content-Type", "application/json")
 
+				// Phase 2: Exercise (Act)
 				resp, err := builder.app.Test(req)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 			})

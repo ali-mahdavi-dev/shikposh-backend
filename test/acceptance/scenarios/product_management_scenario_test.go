@@ -3,30 +3,28 @@ package acceptance_test
 import (
 	"context"
 
-	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/entity"
-	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/service_layer/command_handler"
-	appadapter "shikposh-backend/pkg/framework/adapter"
 	apperrors "shikposh-backend/pkg/framework/errors"
-	"shikposh-backend/pkg/framework/service_layer/unit_of_work"
+	"shikposh-backend/test/acceptance/testdouble/builders"
+	"shikposh-backend/test/acceptance/testdouble/factories"
+	"shikposh-backend/test/acceptance/testdouble/helpers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 var _ = Describe("Product Management Acceptance Scenarios", func() {
 	var (
-		builder *ProductAcceptanceTestBuilder
+		builder *builders.ProductAcceptanceTestBuilder
+		factory *factories.ProductFactory
 		handler *command_handler.ProductCommandHandler
 		ctx     context.Context
 	)
 
 	BeforeEach(func() {
-		builder = NewProductAcceptanceTestBuilder(nil)
+		builder = builders.NewProductAcceptanceTestBuilder()
+		factory = factories.NewProductFactory(builder.DB)
 		handler = builder.BuildHandler()
 		ctx = context.Background()
 	})
@@ -37,203 +35,84 @@ var _ = Describe("Product Management Acceptance Scenarios", func() {
 
 	Describe("Complete product management flow", func() {
 		It("مدیر می‌تواند محصول جدید ایجاد کند و سپس آن را به‌روزرسانی و حذف کند", func() {
-			// Step 1: Create category
-			categoryRepo := repository.NewCategoryRepository(builder.db)
-			category := &entity.Category{
-				Name: "Clothing",
-				Slug: "clothing",
-			}
-			err := categoryRepo.Save(ctx, category)
-			Expect(err).NotTo(HaveOccurred())
+			// Phase 1: Setup (Arrange)
+			category := factory.CreateCategory("Clothing", "clothing")
+			createCmd := factory.CreateProductCommand("Men's T-Shirt", "Test Brand", uint64(category.ID))
 
-			// Step 2: Create product
-			desc := "Test product description"
-			createCmd := &commands.CreateProduct{
-				Name:        "Men's T-Shirt",
-				Brand:       "Test Brand",
-				Description: &desc,
-				CategoryID:  uint64(category.ID),
-				Tags:        []string{"men", "summer"},
-				Sizes:       []string{"M", "L", "XL"},
-				Features: []commands.ProductFeatureInput{
-					{Feature: "Waterproof", Order: 1},
-					{Feature: "Washable", Order: 2},
-				},
-				Specs: []commands.ProductSpecInput{
-					{Key: "Material", Value: "100% Cotton", Order: 1},
-					{Key: "Country", Value: "USA", Order: 2},
-				},
-				Details: []commands.ProductDetailInput{
-					{Price: 100000.0, Stock: 10},
-				},
-			}
+			// Phase 2: Exercise (Act) - Create product
+			err := handler.CreateProductHandler(ctx, createCmd)
 
-			err = handler.CreateProductHandler(ctx, createCmd)
+			// Phase 3: Verify (Assert) - Verify product creation
 			Expect(err).NotTo(HaveOccurred())
-
-			// Step 3: Verify product was created with all associations
-			productRepo := repository.NewProductRepository(builder.db)
-			product, err := productRepo.FindBySlug(ctx, createCmd.Slug)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(product).NotTo(BeNil())
+			product := helpers.FindProductBySlug(builder.DB, command_handler.GenerateSlug(createCmd.Name))
 			Expect(product.Name).To(Equal("Men's T-Shirt"))
 			Expect(product.Features).To(HaveLen(2))
 			Expect(product.Specs).To(HaveLen(2))
 			Expect(product.Details).To(HaveLen(1))
 
-			// Step 4: Update product
-			newDesc := "Updated description"
-			updateCmd := &commands.UpdateProduct{
-				ID:          uint64(product.ID),
-				Name:        "Updated Men's T-Shirt",
-				Slug:        "updated-mens-tshirt",
-				Brand:       "New Brand",
-				Description: &newDesc,
-				CategoryID:  uint64(category.ID),
-				Features: []commands.ProductFeatureInput{
-					{Feature: "New Feature", Order: 1},
-				},
-				Details: []commands.ProductDetailInput{
-					{Price: 150000.0, Stock: 20},
-				},
-			}
-
+			// Phase 2: Exercise (Act) - Update product
+			updateCmd := factory.CreateUpdateCommand(uint64(product.ID), "Updated Men's T-Shirt", "New Brand", uint64(category.ID))
 			err = handler.UpdateProductHandler(ctx, updateCmd)
-			Expect(err).NotTo(HaveOccurred())
 
-			// Step 5: Verify product was updated
-			updated, err := productRepo.FindByID(ctx, uint64(product.ID))
+			// Phase 3: Verify (Assert) - Verify product update
 			Expect(err).NotTo(HaveOccurred())
+			updated := helpers.FindProductByID(builder.DB, uint64(product.ID))
 			Expect(updated.Name).To(Equal("Updated Men's T-Shirt"))
 			Expect(updated.Brand).To(Equal("New Brand"))
 			Expect(updated.Features).To(HaveLen(1))
 			Expect(updated.Features[0].Feature).To(Equal("New Feature"))
 
-			// Step 6: Soft delete product
-			deleteCmd := &commands.DeleteProduct{
-				ID:         uint64(product.ID),
-				SoftDelete: true,
-			}
-
+			// Phase 2: Exercise (Act) - Delete product
+			deleteCmd := factory.CreateDeleteCommand(uint64(product.ID), true)
 			err = handler.DeleteProductHandler(ctx, deleteCmd)
-			Expect(err).NotTo(HaveOccurred())
 
-			// Step 7: Verify product was soft deleted
-			_, err = productRepo.FindByID(ctx, uint64(product.ID))
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(Equal(appadapter.ErrEntityNotFound))
+			// Phase 3: Verify (Assert) - Verify product deletion
+			Expect(err).NotTo(HaveOccurred())
+			helpers.VerifyProductNotFound(builder.DB, uint64(product.ID))
 		})
 	})
 
 	Describe("Duplicate slug prevention", func() {
 		It("سیستم از ایجاد محصول با شناسه تکراری جلوگیری می‌کند", func() {
-			// Step 1: Create category
-			categoryRepo := repository.NewCategoryRepository(builder.db)
-			category := &entity.Category{
-				Name: "Clothing",
-				Slug: "clothing",
-			}
-			err := categoryRepo.Save(ctx, category)
+			// Phase 1: Setup (Arrange)
+			category := factory.CreateCategory("Clothing", "clothing")
+			cmd1 := factory.CreateProductCommand("First Product", "Brand", uint64(category.ID))
+
+			// Phase 2: Exercise (Act) - Create first product
+			err := handler.CreateProductHandler(ctx, cmd1)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Step 2: Create first product
-			desc := "Description"
-			cmd1 := &commands.CreateProduct{
-				Name:        "First Product",
-				Brand:       "Brand",
-				Description: &desc,
-				CategoryID:  uint64(category.ID),
-				Details: []commands.ProductDetailInput{
-					{Price: 100000.0},
-				},
-			}
-			err = handler.CreateProductHandler(ctx, cmd1)
-			Expect(err).NotTo(HaveOccurred())
+			// Phase 1: Setup (Arrange) - Prepare duplicate command
+			cmd2 := factory.CreateProductCommand("First Product", "Other Brand", uint64(category.ID))
 
-			// Step 3: Try to create product with same slug (generated from same name)
-			cmd2 := &commands.CreateProduct{
-				Name:        "First Product",
-				Brand:       "Other Brand",
-				Description: &desc,
-				CategoryID:  uint64(category.ID),
-				Details: []commands.ProductDetailInput{
-					{Price: 200000.0},
-				},
-			}
+			// Phase 2: Exercise (Act) - Try to create duplicate product
 			err = handler.CreateProductHandler(ctx, cmd2)
+
+			// Phase 3: Verify (Assert) - Verify conflict error
 			Expect(err).To(HaveOccurred())
-			appErr, ok := err.(apperrors.Error)
-			Expect(ok).To(BeTrue())
-			Expect(appErr.Type()).To(Equal(apperrors.ErrorTypeConflict))
+			Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeConflict))
 		})
 	})
 
 	Describe("Product validation", func() {
 		It("سیستم از ایجاد محصول بدون قیمت جلوگیری می‌کند", func() {
-			// Step 1: Create category
-			categoryRepo := repository.NewCategoryRepository(builder.db)
-			category := &entity.Category{
-				Name: "Clothing",
-				Slug: "clothing",
-			}
-			err := categoryRepo.Save(ctx, category)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Step 2: Try to create product without price details
+			// Phase 1: Setup (Arrange)
+			category := factory.CreateCategory("Clothing", "clothing")
 			desc := "Description"
 			cmd := &commands.CreateProduct{
 				Name:        "Product Without Price",
 				Brand:       "Brand",
 				Description: &desc,
 				CategoryID:  uint64(category.ID),
-				Details:     []commands.ProductDetailInput{}, // No price details
+				Details:     []commands.ProductDetailInput{},
 			}
 
-			err = handler.CreateProductHandler(ctx, cmd)
+			// Phase 2: Exercise (Act)
+			err := handler.CreateProductHandler(ctx, cmd)
+
+			// Phase 3: Verify (Assert)
 			Expect(err).To(HaveOccurred())
-			appErr, ok := err.(apperrors.Error)
-			Expect(ok).To(BeTrue())
-			Expect(appErr.Type()).To(Equal(apperrors.ErrorTypeValidation))
+			Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeValidation))
 		})
 	})
 })
-
-// ProductAcceptanceTestBuilder helps build acceptance test scenarios for products
-type ProductAcceptanceTestBuilder struct {
-	db  *gorm.DB
-	uow unit_of_work.PGUnitOfWork
-}
-
-func NewProductAcceptanceTestBuilder(t GinkgoTInterface) *ProductAcceptanceTestBuilder {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	Expect(err).NotTo(HaveOccurred())
-
-	err = db.AutoMigrate(
-		&entity.Category{},
-		&productaggregate.Product{},
-		&productaggregate.ProductFeature{},
-		&productaggregate.ProductDetail{},
-		&productaggregate.ProductSpec{},
-	)
-	Expect(err).NotTo(HaveOccurred())
-
-	eventCh := make(chan appadapter.EventWithWaitGroup, 100)
-	uow := unit_of_work.New(db, eventCh)
-
-	return &ProductAcceptanceTestBuilder{
-		db:  db,
-		uow: uow,
-	}
-}
-
-func (b *ProductAcceptanceTestBuilder) BuildHandler() *command_handler.ProductCommandHandler {
-	return command_handler.NewProductCommandHandler(b.uow)
-}
-
-func (b *ProductAcceptanceTestBuilder) Cleanup() {
-	b.db.Exec("DELETE FROM products")
-	b.db.Exec("DELETE FROM categories")
-	b.db.Exec("DELETE FROM product_features")
-	b.db.Exec("DELETE FROM product_details")
-	b.db.Exec("DELETE FROM product_specs")
-}

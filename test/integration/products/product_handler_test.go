@@ -37,6 +37,7 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 	Describe("CreateProductHandler", func() {
 		Context("when creating a new product", func() {
 			It("should create product with all associations in database", func() {
+				// Phase 1: Setup (Arrange)
 				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
 				productCmd := factories.CreateProductCommand("Men's T-Shirt", "Test Brand", uint64(category.ID))
 				productCmd.Features = []commands.ProductFeatureInput{
@@ -47,9 +48,11 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 					{Key: "Material", Value: "100% Cotton", Order: 1},
 				}
 
+				// Phase 2: Exercise (Act)
 				err := handler.CreateProductHandler(ctx, productCmd)
-				Expect(err).NotTo(HaveOccurred())
 
+				// Phase 3: Verify (Assert)
+				Expect(err).NotTo(HaveOccurred())
 				product := helpers.FindProductBySlug(builder.DB, command_handler.GenerateSlug(productCmd.Name))
 				Expect(product.Name).To(Equal("Men's T-Shirt"))
 				Expect(product.Features).To(HaveLen(2))
@@ -62,13 +65,21 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 
 		Context("when slug already exists", func() {
 			It("should return conflict error", func() {
+				// Phase 1: Setup (Arrange)
 				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
 				firstProduct := factories.CreateProductCommand("First Product", "Brand", uint64(category.ID))
+
+				// Phase 2: Exercise (Act) - Create first product
 				err := handler.CreateProductHandler(ctx, firstProduct)
 				Expect(err).NotTo(HaveOccurred())
 
+				// Phase 1: Setup (Arrange) - Prepare duplicate product
 				duplicateProduct := factories.CreateProductCommand("First Product", "Other Brand", uint64(category.ID))
+
+				// Phase 2: Exercise (Act) - Try to create duplicate
 				err = handler.CreateProductHandler(ctx, duplicateProduct)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).To(HaveOccurred())
 				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeConflict))
 			})
@@ -76,10 +87,14 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 
 		Context("when category does not exist", func() {
 			It("should return not found error", func() {
+				// Phase 1: Setup (Arrange)
 				nonExistentCategoryID := uint64(99999)
 				productCmd := factories.CreateProductCommand("Product", "Brand", nonExistentCategoryID)
 
+				// Phase 2: Exercise (Act)
 				err := handler.CreateProductHandler(ctx, productCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).To(HaveOccurred())
 				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeNotFound))
 			})
@@ -87,19 +102,27 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 
 		Context("when product validation fails", func() {
 			It("should return validation error when name is empty", func() {
+				// Phase 1: Setup (Arrange)
 				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
 				productCmd := factories.CreateProductCommandWithEmptyName(uint64(category.ID))
 
+				// Phase 2: Exercise (Act)
 				err := handler.CreateProductHandler(ctx, productCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).To(HaveOccurred())
 				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeValidation))
 			})
 
 			It("should return validation error when no details provided", func() {
+				// Phase 1: Setup (Arrange)
 				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
 				productCmd := factories.CreateProductCommandWithoutDetails("Product", "Brand", uint64(category.ID))
 
+				// Phase 2: Exercise (Act)
 				err := handler.CreateProductHandler(ctx, productCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).To(HaveOccurred())
 				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeValidation))
 			})
@@ -109,6 +132,7 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 	Describe("UpdateProductHandler", func() {
 		Context("when updating an existing product", func() {
 			It("should update product and replace associations", func() {
+				// Phase 1: Setup (Arrange) - Create product
 				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
 				existingProduct := factories.CreateProductCommand("Old Product", "Old Brand", uint64(category.ID))
 				existingProduct.Features = []commands.ProductFeatureInput{
@@ -120,9 +144,11 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 				product := helpers.FindProductBySlug(builder.DB, command_handler.GenerateSlug(existingProduct.Name))
 				updateCmd := factories.CreateUpdateCommand(uint64(product.ID), "New Product", "New Brand", uint64(category.ID))
 
+				// Phase 2: Exercise (Act)
 				err = handler.UpdateProductHandler(ctx, updateCmd)
-				Expect(err).NotTo(HaveOccurred())
 
+				// Phase 3: Verify (Assert)
+				Expect(err).NotTo(HaveOccurred())
 				updatedProduct := helpers.FindProductByID(builder.DB, uint64(product.ID))
 				Expect(updatedProduct.Name).To(Equal("New Product"))
 				Expect(updatedProduct.Brand).To(Equal("New Brand"))
@@ -133,11 +159,15 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 
 		Context("when product does not exist", func() {
 			It("should return not found error", func() {
+				// Phase 1: Setup (Arrange)
 				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
 				nonExistentProductID := uint64(99999)
 				updateCmd := factories.CreateUpdateCommand(nonExistentProductID, "Product", "Brand", uint64(category.ID))
 
+				// Phase 2: Exercise (Act)
 				err := handler.UpdateProductHandler(ctx, updateCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).To(HaveOccurred())
 				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeNotFound))
 			})
@@ -145,6 +175,7 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 
 		Context("when updating with duplicate slug", func() {
 			It("should return conflict error", func() {
+				// Phase 1: Setup (Arrange) - Create products
 				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
 				firstProduct := factories.CreateProductCommand("Product One", "Brand1", uint64(category.ID))
 				err := handler.CreateProductHandler(ctx, firstProduct)
@@ -157,7 +188,10 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 				product2 := helpers.FindProductBySlug(builder.DB, command_handler.GenerateSlug(secondProduct.Name))
 				updateCmd := factories.CreateUpdateCommandWithDuplicateSlug(uint64(product2.ID), command_handler.GenerateSlug(firstProduct.Name), uint64(category.ID))
 
+				// Phase 2: Exercise (Act)
 				err = handler.UpdateProductHandler(ctx, updateCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).To(HaveOccurred())
 				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeConflict))
 			})
@@ -167,6 +201,7 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 	Describe("DeleteProductHandler", func() {
 		Context("when soft deleting a product", func() {
 			It("should soft delete product and keep associations", func() {
+				// Phase 1: Setup (Arrange) - Create product
 				category := factories.CreateCategory(builder.DB, "Clothing", "clothing")
 				productCmd := factories.CreateProductCommand("Product To Delete", "Brand", uint64(category.ID))
 				err := handler.CreateProductHandler(ctx, productCmd)
@@ -178,9 +213,11 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 					SoftDelete: true,
 				}
 
+				// Phase 2: Exercise (Act)
 				err = handler.DeleteProductHandler(ctx, deleteCmd)
-				Expect(err).NotTo(HaveOccurred())
 
+				// Phase 3: Verify (Assert)
+				Expect(err).NotTo(HaveOccurred())
 				_, err = helpers.FindProductByIDWithError(builder.DB, uint64(product.ID))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(appadapter.ErrEntityNotFound))
@@ -189,13 +226,17 @@ var _ = Describe("ProductCommandHandler Integration", func() {
 
 		Context("when product does not exist", func() {
 			It("should return not found error", func() {
+				// Phase 1: Setup (Arrange)
 				nonExistentProductID := uint64(99999)
 				deleteCmd := &commands.DeleteProduct{
 					ID:         nonExistentProductID,
 					SoftDelete: true,
 				}
 
+				// Phase 2: Exercise (Act)
 				err := handler.DeleteProductHandler(ctx, deleteCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).To(HaveOccurred())
 				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeNotFound))
 			})

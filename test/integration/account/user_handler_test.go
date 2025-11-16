@@ -37,11 +37,14 @@ var _ = Describe("UserHandler Integration", func() {
 	Describe("RegisterHandler", func() {
 		Context("when registering a new user", func() {
 			It("should register and persist user to database", func() {
+				// Phase 1: Setup (Arrange)
 				registerCmd := factories.CreateRegisterCommand("newuser", "newuser@example.com", "password123")
 
+				// Phase 2: Exercise (Act)
 				err := handler.RegisterHandler(ctx, registerCmd)
-				Expect(err).NotTo(HaveOccurred())
 
+				// Phase 3: Verify (Assert)
+				Expect(err).NotTo(HaveOccurred())
 				user := helpers.FindUserByUsername(builder.DB, "newuser")
 				Expect(user.UserName).To(Equal("newuser"))
 				Expect(user.Email).To(Equal("newuser@example.com"))
@@ -51,11 +54,14 @@ var _ = Describe("UserHandler Integration", func() {
 
 		Context("when username already exists", func() {
 			It("should return conflict error", func() {
+				// Phase 1: Setup (Arrange)
 				factories.CreateUser(builder.DB, "existinguser", "existing@example.com", "password123")
-
 				registerCmd := factories.CreateRegisterCommand("existinguser", "test@example.com", "password123")
 
+				// Phase 2: Exercise (Act)
 				err := handler.RegisterHandler(ctx, registerCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).To(HaveOccurred())
 				Expect(helpers.GetErrorType(err)).To(Equal(apperrors.ErrorTypeConflict))
 			})
@@ -65,13 +71,16 @@ var _ = Describe("UserHandler Integration", func() {
 	Describe("LoginHandler", func() {
 		Context("when credentials are valid", func() {
 			It("should login and create token in database", func() {
+				// Phase 1: Setup (Arrange)
 				user := factories.CreateUser(builder.DB, "testuser", "test@example.com", "password123")
 				loginCmd := factories.CreateLoginCommand("testuser", "password123")
 
+				// Phase 2: Exercise (Act)
 				token, err := handler.LoginHandler(ctx, loginCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(token).NotTo(BeEmpty())
-
 				savedToken := helpers.FindTokenByUserID(builder.DB, user.ID)
 				Expect(savedToken.Token).To(Equal(token))
 			})
@@ -79,14 +88,17 @@ var _ = Describe("UserHandler Integration", func() {
 
 		Context("when user logs in again", func() {
 			It("should replace existing token", func() {
+				// Phase 1: Setup (Arrange)
 				user := factories.CreateUser(builder.DB, "testuser", "test@example.com", "password123")
 				factories.CreateToken(builder.DB, user.ID, "old-token")
-
 				loginCmd := factories.CreateLoginCommand("testuser", "password123")
+
+				// Phase 2: Exercise (Act)
 				newToken, err := handler.LoginHandler(ctx, loginCmd)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(newToken).NotTo(Equal("old-token"))
-
 				savedToken := helpers.FindTokenByUserID(builder.DB, user.ID)
 				Expect(savedToken.Token).To(Equal(newToken))
 			})
@@ -96,14 +108,16 @@ var _ = Describe("UserHandler Integration", func() {
 	Describe("LogoutHandler", func() {
 		Context("when user has valid token", func() {
 			It("should remove token from database", func() {
+				// Phase 1: Setup (Arrange)
 				user := factories.CreateUser(builder.DB, "testuser", "test@example.com", "password123")
 				factories.CreateToken(builder.DB, user.ID, "test-token")
-
 				logoutCmd := &commands.Logout{UserID: uint64(user.ID)}
 
+				// Phase 2: Exercise (Act)
 				err := handler.LogoutHandler(ctx, logoutCmd)
-				Expect(err).NotTo(HaveOccurred())
 
+				// Phase 3: Verify (Assert)
+				Expect(err).NotTo(HaveOccurred())
 				_, err = helpers.FindTokenByUserIDWithError(builder.DB, user.ID)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(repository.ErrTokenNotFound))

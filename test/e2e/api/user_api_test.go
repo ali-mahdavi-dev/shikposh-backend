@@ -33,6 +33,7 @@ var _ = Describe("User API E2E", func() {
 	Describe("POST /api/v1/public/register", func() {
 		Context("when registering a new user", func() {
 			It("should register user via HTTP API", func() {
+				// Phase 1: Setup (Arrange)
 				cmd := commands.RegisterUser{
 					AvatarIdentifier: "avatar123",
 					UserName:         "newuser",
@@ -41,14 +42,15 @@ var _ = Describe("User API E2E", func() {
 					Email:            "newuser@example.com",
 					Password:         "password123",
 				}
-
 				body, err := json.Marshal(cmd)
 				Expect(err).NotTo(HaveOccurred())
-
 				req := httptest.NewRequest(http.MethodPost, "/api/v1/public/register", bytes.NewBuffer(body))
 				req.Header.Set("Content-Type", "application/json")
 
+				// Phase 2: Exercise (Act)
 				resp, err := builder.app.Test(req)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 			})
@@ -56,7 +58,7 @@ var _ = Describe("User API E2E", func() {
 
 		Context("when username already exists", func() {
 			It("should return conflict status", func() {
-				// Register first user
+				// Phase 1: Setup (Arrange) - Register first user
 				cmd1 := commands.RegisterUser{
 					UserName:  "existinguser",
 					FirstName: "Test",
@@ -69,7 +71,7 @@ var _ = Describe("User API E2E", func() {
 				req1.Header.Set("Content-Type", "application/json")
 				builder.app.Test(req1)
 
-				// Try to register with same username
+				// Phase 1: Setup (Arrange) - Prepare duplicate registration
 				cmd2 := commands.RegisterUser{
 					UserName:  "existinguser",
 					FirstName: "Another",
@@ -81,7 +83,10 @@ var _ = Describe("User API E2E", func() {
 				req2 := httptest.NewRequest(http.MethodPost, "/api/v1/public/register", bytes.NewBuffer(body2))
 				req2.Header.Set("Content-Type", "application/json")
 
+				// Phase 2: Exercise (Act)
 				resp, err := builder.app.Test(req2)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 			})
@@ -91,7 +96,7 @@ var _ = Describe("User API E2E", func() {
 	Describe("POST /api/v1/public/login", func() {
 		Context("when credentials are valid", func() {
 			It("should login and return access token", func() {
-				// First register a user
+				// Phase 1: Setup (Arrange) - Register user
 				registerCmd := commands.RegisterUser{
 					UserName:  "testuser",
 					FirstName: "Test",
@@ -104,7 +109,7 @@ var _ = Describe("User API E2E", func() {
 				registerReq.Header.Set("Content-Type", "application/json")
 				builder.app.Test(registerReq)
 
-				// Now login
+				// Phase 1: Setup (Arrange) - Prepare login request
 				loginCmd := commands.LoginUser{
 					UserName: "testuser",
 					Password: "password123",
@@ -113,11 +118,12 @@ var _ = Describe("User API E2E", func() {
 				loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/public/login", bytes.NewBuffer(loginBody))
 				loginReq.Header.Set("Content-Type", "application/json")
 
+				// Phase 2: Exercise (Act)
 				resp, err := builder.app.Test(loginReq)
+
+				// Phase 3: Verify (Assert)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-				// Verify response contains access token
 				var result map[string]interface{}
 				err = json.NewDecoder(resp.Body).Decode(&result)
 				Expect(err).NotTo(HaveOccurred())
