@@ -5,17 +5,21 @@ import (
 
 	"gorm.io/gorm"
 
-	"shikposh-backend/internal/account/adapter/repository"
+	accountrepository "shikposh-backend/internal/account/adapter/repository"
 	productrepository "shikposh-backend/internal/products/adapter/repository"
+
 	"github.com/shikposh/framework/adapter"
 )
 
 // PGUnitOfWork extends the base UnitOfWork with PostgreSQL-specific functionality.
 type PGUnitOfWork interface {
 	adapter.UnitOfWork
-	User(ctx context.Context) repository.UserRepository
-	Token(ctx context.Context) repository.TokenRepository
-	Profile(ctx context.Context) repository.ProfileRepository
+	// account repositories
+	User(ctx context.Context) accountrepository.UserRepository
+	Token(ctx context.Context) accountrepository.TokenRepository
+	Profile(ctx context.Context) accountrepository.ProfileRepository
+
+	// product repositories
 	Product(ctx context.Context) productrepository.ProductRepository
 	Category(ctx context.Context) productrepository.CategoryRepository
 	Review(ctx context.Context) productrepository.ReviewRepository
@@ -36,24 +40,24 @@ func New(db *gorm.DB, eventCh chan<- adapter.EventWithWaitGroup) PGUnitOfWork {
 }
 
 // User returns the UserRepository instance for the current transaction.
-func (uow *pgUnitOfWork) User(ctx context.Context) repository.UserRepository {
+func (uow *pgUnitOfWork) User(ctx context.Context) accountrepository.UserRepository {
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "user", func(session *gorm.DB) adapter.SeenedRepository {
-		return repository.NewUserRepository(session)
-	}).(repository.UserRepository)
+		return accountrepository.NewUserRepository(session)
+	}).(accountrepository.UserRepository)
 }
 
 // Token returns the TokenRepository instance for the current transaction.
-func (uow *pgUnitOfWork) Token(ctx context.Context) repository.TokenRepository {
+func (uow *pgUnitOfWork) Token(ctx context.Context) accountrepository.TokenRepository {
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "token", func(session *gorm.DB) adapter.SeenedRepository {
-		return repository.NewTokenRepository(session)
-	}).(repository.TokenRepository)
+		return accountrepository.NewTokenRepository(session)
+	}).(accountrepository.TokenRepository)
 }
 
 // Profile returns the ProfileRepository instance for the current transaction.
-func (uow *pgUnitOfWork) Profile(ctx context.Context) repository.ProfileRepository {
+func (uow *pgUnitOfWork) Profile(ctx context.Context) accountrepository.ProfileRepository {
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "profile", func(session *gorm.DB) adapter.SeenedRepository {
-		return repository.NewProfileRepository(session)
-	}).(repository.ProfileRepository)
+		return accountrepository.NewProfileRepository(session)
+	}).(accountrepository.ProfileRepository)
 }
 
 // Product returns the ProductRepository instance for the current transaction.
