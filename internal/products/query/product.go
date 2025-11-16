@@ -7,8 +7,8 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	elasticsearchx "github.com/ali-mahdavi-dev/framework/infrastructure/elasticsearch"
-	"github.com/ali-mahdavi-dev/framework/infrastructure/logging"
+	elasticsearchx "github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/elasticsearch"
+	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
 	"shikposh-backend/internal/unit_of_work"
 )
 

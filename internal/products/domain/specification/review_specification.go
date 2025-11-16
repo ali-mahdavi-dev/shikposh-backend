@@ -2,7 +2,7 @@ package specification
 
 import (
 	"shikposh-backend/internal/products/domain/entity"
-	"github.com/ali-mahdavi-dev/framework/specification"
+	"github.com/ali-mahdavi-dev/shikposh-framework/specification"
 )
 
 // ReviewHasMinimumRatingSpecification checks if a review has a minimum rating

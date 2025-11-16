@@ -6,7 +6,7 @@ import (
 	"shikposh-backend/internal/products/service_layer/command_handler"
 	"shikposh-backend/test/unit/testdouble/mocks"
 
-	"github.com/ali-mahdavi-dev/framework/service_layer/types"
+	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/types"
 
 	"github.com/stretchr/testify/mock"
 )

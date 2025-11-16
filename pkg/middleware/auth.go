@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"shikposh-backend/internal/account/domain/entity"
-	httpapi "github.com/ali-mahdavi-dev/framework/api/http"
+	httpapi "github.com/ali-mahdavi-dev/shikposh-framework/api/http"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"

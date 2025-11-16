@@ -6,7 +6,7 @@ import (
 
 	"shikposh-backend/config"
 	"shikposh-backend/internal/account/service_layer/command_handler"
-	appadapter "github.com/ali-mahdavi-dev/framework/adapter"
+	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 	"shikposh-backend/internal/unit_of_work"
 
 	"gorm.io/driver/postgres"

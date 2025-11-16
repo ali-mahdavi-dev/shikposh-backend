@@ -6,7 +6,7 @@ import (
 	"shikposh-backend/internal/account/adapter/repository"
 	productrepository "shikposh-backend/internal/products/adapter/repository"
 
-	"github.com/ali-mahdavi-dev/framework/service_layer/types"
+	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/types"
 
 	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"

@@ -11,7 +11,7 @@
 ### 🔗 Related Projects
 
 - **Frontend Repository**: [shikposh](https://github.com/ali-mahdavi-dev/shikposh) - Modern e-commerce frontend built with Next.js 15, React 19, and TypeScript
-- **Framework Module**: [framework](https://github.com/ali-mahdavi-dev/framework) - Reusable framework components extracted as a separate Go module
+- **Framework Module**: [shikposh-framework](https://github.com/ali-mahdavi-dev/shikposh-framework) - Reusable framework components extracted as a separate Go module
 
 ---
 
@@ -200,7 +200,7 @@ module/
 
 **Framework Module:**
 
-The project uses a **separate framework module** (`github.com/ali-mahdavi-dev/framework`) that contains reusable components:
+The project uses a **separate framework module** (`github.com/ali-mahdavi-dev/shikposh-framework`) that contains reusable components:
 
 - **Adapters** - Base repository and unit of work interfaces
 - **API Utilities** - HTTP error handling, validation, JWT, middleware
@@ -712,7 +712,7 @@ cd shikposh/backend
 go mod download
 ```
 
-**Note:** This project uses a separate framework module located at `../framework`. The framework is referenced via a `replace` directive in `go.mod` for local development. For production, you can publish the framework module or use a different import path.
+**Note:** This project uses a separate framework module located at `../framework`. The framework is referenced via a `replace` directive in `go.mod` for local development. For production, you can use `go get github.com/ali-mahdavi-dev/shikposh-framework` or publish the framework module.
 
 #### 3️⃣ Configure the Application
 

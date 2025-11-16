@@ -3,7 +3,7 @@ package specification
 import (
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"github.com/ali-mahdavi-dev/framework/specification"
+	"github.com/ali-mahdavi-dev/shikposh-framework/specification"
 )
 
 // ProductIsFeaturedSpecification checks if a product is featured

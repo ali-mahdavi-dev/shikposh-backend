@@ -8,9 +8,9 @@ import (
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/commands"
 	"shikposh-backend/internal/account/domain/entity"
-	"github.com/ali-mahdavi-dev/framework/api/jwt"
-	apperrors "github.com/ali-mahdavi-dev/framework/errors"
-	"github.com/ali-mahdavi-dev/framework/errors/phrases"
+	"github.com/ali-mahdavi-dev/shikposh-framework/api/jwt"
+	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
+	"github.com/ali-mahdavi-dev/shikposh-framework/errors/phrases"
 	"shikposh-backend/internal/unit_of_work"
 
 	"github.com/pkg/errors"

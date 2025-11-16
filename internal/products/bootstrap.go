@@ -13,13 +13,13 @@ import (
 
 	"shikposh-backend/internal/unit_of_work"
 
-	"github.com/ali-mahdavi-dev/framework/adapter"
-	elasticsearchx "github.com/ali-mahdavi-dev/framework/infrastructure/elasticsearch"
-	kafak "github.com/ali-mahdavi-dev/framework/infrastructure/kafak"
-	"github.com/ali-mahdavi-dev/framework/infrastructure/logging"
-	commandeventhandler "github.com/ali-mahdavi-dev/framework/service_layer/command_event_handler"
-	commandmiddleware "github.com/ali-mahdavi-dev/framework/service_layer/command_event_handler/command_middleware"
-	"github.com/ali-mahdavi-dev/framework/service_layer/messagebus"
+	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
+	elasticsearchx "github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/elasticsearch"
+	kafak "github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/kafak"
+	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
+	commandeventhandler "github.com/ali-mahdavi-dev/shikposh-framework/service_layer/command_event_handler"
+	commandmiddleware "github.com/ali-mahdavi-dev/shikposh-framework/service_layer/command_event_handler/command_middleware"
+	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/messagebus"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"

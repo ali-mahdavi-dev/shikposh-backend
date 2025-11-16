@@ -3,7 +3,7 @@ module shikposh-backend
 go 1.25.1
 
 require (
-	github.com/ali-mahdavi-dev/framework v0.0.0
+	github.com/ali-mahdavi-dev/shikposh-framework v0.0.0
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/gofiber/fiber/v3 v3.0.0-rc.2
@@ -130,4 +130,4 @@ require (
 )
 
 // برای توسعه محلی - بعد از پابلیش روی GitHub می‌توانید این خط را حذف کنید
-replace github.com/ali-mahdavi-dev/framework => ../framework
+replace github.com/ali-mahdavi-dev/shikposh-framework => ../framework
