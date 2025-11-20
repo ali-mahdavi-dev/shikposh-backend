@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/redisx"
+	"github.com/redis/go-redis/v9"
 )
 
 type OtpService struct {
@@ -68,7 +70,16 @@ func (o *OtpService) VerifyOTP(ctx context.Context, phone string, otp string, ot
 	// Get OTP from Redis
 	storedOTP, err := o.redis.GetValue(ctx, key)
 	if err != nil {
-		logging.Warn("OTP verification failed: OTP not found or expired").
+		// Check if error is redis.Nil (key doesn't exist) - this is expected when OTP is expired or already used
+		if errors.Is(err, redis.Nil) {
+			logging.Warn("OTP verification failed: OTP not found or expired").
+				WithString("phone", phone).
+				WithString("type", otpType).
+				Log()
+			return false, nil // Return false, nil (not an error, just invalid OTP)
+		}
+		// For other Redis errors, return error
+		logging.Warn("OTP verification failed: Redis error").
 			WithString("phone", phone).
 			WithString("type", otpType).
 			WithError(err).
