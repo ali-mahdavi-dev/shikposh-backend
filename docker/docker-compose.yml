@@ -129,6 +129,13 @@ services:
       - "6379:6379"
     networks:
       - webapi_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   ##################### Monitoring #################
   prometheus:
@@ -224,9 +231,14 @@ services:
     volumes:
       - logs:/app/logs
     depends_on:
-      - postgres
-      - elasticsearch
-      - jaeger
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      jaeger:
+        condition: service_started
     restart: unless-stopped
 ####################### VOLUME AND NETWORKS #######################
 volumes:
