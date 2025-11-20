@@ -16,6 +16,7 @@ type MiddlewareConfig struct {
 
 type Middleware struct {
 	Cfg MiddlewareConfig
+	IsAuthenticated bool
 	Uow unitofwork.PGUnitOfWork
 }
 

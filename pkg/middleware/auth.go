@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"shikposh-backend/internal/account/domain/entity"
+
 	httpapi "github.com/ali-mahdavi-dev/shikposh-framework/api/http"
 
 	"github.com/gofiber/fiber/v3"
@@ -21,6 +22,9 @@ func (m *Middleware) AuthMiddleware() fiber.Handler {
 		// Get token from Authorization header
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
+			if !m.IsAuthenticated {
+				return c.Next()
+			}
 			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Authorization header required"})
 		}
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/swagger/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
@@ -250,12 +251,30 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 }
 
 func setupMiddleware(components *serverComponents, cfg *config.Config) error {
+	// Register CORS middleware first
+	// Parse AllowOrigins: if "*", use it directly; otherwise split by comma
+	allowOrigins := []string{cfg.Cors.AllowOrigins}
+	if cfg.Cors.AllowOrigins == "*" {
+		allowOrigins = []string{"*"}
+	}
+
+	// When using wildcard "*", AllowCredentials must be false
+	// When using specific origins, AllowCredentials can be true
+	allowCredentials := cfg.Cors.AllowOrigins != "*"
+
+	components.server.Use(cors.New(cors.Config{
+		AllowOrigins:     allowOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowCredentials: allowCredentials,
+	}))
+
 	middleware := mw.NewMiddleware(
 		mw.MiddlewareConfig{JWTSecret: cfg.JWT.Secret},
 		components.db,
 	)
 
-	// Register tracing middleware first (if enabled)
+	// Register tracing middleware (if enabled)
 	if components.tracer != nil && cfg.Jaeger.Enabled {
 		components.server.Use(frameworkmiddleware.TracingMiddleware())
 	}
