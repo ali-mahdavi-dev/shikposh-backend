@@ -28,6 +28,29 @@ func NewProductQueryHandler(uow unitofwork.PGUnitOfWork, elasticsearch elasticse
 }
 
 func (h *ProductQueryHandler) GetAllProducts(ctx context.Context) ([]*productaggregate.Product, error) {
+	// Try Elasticsearch first if available
+	if h.elasticsearch != nil {
+		// Use match_all query to get all products
+		searchQuery := map[string]interface{}{
+			"query": map[string]interface{}{
+				"match_all": map[string]interface{}{},
+			},
+			"size": 100,
+		}
+
+		products, err := h.executeElasticsearchQuery(ctx, searchQuery)
+		if err == nil {
+			logging.Debug("All products retrieved from Elasticsearch").
+				WithInt("count", len(products)).
+				Log()
+			return products, nil
+		}
+		logging.Warn("Elasticsearch search failed, falling back to database").
+			WithError(err).
+			Log()
+	}
+
+	// Fallback to database
 	var products []*productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -86,6 +109,38 @@ func (h *ProductQueryHandler) GetProductByID(ctx context.Context, id uint64) (*p
 }
 
 func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string) (*productaggregate.Product, error) {
+	// Try Elasticsearch first if available
+	if h.elasticsearch != nil {
+		// Search for product by slug in Elasticsearch
+		searchQuery := map[string]interface{}{
+			"query": map[string]interface{}{
+				"term": map[string]interface{}{
+					"slug": slug,
+				},
+			},
+			"size": 1,
+		}
+
+		products, err := h.executeElasticsearchQuery(ctx, searchQuery)
+		if err == nil && len(products) > 0 {
+			logging.Debug("Product retrieved from Elasticsearch by slug").
+				WithString("slug", slug).
+				Log()
+			return products[0], nil
+		}
+		if err != nil {
+			logging.Warn("Elasticsearch search failed, falling back to database").
+				WithString("slug", slug).
+				WithError(err).
+				Log()
+		} else {
+			logging.Debug("Product not found in Elasticsearch, falling back to database").
+				WithString("slug", slug).
+				Log()
+		}
+	}
+
+	// Fallback to database
 	var product *productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -99,6 +154,31 @@ func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string)
 }
 
 func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*productaggregate.Product, error) {
+	// Try Elasticsearch first if available
+	if h.elasticsearch != nil {
+		// Search for featured products in Elasticsearch
+		searchQuery := map[string]interface{}{
+			"query": map[string]interface{}{
+				"term": map[string]interface{}{
+					"is_featured": true,
+				},
+			},
+			"size": 100,
+		}
+
+		products, err := h.executeElasticsearchQuery(ctx, searchQuery)
+		if err == nil {
+			logging.Debug("Featured products retrieved from Elasticsearch").
+				WithInt("count", len(products)).
+				Log()
+			return products, nil
+		}
+		logging.Warn("Elasticsearch search failed, falling back to database").
+			WithError(err).
+			Log()
+	}
+
+	// Fallback to database
 	var products []*productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -112,6 +192,51 @@ func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*produ
 }
 
 func (h *ProductQueryHandler) GetProductsByCategory(ctx context.Context, categorySlug string) ([]*productaggregate.Product, error) {
+	// Try Elasticsearch first if available
+	if h.elasticsearch != nil {
+		// First, get category ID from slug
+		var categoryID uint64
+		err := h.uow.Do(ctx, func(ctx context.Context) error {
+			category, err := h.uow.Category(ctx).FindBySlug(ctx, categorySlug)
+			if err != nil {
+				return err
+			}
+			categoryID = uint64(category.ID)
+			return nil
+		})
+		if err == nil {
+			// Search for products by category_id in Elasticsearch
+			searchQuery := map[string]interface{}{
+				"query": map[string]interface{}{
+					"term": map[string]interface{}{
+						"category_id": categoryID,
+					},
+				},
+				"size": 100,
+			}
+
+			products, err := h.executeElasticsearchQuery(ctx, searchQuery)
+			if err == nil {
+				logging.Debug("Products by category retrieved from Elasticsearch").
+					WithString("category", categorySlug).
+					WithInt64("category_id", int64(categoryID)).
+					WithInt("count", len(products)).
+					Log()
+				return products, nil
+			}
+			logging.Warn("Elasticsearch search failed, falling back to database").
+				WithString("category", categorySlug).
+				WithError(err).
+				Log()
+		} else {
+			logging.Warn("Failed to get category ID from slug, falling back to database").
+				WithString("category", categorySlug).
+				WithError(err).
+				Log()
+		}
+	}
+
+	// Fallback to database
 	var products []*productaggregate.Product
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -157,7 +282,26 @@ func (h *ProductQueryHandler) SearchProducts(ctx context.Context, searchQuery st
 func (h *ProductQueryHandler) GetFilteredProducts(ctx context.Context, filters repository.ProductFilters) ([]*productaggregate.Product, error) {
 	// Try Elasticsearch first if available
 	if h.elasticsearch != nil {
-		products, err := h.searchInElasticsearchWithFilters(ctx, filters)
+		// Convert category slug to category_id if needed for Elasticsearch
+		var categoryID *uint64
+		if filters.Category != nil && *filters.Category != "" {
+			err := h.uow.Do(ctx, func(ctx context.Context) error {
+				category, err := h.uow.Category(ctx).FindBySlug(ctx, *filters.Category)
+				if err != nil {
+					return err
+				}
+				id := uint64(category.ID)
+				categoryID = &id
+				return nil
+			})
+			if err != nil {
+				logging.Warn("Failed to convert category slug to ID, will use database").
+					WithString("category", *filters.Category).
+					WithError(err).
+					Log()
+			}
+		}
+		products, err := h.searchInElasticsearchWithFilters(ctx, filters, categoryID)
 		if err == nil {
 			logging.Debug("Products filtered from Elasticsearch").
 				WithInt("count", len(products)).
@@ -200,7 +344,7 @@ func (h *ProductQueryHandler) searchInElasticsearch(ctx context.Context, query s
 }
 
 // searchInElasticsearchWithFilters performs a search with all filters applied in Elasticsearch
-func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Context, filters repository.ProductFilters) ([]*productaggregate.Product, error) {
+func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Context, filters repository.ProductFilters, categoryID *uint64) ([]*productaggregate.Product, error) {
 	// Build bool query with must, should, and filter clauses
 	boolQuery := map[string]interface{}{
 		"must":   []interface{}{},
@@ -220,11 +364,11 @@ func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Conte
 		})
 	}
 
-	// Add category filter
-	if filters.Category != nil && *filters.Category != "" {
+	// Add category filter using category_id (converted from slug in GetFilteredProducts)
+	if categoryID != nil {
 		boolQuery["filter"] = append(boolQuery["filter"].([]interface{}), map[string]interface{}{
 			"term": map[string]interface{}{
-				"category": *filters.Category,
+				"category_id": *categoryID,
 			},
 		})
 	}
