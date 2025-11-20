@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -253,9 +254,19 @@ func setupServer(components *serverComponents, cfg *config.Config) error {
 func setupMiddleware(components *serverComponents, cfg *config.Config) error {
 	// Register CORS middleware first
 	// Parse AllowOrigins: if "*", use it directly; otherwise split by comma
-	allowOrigins := []string{cfg.Cors.AllowOrigins}
+	var allowOrigins []string
 	if cfg.Cors.AllowOrigins == "*" {
 		allowOrigins = []string{"*"}
+	} else {
+		// Split by comma to support multiple origins
+		origins := strings.Split(cfg.Cors.AllowOrigins, ",")
+		allowOrigins = make([]string, 0, len(origins))
+		for _, origin := range origins {
+			trimmed := strings.TrimSpace(origin)
+			if trimmed != "" {
+				allowOrigins = append(allowOrigins, trimmed)
+			}
+		}
 	}
 
 	// When using wildcard "*", AllowCredentials must be false
@@ -265,8 +276,9 @@ func setupMiddleware(components *serverComponents, cfg *config.Config) error {
 	components.server.Use(cors.New(cors.Config{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
 		AllowCredentials: allowCredentials,
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 	}))
 
 	middleware := mw.NewMiddleware(

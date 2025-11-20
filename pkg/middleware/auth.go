@@ -19,28 +19,22 @@ var errTokenDoesNotExist = errors.New("token does not exist")
 
 func (m *Middleware) AuthMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
-		// Get token from cookie first, then fallback to Authorization header
+		// Get token from Authorization header (frontend manages tokens)
 		var tokenStr string
 		
-		// Try to get from cookie
-		tokenStr = c.Cookies("access_token")
-		
-		// Fallback to Authorization header if cookie is empty
-		if tokenStr == "" {
-			authHeader := c.Get("Authorization")
-			if authHeader == "" {
-				if !m.IsAuthenticated {
-					return c.Next()
-				}
-				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Authorization required"})
+		authHeader := c.Get("Authorization")
+		if authHeader == "" {
+			if !m.IsAuthenticated {
+				return c.Next()
 			}
-
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2 || parts[0] != "Bearer" {
-				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token format"})
-			}
-			tokenStr = parts[1]
+			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Authorization required"})
 		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token format"})
+		}
+		tokenStr = parts[1]
 		
 		if tokenStr == "" {
 			if !m.IsAuthenticated {
