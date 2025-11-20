@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 
+	"shikposh-backend/internal/products/adapter/phrases"
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity"
 	"shikposh-backend/internal/products/domain/specification"
+
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
-	"github.com/ali-mahdavi-dev/shikposh-framework/errors/phrases"
 )
 
 func (h *ReviewCommandHandler) CreateReviewHandler(ctx context.Context, cmd *commands.CreateReview) error {
@@ -19,7 +20,7 @@ func (h *ReviewCommandHandler) CreateReviewHandler(ctx context.Context, cmd *com
 		product, err := h.uow.Product(ctx).FindByID(ctx, cmd.ProductID)
 		if err != nil {
 			if errors.Is(err, appadapter.ErrEntityNotFound) {
-				return apperrors.NotFound(phrases.UserNotFound)
+				return apperrors.NotFound(phrases.ProductNotFound)
 			}
 			return fmt.Errorf("ReviewCommandHandler.CreateReviewHandler error finding product: %w", err)
 		}

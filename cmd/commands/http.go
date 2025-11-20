@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -24,7 +25,9 @@ import (
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/databases"
 	elasticsearchx "github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/elasticsearch"
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
+	redisx "github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/redisx"
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/tracing"
+	"github.com/redis/go-redis/v9"
 
 	"gorm.io/gorm"
 )
@@ -46,6 +49,7 @@ type serverComponents struct {
 	server        *fiber.App
 	tracer        *tracing.Tracer
 	elasticsearch elasticsearchx.Connection
+	redis         redisx.Connection
 }
 
 func startServer(cfg *config.Config) error {
@@ -66,6 +70,14 @@ func startServer(cfg *config.Config) error {
 		// Continue without Elasticsearch - it's optional for now
 	}
 
+	redis, err := initializeRedis(cfg)
+	if err != nil {
+		logging.Warn("Failed to initialize Redis").
+			WithError(err).
+			Log()
+		return fmt.Errorf("failed to initialize Redis: %w", err)
+	}
+
 	// Create Fiber app
 	server := createFiberApp(cfg)
 
@@ -74,6 +86,7 @@ func startServer(cfg *config.Config) error {
 		server:        server,
 		tracer:        tracer,
 		elasticsearch: elasticsearch,
+		redis:         redis,
 	}
 
 	// Setup routes and middleware
@@ -170,6 +183,33 @@ func getEnvironment(cfg *config.Config) string {
 		return cfg.Jaeger.Environment
 	}
 	return cfg.Server.RunMode
+}
+
+func initializeRedis(cfg *config.Config) (redisx.Connection, error) {
+	ctx := context.Background()
+
+	db, err := strconv.Atoi(cfg.Redis.Db)
+	if err != nil {
+		db = 0
+	}
+
+	options := &redis.Options{
+		Addr:         fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
+		Password:     cfg.Redis.Password,
+		DB:           db,
+		DialTimeout:  cfg.Redis.DialTimeout,
+		ReadTimeout:  cfg.Redis.ReadTimeout,
+		WriteTimeout: cfg.Redis.WriteTimeout,
+		PoolSize:     cfg.Redis.PoolSize,
+		PoolTimeout:  cfg.Redis.PoolTimeout,
+	}
+
+	conn, err := redisx.NewRedisConnection(ctx, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize Redis: %w", err)
+	}
+
+	return conn, nil
 }
 
 func initializeElasticsearch(cfg *config.Config) (elasticsearchx.Connection, error) {

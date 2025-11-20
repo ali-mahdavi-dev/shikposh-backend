@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"shikposh-backend/config"
+	"shikposh-backend/internal/products/adapter/phrases"
 	"shikposh-backend/internal/products/entrypoint"
 	"shikposh-backend/internal/products/entrypoint/handler"
 	"shikposh-backend/internal/products/query"
@@ -11,7 +12,7 @@ import (
 	"shikposh-backend/internal/products/service_layer/event_handler"
 	"shikposh-backend/internal/products/service_layer/outbox"
 
-	"shikposh-backend/internal/unit_of_work"
+	unitofwork "shikposh-backend/internal/unit_of_work"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 	elasticsearchx "github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/elasticsearch"
@@ -26,6 +27,8 @@ import (
 )
 
 func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsearch elasticsearchx.Connection) error {
+	// Register products module error phrases
+	phrases.RegisterProductsPhrases()
 	eventCh := make(chan adapter.EventWithWaitGroup, 100)
 	uow := unitofwork.New(db, eventCh)
 	bus := messagebus.NewMessageBus(uow, eventCh)

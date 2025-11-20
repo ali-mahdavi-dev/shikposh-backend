@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"shikposh-backend/internal/products/adapter/phrases"
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
+
 	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
-	"github.com/ali-mahdavi-dev/shikposh-framework/errors/phrases"
 
 	"gorm.io/gorm"
 )
@@ -19,7 +20,7 @@ func (h *ProductCommandHandler) DeleteProductHandler(ctx context.Context, cmd *c
 		product, err := h.uow.Product(ctx).FindByID(ctx, cmd.ID)
 		if err != nil {
 			if errors.Is(err, repository.ErrProductNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {
-				return apperrors.NotFound(phrases.UserNotFound, "Product not found")
+				return apperrors.NotFound(phrases.ProductNotFound)
 			}
 			return fmt.Errorf("ProductCommandHandler.DeleteProductHandler error finding product: %w", err)
 		}

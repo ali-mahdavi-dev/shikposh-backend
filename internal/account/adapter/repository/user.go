@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"shikposh-backend/internal/account/domain/entity"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"gorm.io/gorm"
@@ -16,6 +17,7 @@ type UserRepository interface {
 	adapter.BaseRepository[*entity.User]
 	FindByUserName(ctx context.Context, username string) (*entity.User, error)
 	FindByUsernameExcludingID(ctx context.Context, username string, Id uint) (*entity.User, error)
+	FindByPhone(ctx context.Context, phone string) (*entity.User, error)
 }
 
 type userGormRepository struct {
@@ -50,6 +52,19 @@ func (u *userGormRepository) FindByUsernameExcludingID(ctx context.Context, user
 
 func (u *userGormRepository) FindByUserName(ctx context.Context, username string) (*entity.User, error) {
 	user, err := u.FindByField(ctx, "user_name", username)
+	if err != nil {
+		if errors.Is(err, adapter.ErrEntityNotFound) {
+			return nil, ErrUserNotFound
+		}
+
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (u *userGormRepository) FindByPhone(ctx context.Context, phone string) (*entity.User, error) {
+	user, err := u.FindByField(ctx, "phone", phone)
 	if err != nil {
 		if errors.Is(err, adapter.ErrEntityNotFound) {
 			return nil, ErrUserNotFound

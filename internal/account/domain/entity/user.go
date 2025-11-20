@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"shikposh-backend/internal/account/domain/events"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"gorm.io/gorm"
@@ -22,6 +23,7 @@ type User struct {
 	FirstName        string         `json:"first_name" gorm:"first_name"`
 	LastName         string         `json:"last_name" gorm:"last_name"`
 	Email            string         `json:"email" gorm:"email"`
+	Phone            string         `json:"phone" gorm:"phone;uniqueIndex"`
 	Password         string         `json:"password" gorm:"password"`
 }
 
@@ -31,6 +33,7 @@ func NewUser(
 	firstName string,
 	lastName string,
 	email string,
+	phone string,
 	password string,
 ) *User {
 	user := &User{
@@ -39,6 +42,7 @@ func NewUser(
 		FirstName:        firstName,
 		LastName:         lastName,
 		Email:            email,
+		Phone:            phone,
 		Password:         password,
 	}
 

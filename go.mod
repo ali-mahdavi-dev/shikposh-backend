@@ -3,7 +3,7 @@ module shikposh-backend
 go 1.25.1
 
 require (
-	github.com/ali-mahdavi-dev/shikposh-framework v0.0.0
+	github.com/ali-mahdavi-dev/shikposh-framework v0.0.0-00010101000000-000000000000
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/gofiber/fiber/v3 v3.0.0-rc.2
@@ -14,6 +14,7 @@ require (
 	github.com/onsi/gomega v1.38.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
+	github.com/redis/go-redis/v9 v9.16.0
 	github.com/spf13/cast v1.10.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
@@ -35,6 +36,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect

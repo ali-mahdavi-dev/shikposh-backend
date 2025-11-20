@@ -4,11 +4,12 @@ import (
 	"image/png"
 
 	"shikposh-backend/internal/account/adapter"
+	accountphrases "shikposh-backend/internal/account/adapter/phrases"
 	"shikposh-backend/internal/account/domain/commands"
 	"shikposh-backend/internal/account/service_layer/command_handler"
+
 	httpapi "github.com/ali-mahdavi-dev/shikposh-framework/api/http"
 	"github.com/ali-mahdavi-dev/shikposh-framework/errors"
-	"github.com/ali-mahdavi-dev/shikposh-framework/errors/phrases"
 	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/messagebus"
 
 	"github.com/gofiber/fiber/v3"
@@ -19,13 +20,15 @@ type UserController struct {
 	bus         messagebus.MessageBus
 	ag          *adapter.AvatarGenerator
 	userHandler *command_handler.UserHandler
+	otpHandler  *command_handler.OtpHandler
 }
 
-func NewUserController(bus messagebus.MessageBus, ag *adapter.AvatarGenerator, userHandler *command_handler.UserHandler) *UserController {
+func NewUserController(bus messagebus.MessageBus, ag *adapter.AvatarGenerator, userHandler *command_handler.UserHandler, otpHandler *command_handler.OtpHandler) *UserController {
 	return &UserController{
 		bus:         bus,
 		ag:          ag,
 		userHandler: userHandler,
+		otpHandler:  otpHandler,
 	}
 }
 
@@ -36,6 +39,13 @@ func (u *UserController) RegisterRoutes(r fiber.Router) {
 		publicRoute.Post("/register", u.Register)
 		publicRoute.Post("/login", u.Login)
 		publicRoute.Post("/logout", u.Logout)
+
+		// OTP endpoints
+		authRoute := publicRoute.Group("/auth")
+		{
+			authRoute.Post("/send-otp", u.SendOtp)
+			authRoute.Post("/verify-otp", u.VerifyOtp)
+		}
 	}
 }
 
@@ -142,7 +152,7 @@ func (u *UserController) Logout(c fiber.Ctx) error {
 
 	userID := c.Get("user_id")
 	if userID == "" {
-		return httpapi.ResError(c, errors.NotFound(phrases.UserNotFound))
+		return httpapi.ResError(c, errors.NotFound(accountphrases.UserNotFound))
 	}
 
 	cmd := new(commands.Logout)
@@ -154,4 +164,88 @@ func (u *UserController) Logout(c fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// SendOtp godoc
+//
+//	@Summary		Send OTP
+//	@Description	Sends OTP code to the provided phone number
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		commands.SendOtp	true	"SendOtp request"
+//	@Success		200		{object}	httpapi.ResponseResult	"OTP sent successfully"
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request"
+//	@Failure		429		{object}	httpapi.ResponseResult	"Too many requests"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/public/auth/send-otp [post]
+func (u *UserController) SendOtp(c fiber.Ctx) error {
+	ctx := c.Context()
+	cmd := new(commands.SendOtp)
+
+	if err := httpapi.ParseJSON(c, cmd); err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	err := u.bus.Handle(ctx, cmd)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResSuccess(c, map[string]interface{}{
+		"success":    true,
+		"message":    "کد OTP با موفقیت ارسال شد",
+		"expires_in": 120, // seconds
+	})
+}
+
+// VerifyOtp godoc
+//
+//	@Summary		Verify OTP
+//	@Description	Verifies OTP code and returns token if user exists, or indicates if user needs to register
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		commands.VerifyOtp	true	"VerifyOtp request"
+//	@Success		200		{object}	httpapi.ResponseResult	"OTP verified successfully"
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request"
+//	@Failure		401		{object}	httpapi.ResponseResult	"Invalid OTP"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/public/auth/verify-otp [post]
+func (u *UserController) VerifyOtp(c fiber.Ctx) error {
+	ctx := c.Context()
+	cmd := new(commands.VerifyOtp)
+
+	if err := httpapi.ParseJSON(c, cmd); err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	result, err := u.otpHandler.VerifyOtpHandler(ctx, cmd)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	response := map[string]interface{}{
+		"success":     true,
+		"user_exists": result.UserExists,
+	}
+
+	if result.Token != "" {
+		response["token"] = result.Token
+		// Set token in response header
+		c.Set("Authorization", "Bearer "+result.Token)
+	}
+
+	if result.User != nil {
+		response["user"] = map[string]interface{}{
+			"id":         result.User.ID,
+			"user_name":  result.User.UserName,
+			"first_name": result.User.FirstName,
+			"last_name":  result.User.LastName,
+			"email":      result.User.Email,
+			"phone":      result.User.Phone,
+		}
+	}
+
+	return httpapi.ResSuccess(c, response)
 }

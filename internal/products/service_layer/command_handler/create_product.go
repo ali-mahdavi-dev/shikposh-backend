@@ -5,14 +5,15 @@ import (
 	"errors"
 	"fmt"
 
+	"shikposh-backend/internal/products/adapter/phrases"
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/internal/products/domain/specification"
+
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
-	"github.com/ali-mahdavi-dev/shikposh-framework/errors/phrases"
 )
 
 func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *commands.CreateProduct) error {
@@ -21,7 +22,7 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 		_, err := h.uow.Category(ctx).FindByID(ctx, cmd.CategoryID)
 		if err != nil {
 			if errors.Is(err, appadapter.ErrEntityNotFound) {
-				return apperrors.NotFound(phrases.UserNotFound, "Category not found")
+				return apperrors.NotFound(phrases.CategoryNotFound)
 			}
 
 			return fmt.Errorf("ProductCommandHandler.CreateProductHandler error finding category: %w", err)
@@ -30,7 +31,7 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 		// Check if slug already exists
 		_, err = h.uow.Product(ctx).FindBySlug(ctx, cmd.Slug)
 		if err == nil {
-			return apperrors.Conflict("", fmt.Sprintf("Product with slug '%s' already exists", cmd.Slug))
+			return apperrors.Conflict(phrases.ProductSlugExists)
 		} else if !errors.Is(err, repository.ErrProductNotFound) {
 			return fmt.Errorf("ProductCommandHandler.CreateProductHandler error checking slug: %w", err)
 		}
