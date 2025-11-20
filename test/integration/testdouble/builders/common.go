@@ -107,4 +107,3 @@ func (c *combinedFS) ReadDir(name string) ([]fs.DirEntry, error) {
 
 	return allEntries, nil
 }
-

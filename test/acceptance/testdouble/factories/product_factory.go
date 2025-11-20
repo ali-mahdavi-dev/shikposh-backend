@@ -66,8 +66,8 @@ func (f *ProductFactory) CreateProduct(name, brand string, categoryID uint64) *p
 	for _, detailInput := range cmd.Details {
 		detail := &productaggregate.ProductDetail{
 			ProductID: product.ID,
-			Price:    detailInput.Price,
-			Stock:    detailInput.Stock,
+			Price:     detailInput.Price,
+			Stock:     detailInput.Stock,
 		}
 		f.db.Create(detail)
 	}
@@ -125,4 +125,3 @@ func (f *ProductFactory) CreateDeleteCommand(productID uint64, softDelete bool) 
 		SoftDelete: softDelete,
 	}
 }
-

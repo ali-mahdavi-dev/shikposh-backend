@@ -6,8 +6,9 @@ import (
 
 	"shikposh-backend/config"
 	"shikposh-backend/internal/account/service_layer/command_handler"
+	unitofwork "shikposh-backend/internal/unit_of_work"
+
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
-	"shikposh-backend/internal/unit_of_work"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -86,4 +87,3 @@ func (b *UserIntegrationTestBuilder) Cleanup() {
 	adminSQLDB, _ := adminDB.DB()
 	adminSQLDB.Close()
 }
-

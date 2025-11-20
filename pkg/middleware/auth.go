@@ -21,7 +21,7 @@ func (m *Middleware) AuthMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		// Get token from Authorization header (frontend manages tokens)
 		var tokenStr string
-		
+
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			if !m.IsAuthenticated {
@@ -35,7 +35,7 @@ func (m *Middleware) AuthMiddleware() fiber.Handler {
 			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token format"})
 		}
 		tokenStr = parts[1]
-		
+
 		if tokenStr == "" {
 			if !m.IsAuthenticated {
 				return c.Next()

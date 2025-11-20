@@ -2,6 +2,7 @@ package specification
 
 import (
 	"shikposh-backend/internal/products/domain/entity"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/specification"
 )
 

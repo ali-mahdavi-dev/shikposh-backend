@@ -20,8 +20,6 @@ func NewOtpHandler(uow unitofwork.PGUnitOfWork, cfg *config.Config, otpService *
 	}
 }
 
-
-
 type UserHandler struct {
 	uow unitofwork.PGUnitOfWork
 	cfg *config.Config

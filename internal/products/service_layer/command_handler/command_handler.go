@@ -1,7 +1,7 @@
 package command_handler
 
 import (
-	"shikposh-backend/internal/unit_of_work"
+	unitofwork "shikposh-backend/internal/unit_of_work"
 
 	"github.com/gosimple/slug"
 )

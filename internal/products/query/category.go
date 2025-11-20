@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"shikposh-backend/internal/products/domain/entity"
-	"shikposh-backend/internal/unit_of_work"
+	unitofwork "shikposh-backend/internal/unit_of_work"
 )
 
 type CategoryQueryHandler struct {

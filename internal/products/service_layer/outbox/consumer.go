@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strconv"
 
+	unitofwork "shikposh-backend/internal/unit_of_work"
+
 	elasticsearchx "github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/elasticsearch"
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
 	frameworkoutbox "github.com/ali-mahdavi-dev/shikposh-framework/service_layer/outbox"
-	"shikposh-backend/internal/unit_of_work"
 )
 
 // Consumer wraps the framework outbox consumer for products module

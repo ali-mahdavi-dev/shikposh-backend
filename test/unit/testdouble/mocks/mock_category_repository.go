@@ -5,6 +5,7 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/entity"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"github.com/stretchr/testify/mock"
@@ -75,4 +76,3 @@ func (m *MockCategoryRepository) SetSeen(model adapter.Entity) {
 }
 
 var _ repository.CategoryRepository = (*MockCategoryRepository)(nil)
-

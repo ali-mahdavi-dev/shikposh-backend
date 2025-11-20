@@ -4,8 +4,9 @@ import (
 	"shikposh-backend/config"
 	"shikposh-backend/internal/account/domain/entity"
 	"shikposh-backend/internal/account/service_layer/command_handler"
+	unitofwork "shikposh-backend/internal/unit_of_work"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
-	"shikposh-backend/internal/unit_of_work"
 
 	. "github.com/onsi/gomega"
 	"gorm.io/driver/sqlite"
@@ -56,4 +57,3 @@ func (b *UserAcceptanceTestBuilder) Cleanup() {
 	b.DB.Exec("DELETE FROM tokens")
 	b.DB.Exec("DELETE FROM profiles")
 }
-

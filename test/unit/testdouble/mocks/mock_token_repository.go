@@ -5,6 +5,7 @@ import (
 
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/entity"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"github.com/stretchr/testify/mock"
@@ -67,4 +68,3 @@ func (m *MockTokenRepository) SetSeen(model adapter.Entity) {
 }
 
 var _ repository.TokenRepository = (*MockTokenRepository)(nil)
-

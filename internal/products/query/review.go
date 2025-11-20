@@ -5,7 +5,7 @@ import (
 
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/internal/unit_of_work"
+	unitofwork "shikposh-backend/internal/unit_of_work"
 )
 
 type ReviewQueryHandler struct {

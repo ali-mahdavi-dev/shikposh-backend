@@ -12,4 +12,3 @@ func GetErrorType(err error) apperrors.ErrorType {
 	Expect(ok).To(BeTrue())
 	return appErr.Type()
 }
-

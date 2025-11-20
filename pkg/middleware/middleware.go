@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"shikposh-backend/internal/unit_of_work"
+	unitofwork "shikposh-backend/internal/unit_of_work"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 	frameworkmiddleware "github.com/ali-mahdavi-dev/shikposh-framework/api/middleware"
@@ -15,9 +15,9 @@ type MiddlewareConfig struct {
 }
 
 type Middleware struct {
-	Cfg MiddlewareConfig
+	Cfg             MiddlewareConfig
 	IsAuthenticated bool
-	Uow unitofwork.PGUnitOfWork
+	Uow             unitofwork.PGUnitOfWork
 }
 
 func NewMiddleware(cfg MiddlewareConfig, db *gorm.DB) *Middleware {

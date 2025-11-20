@@ -10,6 +10,7 @@ import (
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
+
 	httpapi "github.com/ali-mahdavi-dev/shikposh-framework/api/http"
 	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/messagebus"
 
@@ -415,7 +416,7 @@ func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		uint64				true	"Product ID"
+//	@Param			id		path		uint64					true	"Product ID"
 //	@Param			request	body		commands.UpdateProduct	true	"UpdateProduct request"
 //	@Success		200		{object}	httpapi.ResponseResult
 //	@Router			/api/v1/admin/products/{id} [put]

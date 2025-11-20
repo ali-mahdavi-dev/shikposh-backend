@@ -1,4 +1,52 @@
 definitions:
+  commands.CreateProduct:
+    properties:
+      brand:
+        minLength: 2
+        type: string
+      category_id:
+        type: integer
+      description:
+        minLength: 10
+        type: string
+      details:
+        items:
+          $ref: '#/definitions/commands.ProductDetailInput'
+        type: array
+      features:
+        items:
+          $ref: '#/definitions/commands.ProductFeatureInput'
+        type: array
+      image:
+        type: string
+      is_featured:
+        type: boolean
+      is_new:
+        type: boolean
+      name:
+        minLength: 3
+        type: string
+      sizes:
+        items:
+          type: string
+        type: array
+      slug:
+        minLength: 3
+        type: string
+      specs:
+        items:
+          $ref: '#/definitions/commands.ProductSpecInput'
+        type: array
+      tags:
+        items:
+          type: string
+        type: array
+    required:
+    - brand
+    - category_id
+    - name
+    - slug
+    type: object
   commands.CreateReview:
     properties:
       comment:
@@ -25,49 +73,178 @@ definitions:
     properties:
       password:
         type: string
-      user_name:
+      phone:
         type: string
     required:
     - password
-    - user_name
+    - phone
+    type: object
+  commands.ProductDetailInput:
+    properties:
+      color_key:
+        type: string
+      color_name:
+        type: string
+      discount:
+        maximum: 100
+        minimum: 0
+        type: integer
+      images:
+        items:
+          type: string
+        type: array
+      original_price:
+        type: number
+      price:
+        minimum: 0
+        type: number
+      size_key:
+        type: string
+      stock:
+        minimum: 0
+        type: integer
+    required:
+    - price
+    type: object
+  commands.ProductFeatureInput:
+    properties:
+      feature:
+        type: string
+      order:
+        type: integer
+    required:
+    - feature
+    type: object
+  commands.ProductSpecInput:
+    properties:
+      key:
+        type: string
+      order:
+        type: integer
+      value:
+        type: string
+    required:
+    - key
+    - value
     type: object
   commands.RegisterUser:
     properties:
-      avatar_identifier:
+      avatarIdentifier:
         type: string
       email:
         type: string
       first_name:
-        minLength: 3
+        minLength: 2
         type: string
       last_name:
-        minLength: 3
+        minLength: 2
         type: string
       password:
-        minLength: 6
+        description: Optional for OTP-based registration
         type: string
-      user_name:
-        minLength: 3
+      phone:
         type: string
     required:
-    - avatar_identifier
-    - email
     - first_name
     - last_name
-    - password
-    - user_name
+    - phone
+    type: object
+  commands.ReviewHelpfulType:
+    enum:
+    - helpful
+    - notHelpful
+    type: string
+    x-enum-varnames:
+    - ReviewHelpfulTypeHelpful
+    - ReviewHelpfulTypeNotHelpful
+  commands.SendOtp:
+    properties:
+      phone:
+        type: string
+      type:
+        enum:
+        - login
+        - register
+        type: string
+    required:
+    - phone
+    - type
+    type: object
+  commands.UpdateProduct:
+    properties:
+      brand:
+        minLength: 2
+        type: string
+      category_id:
+        type: integer
+      description:
+        minLength: 10
+        type: string
+      details:
+        items:
+          $ref: '#/definitions/commands.ProductDetailInput'
+        type: array
+      features:
+        items:
+          $ref: '#/definitions/commands.ProductFeatureInput'
+        type: array
+      id:
+        type: integer
+      image:
+        type: string
+      is_featured:
+        type: boolean
+      is_new:
+        type: boolean
+      name:
+        minLength: 3
+        type: string
+      sizes:
+        items:
+          type: string
+        type: array
+      slug:
+        minLength: 3
+        type: string
+      specs:
+        items:
+          $ref: '#/definitions/commands.ProductSpecInput'
+        type: array
+      tags:
+        items:
+          type: string
+        type: array
+    required:
+    - brand
+    - category_id
+    - id
+    - name
+    - slug
     type: object
   commands.UpdateReviewHelpful:
     properties:
       review_id:
         type: integer
       type:
-        enum:
-        - helpful
-        - notHelpful
-        type: string
+        $ref: '#/definitions/commands.ReviewHelpfulType'
     required:
     - review_id
+    - type
+    type: object
+  commands.VerifyOtp:
+    properties:
+      otp:
+        type: string
+      phone:
+        type: string
+      type:
+        enum:
+        - login
+        - register
+        type: string
+    required:
+    - otp
+    - phone
     - type
     type: object
   http.HTTPError:
@@ -103,6 +280,183 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/admin/products:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new product with all its details, features, and specs
+      parameters:
+      - description: CreateProduct request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/commands.CreateProduct'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Create a new product
+      tags:
+      - products
+  /api/v1/admin/products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a product. Can perform soft delete or hard delete.
+      parameters:
+      - description: Product ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'Soft delete (default: true)'
+        in: query
+        name: soft_delete
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Delete a product
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing product. Only provided fields will be updated.
+      parameters:
+      - description: Product ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: UpdateProduct request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/commands.UpdateProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Update a product
+      tags:
+      - products
+  /api/v1/public/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refreshes the access token using a valid refresh token from request
+        body
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token refreshed successfully
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Refresh access token
+      tags:
+      - auth
+  /api/v1/public/auth/send-otp:
+    post:
+      consumes:
+      - application/json
+      description: Sends OTP code to the provided phone number
+      parameters:
+      - description: SendOtp request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/commands.SendOtp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP sent successfully
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "429":
+          description: Too many requests
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Send OTP
+      tags:
+      - auth
+  /api/v1/public/auth/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Verifies OTP code and returns token if user exists, or indicates
+        if user needs to register
+      parameters:
+      - description: VerifyOtp request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/commands.VerifyOtp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP verified successfully
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: Invalid OTP
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      summary: Verify OTP
+      tags:
+      - auth
   /api/v1/public/categories:
     get:
       consumes:
@@ -339,7 +693,7 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
+        "201":
           description: Registration successful
           schema:
             $ref: '#/definitions/http.ResponseResult'

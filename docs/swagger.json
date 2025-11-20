@@ -4,6 +4,272 @@
         "contact": {}
     },
     "paths": {
+        "/api/v1/admin/products": {
+            "post": {
+                "description": "Creates a new product with all its details, features, and specs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Create a new product",
+                "parameters": [
+                    {
+                        "description": "CreateProduct request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commands.CreateProduct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/products/{id}": {
+            "put": {
+                "description": "Updates an existing product. Only provided fields will be updated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Update a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "UpdateProduct request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commands.UpdateProduct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a product. Can perform soft delete or hard delete.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Delete a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Soft delete (default: true)",
+                        "name": "soft_delete",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/auth/refresh": {
+            "post": {
+                "description": "Refreshes the access token using a valid refresh token from request body",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh access token",
+                "parameters": [
+                    {
+                        "description": "Refresh token request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token refreshed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid or expired refresh token",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/auth/send-otp": {
+            "post": {
+                "description": "Sends OTP code to the provided phone number",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Send OTP",
+                "parameters": [
+                    {
+                        "description": "SendOtp request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commands.SendOtp"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OTP sent successfully",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/auth/verify-otp": {
+            "post": {
+                "description": "Verifies OTP code and returns token if user exists, or indicates if user needs to register",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify OTP",
+                "parameters": [
+                    {
+                        "description": "VerifyOtp request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commands.VerifyOtp"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OTP verified successfully",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid OTP",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/public/categories": {
             "get": {
                 "description": "Retrieves all product categories",
@@ -359,7 +625,7 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "201": {
                         "description": "Registration successful",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
@@ -470,6 +736,75 @@
         }
     },
     "definitions": {
+        "commands.CreateProduct": {
+            "type": "object",
+            "required": [
+                "brand",
+                "category_id",
+                "name",
+                "slug"
+            ],
+            "properties": {
+                "brand": {
+                    "type": "string",
+                    "minLength": 2
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string",
+                    "minLength": 10
+                },
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/commands.ProductDetailInput"
+                    }
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/commands.ProductFeatureInput"
+                    }
+                },
+                "image": {
+                    "type": "string"
+                },
+                "is_featured": {
+                    "type": "boolean"
+                },
+                "is_new": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "minLength": 3
+                },
+                "sizes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "slug": {
+                    "type": "string",
+                    "minLength": 3
+                },
+                "specs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/commands.ProductSpecInput"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "commands.CreateReview": {
             "type": "object",
             "required": [
@@ -504,13 +839,84 @@
             "type": "object",
             "required": [
                 "password",
-                "user_name"
+                "phone"
             ],
             "properties": {
                 "password": {
                     "type": "string"
                 },
-                "user_name": {
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "commands.ProductDetailInput": {
+            "type": "object",
+            "required": [
+                "price"
+            ],
+            "properties": {
+                "color_key": {
+                    "type": "string"
+                },
+                "color_name": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "original_price": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "size_key": {
+                    "type": "string"
+                },
+                "stock": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "commands.ProductFeatureInput": {
+            "type": "object",
+            "required": [
+                "feature"
+            ],
+            "properties": {
+                "feature": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "commands.ProductSpecInput": {
+            "type": "object",
+            "required": [
+                "key",
+                "value"
+            ],
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "value": {
                     "type": "string"
                 }
             }
@@ -518,15 +924,12 @@
         "commands.RegisterUser": {
             "type": "object",
             "required": [
-                "avatar_identifier",
-                "email",
                 "first_name",
                 "last_name",
-                "password",
-                "user_name"
+                "phone"
             ],
             "properties": {
-                "avatar_identifier": {
+                "avatarIdentifier": {
                     "type": "string"
                 },
                 "email": {
@@ -534,19 +937,121 @@
                 },
                 "first_name": {
                     "type": "string",
-                    "minLength": 3
+                    "minLength": 2
                 },
                 "last_name": {
                     "type": "string",
-                    "minLength": 3
+                    "minLength": 2
                 },
                 "password": {
-                    "type": "string",
-                    "minLength": 6
+                    "description": "Optional for OTP-based registration",
+                    "type": "string"
                 },
-                "user_name": {
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "commands.ReviewHelpfulType": {
+            "type": "string",
+            "enum": [
+                "helpful",
+                "notHelpful"
+            ],
+            "x-enum-varnames": [
+                "ReviewHelpfulTypeHelpful",
+                "ReviewHelpfulTypeNotHelpful"
+            ]
+        },
+        "commands.SendOtp": {
+            "type": "object",
+            "required": [
+                "phone",
+                "type"
+            ],
+            "properties": {
+                "phone": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "login",
+                        "register"
+                    ]
+                }
+            }
+        },
+        "commands.UpdateProduct": {
+            "type": "object",
+            "required": [
+                "brand",
+                "category_id",
+                "id",
+                "name",
+                "slug"
+            ],
+            "properties": {
+                "brand": {
+                    "type": "string",
+                    "minLength": 2
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string",
+                    "minLength": 10
+                },
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/commands.ProductDetailInput"
+                    }
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/commands.ProductFeatureInput"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "is_featured": {
+                    "type": "boolean"
+                },
+                "is_new": {
+                    "type": "boolean"
+                },
+                "name": {
                     "type": "string",
                     "minLength": 3
+                },
+                "sizes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "slug": {
+                    "type": "string",
+                    "minLength": 3
+                },
+                "specs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/commands.ProductSpecInput"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -561,10 +1066,29 @@
                     "type": "integer"
                 },
                 "type": {
+                    "$ref": "#/definitions/commands.ReviewHelpfulType"
+                }
+            }
+        },
+        "commands.VerifyOtp": {
+            "type": "object",
+            "required": [
+                "otp",
+                "phone",
+                "type"
+            ],
+            "properties": {
+                "otp": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string",
                     "enum": [
-                        "helpful",
-                        "notHelpful"
+                        "login",
+                        "register"
                     ]
                 }
             }

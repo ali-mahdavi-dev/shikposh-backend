@@ -8,8 +8,9 @@ import (
 
 	"shikposh-backend/internal/products/domain/entity"
 	"shikposh-backend/internal/products/domain/events"
+	unitofwork "shikposh-backend/internal/unit_of_work"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
-	"shikposh-backend/internal/unit_of_work"
 )
 
 type ProductEventHandler struct {

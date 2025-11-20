@@ -6,14 +6,14 @@ import (
 
 // Account module error phrases
 const (
-	UserNotFound      phrases.MessagePhrase = "Account.User.NotFound"
-	UserAlreadyExists phrases.MessagePhrase = "Account.User.AlreadyExists"
-	UserAgeInvalid    phrases.MessagePhrase = "Account.User.AgeInvalid"
-	UserInvalid       phrases.MessagePhrase = "Account.User.Invalid"
+	UserNotFound       phrases.MessagePhrase = "Account.User.NotFound"
+	UserAlreadyExists  phrases.MessagePhrase = "Account.User.AlreadyExists"
+	UserAgeInvalid     phrases.MessagePhrase = "Account.User.AgeInvalid"
+	UserInvalid        phrases.MessagePhrase = "Account.User.Invalid"
 	PhoneAlreadyExists phrases.MessagePhrase = "Account.User.PhoneAlreadyExists"
-	OtpInvalid        phrases.MessagePhrase = "Account.Otp.Invalid"
-	OtpExpired        phrases.MessagePhrase = "Account.Otp.Expired"
-	OtpRateLimited    phrases.MessagePhrase = "Account.Otp.RateLimited"
+	OtpInvalid         phrases.MessagePhrase = "Account.Otp.Invalid"
+	OtpExpired         phrases.MessagePhrase = "Account.Otp.Expired"
+	OtpRateLimited     phrases.MessagePhrase = "Account.Otp.RateLimited"
 )
 
 // RegisterAccountPhrases registers error phrases for the account module
@@ -42,4 +42,3 @@ func RegisterAccountPhrases() {
 		},
 	})
 }
-

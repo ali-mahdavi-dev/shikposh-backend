@@ -188,7 +188,7 @@ func (u *UserController) Logout(c fiber.Ctx) error {
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		commands.SendOtp	true	"SendOtp request"
+//	@Param			request	body		commands.SendOtp		true	"SendOtp request"
 //	@Success		200		{object}	httpapi.ResponseResult	"OTP sent successfully"
 //	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request"
 //	@Failure		429		{object}	httpapi.ResponseResult	"Too many requests"
@@ -221,7 +221,7 @@ func (u *UserController) SendOtp(c fiber.Ctx) error {
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		commands.VerifyOtp	true	"VerifyOtp request"
+//	@Param			request	body		commands.VerifyOtp		true	"VerifyOtp request"
 //	@Success		200		{object}	httpapi.ResponseResult	"OTP verified successfully"
 //	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request"
 //	@Failure		401		{object}	httpapi.ResponseResult	"Invalid OTP"
@@ -277,7 +277,7 @@ func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		map[string]string	true	"Refresh token request"	example({"refresh_token": "string"})
+//	@Param			request	body		map[string]string		true	"Refresh token request"	example({"refresh_token": "string"})
 //	@Success		200		{object}	httpapi.ResponseResult	"Token refreshed successfully"
 //	@Failure		401		{object}	httpapi.ResponseResult	"Invalid or expired refresh token"
 //	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"

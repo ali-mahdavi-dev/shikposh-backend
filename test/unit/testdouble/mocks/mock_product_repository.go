@@ -6,6 +6,7 @@ import (
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"github.com/stretchr/testify/mock"
@@ -136,4 +137,3 @@ func (m *MockProductRepository) SetSeen(model adapter.Entity) {
 }
 
 var _ repository.ProductRepository = (*MockProductRepository)(nil)
-

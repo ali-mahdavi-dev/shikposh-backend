@@ -5,6 +5,7 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
+
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	. "github.com/onsi/gomega"
@@ -33,11 +34,9 @@ func FindProductByIDWithError(db *gorm.DB, productID uint64) (*productaggregate.
 	return productRepo.FindByID(context.Background(), productID)
 }
 
-
 // VerifyProductNotFound verifies that product was not found
 func VerifyProductNotFound(db *gorm.DB, productID uint64) {
 	_, err := FindProductByIDWithError(db, productID)
 	Expect(err).To(HaveOccurred())
 	Expect(err).To(Equal(appadapter.ErrEntityNotFound))
 }
-

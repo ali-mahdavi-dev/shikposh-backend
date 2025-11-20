@@ -7,9 +7,10 @@ import (
 
 	"shikposh-backend/internal/products/adapter/repository"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
+	unitofwork "shikposh-backend/internal/unit_of_work"
+
 	elasticsearchx "github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/elasticsearch"
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
-	"shikposh-backend/internal/unit_of_work"
 )
 
 type ProductQueryHandler struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"shikposh-backend/internal/account/domain/entity"
-	"shikposh-backend/internal/unit_of_work"
+	unitofwork "shikposh-backend/internal/unit_of_work"
 )
 
 type UserQueryHandler struct {
@@ -27,4 +27,3 @@ func (h *UserQueryHandler) GetUserByID(ctx context.Context, id uint64) (*entity.
 	})
 	return user, err
 }
-
