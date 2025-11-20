@@ -271,7 +271,7 @@ func setupRoutes(components *serverComponents, cfg *config.Config) error {
 	registerSwagger(components.server)
 
 	// Bootstrap application routes
-	if err := account.Bootstrap(components.server, components.db, cfg); err != nil {
+	if err := account.Bootstrap(components.server, components.db, cfg, components.redis); err != nil {
 		return fmt.Errorf("failed to bootstrap account module: %w", err)
 	}
 
