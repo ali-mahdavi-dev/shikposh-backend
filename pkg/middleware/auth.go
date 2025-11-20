@@ -30,11 +30,14 @@ func (m *Middleware) AuthMiddleware() fiber.Handler {
 			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Authorization required"})
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token format"})
+		// Extract token from Authorization header
+		// Support both "Bearer <token>" and just "<token>" formats
+		prefix := "Bearer "
+		if strings.HasPrefix(authHeader, prefix) {
+			tokenStr = authHeader[len(prefix):]
+		} else {
+			tokenStr = authHeader
 		}
-		tokenStr = parts[1]
 
 		if tokenStr == "" {
 			if !m.IsAuthenticated {
@@ -48,7 +51,7 @@ func (m *Middleware) AuthMiddleware() fiber.Handler {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
-			return m.Cfg.JWTSecret, nil
+			return []byte(m.Cfg.JWTSecret), nil
 		})
 
 		if err != nil || !token.Valid {

@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/api/v1/admin/products": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Creates a new product with all its details, features, and specs",
                 "consumes": [
                     "application/json"
@@ -51,6 +56,11 @@ const docTemplate = `{
         },
         "/api/v1/admin/products/{id}": {
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Updates an existing product. Only provided fields will be updated.",
                 "consumes": [
                     "application/json"
@@ -91,6 +101,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Deletes a product. Can perform soft delete or hard delete.",
                 "consumes": [
                     "application/json"
@@ -367,6 +382,11 @@ const docTemplate = `{
         },
         "/api/v1/public/logout": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Logs out the authenticated user.\nExample success response: {\"success\": true}\nExample error response: {\"success\": false, \"error\": {\"code\": \"USER_NOT_FOUND\", \"message\": \"User not found\", \"status\": \"Not Found\"}}",
                 "consumes": [
                     "application/json"

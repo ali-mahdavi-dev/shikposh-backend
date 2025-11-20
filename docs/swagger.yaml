@@ -299,6 +299,8 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
       summary: Create a new product
       tags:
       - products
@@ -325,6 +327,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
       summary: Delete a product
       tags:
       - products
@@ -352,6 +356,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
       summary: Update a product
       tags:
       - products
@@ -547,6 +553,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
       summary: Logout user
       tags:
       - users

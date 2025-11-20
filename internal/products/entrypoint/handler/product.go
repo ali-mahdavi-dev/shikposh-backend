@@ -390,6 +390,7 @@ func (p *ProductHandler) UpdateReviewHelpful(c fiber.Ctx) error {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
+//	@Security		BearerAuth
 //	@Param			request	body		commands.CreateProduct	true	"CreateProduct request"
 //	@Success		201		{object}	httpapi.ResponseResult
 //	@Router			/api/v1/admin/products [post]
@@ -416,6 +417,7 @@ func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
+//	@Security		BearerAuth
 //	@Param			id		path		uint64					true	"Product ID"
 //	@Param			request	body		commands.UpdateProduct	true	"UpdateProduct request"
 //	@Success		200		{object}	httpapi.ResponseResult
@@ -449,6 +451,7 @@ func (p *ProductHandler) UpdateProduct(c fiber.Ctx) error {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
+//	@Security		BearerAuth
 //	@Param			id			path		uint64	true	"Product ID"
 //	@Param			soft_delete	query		boolean	false	"Soft delete (default: true)"
 //	@Success		200			{object}	httpapi.ResponseResult

@@ -30,7 +30,7 @@ func (h *UserHandler) RefreshTokenHandler(ctx context.Context, refreshToken stri
 			if _, ok := token.Method.(*jwtlib.SigningMethodHMAC); !ok {
 				return nil, jwtlib.ErrSignatureInvalid
 			}
-			return h.cfg.JWT.Secret, nil
+			return []byte(h.cfg.JWT.Secret), nil
 		})
 
 		if err != nil || !token.Valid {

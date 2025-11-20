@@ -154,6 +154,7 @@ func (u *UserController) Login(c fiber.Ctx) error {
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
+//	@Security		BearerAuth
 //	@Success		200	{object}	httpapi.ResponseResult	"Logout completed successfully"
 //	@Failure		400	{object}	httpapi.ResponseResult	"Invalid request body or unknown provider"
 //	@Failure		401	{object}	httpapi.ResponseResult	"User not authenticated"
