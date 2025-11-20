@@ -5,6 +5,7 @@ import (
 
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/entity"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"github.com/stretchr/testify/mock"
@@ -62,6 +63,14 @@ func (m *MockUserRepository) FindByUsernameExcludingID(ctx context.Context, user
 	return args.Get(0).(*entity.User), args.Error(1)
 }
 
+func (m *MockUserRepository) FindByPhone(ctx context.Context, phone string) (*entity.User, error) {
+	args := m.Called(ctx, phone)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.User), args.Error(1)
+}
+
 func (m *MockUserRepository) Seen() []adapter.Entity {
 	args := m.Called()
 	if args.Get(0) == nil {
@@ -75,4 +84,3 @@ func (m *MockUserRepository) SetSeen(model adapter.Entity) {
 }
 
 var _ repository.UserRepository = (*MockUserRepository)(nil)
-
