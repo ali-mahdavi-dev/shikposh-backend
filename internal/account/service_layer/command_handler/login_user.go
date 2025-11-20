@@ -16,16 +16,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (h *UserHandler) LoginHandler(ctx context.Context, cmd *commands.LoginUser) (string, error) {
-	var accessToken string
+type LoginResult struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+func (h *UserHandler) LoginHandler(ctx context.Context, cmd *commands.LoginUser) (*LoginResult, error) {
+	var result *LoginResult
 
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
-		user, err := h.uow.User(ctx).FindByUserName(ctx, cmd.UserName)
+		user, err := h.uow.User(ctx).FindByPhone(ctx, cmd.Phone)
 		if err != nil {
 			if errors.Is(err, repository.ErrUserNotFound) {
 				return apperrors.NotFound(accountphrases.UserNotFound)
 			}
-			return fmt.Errorf("UserHandler.LoginHandler fail get user by username: %w", err)
+			return fmt.Errorf("UserHandler.LoginHandler fail get user by phone: %w", err)
 		}
 
 		// Verify password
@@ -47,23 +52,34 @@ func (h *UserHandler) LoginHandler(ctx context.Context, cmd *commands.LoginUser)
 		}
 
 		// Generate new access token
-		accessToken, err = jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, uint64(user.ID))
+		accessToken, err := jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, uint64(user.ID))
 		if err != nil {
-			return fmt.Errorf("UserHandler.LoginHandler fail generate token: %w", err)
+			return fmt.Errorf("UserHandler.LoginHandler fail generate access token: %w", err)
+		}
+
+		// Generate new refresh token
+		refreshToken, err := jwt.GenerateToken(h.cfg.JWT.RefreshTokenExpireDuration, h.cfg.JWT.Secret, uint64(user.ID))
+		if err != nil {
+			return fmt.Errorf("UserHandler.LoginHandler fail generate refresh token: %w", err)
 		}
 
 		// Save new token
-		err = h.uow.Token(ctx).Save(ctx, entity.NewToken(accessToken, user.ID))
+		err = h.uow.Token(ctx).Save(ctx, entity.NewToken(accessToken, refreshToken, user.ID))
 		if err != nil {
 			return fmt.Errorf("UserHandler.LoginHandler fail save token to db: %w", err)
+		}
+
+		result = &LoginResult{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
 		}
 
 		return nil
 	})
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return accessToken, nil
+	return result, nil
 }

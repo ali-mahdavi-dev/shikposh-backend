@@ -7,8 +7,9 @@ import (
 	"shikposh-backend/internal/account/adapter/repository"
 	"shikposh-backend/internal/account/domain/entity"
 	"shikposh-backend/internal/account/domain/events"
+	unitofwork "shikposh-backend/internal/unit_of_work"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
-	"shikposh-backend/internal/unit_of_work"
 )
 
 type UserEventHandler struct {
@@ -28,7 +29,6 @@ func (h *UserEventHandler) RegisterEvent(ctx context.Context, event *events.Regi
 	userID := entity.UserID(*event.UserID)
 	logging.Info("Processing RegisterUserEvent").
 		WithInt64("user_id", int64(userID)).
-		WithString("username", event.UserName).
 		Log()
 
 	err := h.uow.Do(ctx, func(ctx context.Context) error {

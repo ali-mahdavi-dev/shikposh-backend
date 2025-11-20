@@ -26,16 +26,6 @@ func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.Registe
 			return apperrors.Conflict(accountphrases.PhoneAlreadyExists)
 		}
 
-		// Check if username already exists
-		_, err = h.uow.User(ctx).FindByUserName(ctx, cmd.UserName)
-		if err != nil {
-			if err != repository.ErrUserNotFound {
-				return fmt.Errorf("UserHandler.Register error checking existing username: %w", err)
-			}
-		} else {
-			return apperrors.Conflict(accountphrases.UserAlreadyExists)
-		}
-
 		// Hash password if provided, otherwise use empty string
 		var hashedPassword string
 		if cmd.Password != "" {
@@ -46,12 +36,6 @@ func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.Registe
 			hashedPassword = string(hashed)
 		}
 
-		// Use phone as username if username is not provided
-		userName := cmd.UserName
-		if userName == "" {
-			userName = cmd.Phone
-		}
-
 		// Use phone as avatar identifier if not provided
 		avatarIdentifier := cmd.AvatarIdentifier
 		if avatarIdentifier == "" {
@@ -60,7 +44,6 @@ func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.Registe
 
 		user := entity.NewUser(
 			avatarIdentifier,
-			userName,
 			cmd.FirstName,
 			cmd.LastName,
 			cmd.Email,

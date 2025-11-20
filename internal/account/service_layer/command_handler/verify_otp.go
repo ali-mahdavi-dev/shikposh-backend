@@ -17,9 +17,10 @@ import (
 
 // VerifyOtpResult contains the result of OTP verification
 type VerifyOtpResult struct {
-	Token      string
-	User       *entity.User
-	UserExists bool
+	Token        string
+	RefreshToken string
+	User         *entity.User
+	UserExists   bool
 }
 
 // VerifyOtpHandler handles OTP verification
@@ -38,6 +39,7 @@ func (h *OtpHandler) VerifyOtpHandler(ctx context.Context, cmd *commands.VerifyO
 	userExists := err == nil && user != nil
 
 	var accessToken string
+	var refreshToken string
 	var finalUser *entity.User
 
 	if userExists {
@@ -57,11 +59,17 @@ func (h *OtpHandler) VerifyOtpHandler(ctx context.Context, cmd *commands.VerifyO
 		// Generate new access token
 		accessToken, err = jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, uint64(user.ID))
 		if err != nil {
-			return nil, fmt.Errorf("OtpHandler.VerifyOtpHandler failed to generate token: %w", err)
+			return nil, fmt.Errorf("OtpHandler.VerifyOtpHandler failed to generate access token: %w", err)
+		}
+
+		// Generate new refresh token
+		refreshToken, err = jwt.GenerateToken(h.cfg.JWT.RefreshTokenExpireDuration, h.cfg.JWT.Secret, uint64(user.ID))
+		if err != nil {
+			return nil, fmt.Errorf("OtpHandler.VerifyOtpHandler failed to generate refresh token: %w", err)
 		}
 
 		// Save new token
-		err = h.uow.Token(ctx).Save(ctx, entity.NewToken(accessToken, user.ID))
+		err = h.uow.Token(ctx).Save(ctx, entity.NewToken(accessToken, refreshToken, user.ID))
 		if err != nil {
 			return nil, fmt.Errorf("OtpHandler.VerifyOtpHandler failed to save token: %w", err)
 		}
@@ -88,11 +96,17 @@ func (h *OtpHandler) VerifyOtpHandler(ctx context.Context, cmd *commands.VerifyO
 			// Generate new access token
 			accessToken, err = jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, uint64(user.ID))
 			if err != nil {
-				return nil, fmt.Errorf("OtpHandler.VerifyOtpHandler failed to generate token: %w", err)
+				return nil, fmt.Errorf("OtpHandler.VerifyOtpHandler failed to generate access token: %w", err)
+			}
+
+			// Generate new refresh token
+			refreshToken, err = jwt.GenerateToken(h.cfg.JWT.RefreshTokenExpireDuration, h.cfg.JWT.Secret, uint64(user.ID))
+			if err != nil {
+				return nil, fmt.Errorf("OtpHandler.VerifyOtpHandler failed to generate refresh token: %w", err)
 			}
 
 			// Save new token
-			err = h.uow.Token(ctx).Save(ctx, entity.NewToken(accessToken, user.ID))
+			err = h.uow.Token(ctx).Save(ctx, entity.NewToken(accessToken, refreshToken, user.ID))
 			if err != nil {
 				return nil, fmt.Errorf("OtpHandler.VerifyOtpHandler failed to save token: %w", err)
 			}
@@ -103,8 +117,9 @@ func (h *OtpHandler) VerifyOtpHandler(ctx context.Context, cmd *commands.VerifyO
 	}
 
 	return &VerifyOtpResult{
-		Token:      accessToken,
-		User:       finalUser,
-		UserExists: userExists,
+		Token:        accessToken,
+		RefreshToken: refreshToken,
+		User:         finalUser,
+		UserExists:   userExists,
 	}, nil
 }

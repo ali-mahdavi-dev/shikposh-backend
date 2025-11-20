@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"shikposh-backend/internal/account/domain/entity"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"gorm.io/gorm"
@@ -36,7 +37,7 @@ func (p *profileGormRepository) Model(ctx context.Context) *gorm.DB {
 func (p *profileGormRepository) FindByUserID(ctx context.Context, userID entity.UserID) (*entity.Profile, error) {
 	profile, err := p.FindByField(ctx, "user_id", uint64(userID))
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, adapter.ErrEntityNotFound) {
 			return nil, ErrProfileNotFound
 		}
 

@@ -28,15 +28,3 @@ func (h *UserQueryHandler) GetUserByID(ctx context.Context, id uint64) (*entity.
 	return user, err
 }
 
-func (h *UserQueryHandler) GetUserByUserName(ctx context.Context, username string) (*entity.User, error) {
-	var user *entity.User
-	err := h.uow.Do(ctx, func(ctx context.Context) error {
-		var err error
-		user, err = h.uow.User(ctx).FindByUserName(ctx, username)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	return user, err
-}

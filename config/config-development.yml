@@ -53,7 +53,8 @@ otp:
   limiter: 100
 jwt:
   secret: "mySecretKey"
-  accessTokenExpireDuration: 1440
+  accessTokenExpireDuration: 1440m # 24 hours
+  refreshTokenExpireDuration: 720h # 30 days
 jaeger:
   enabled: true
   otlpEndpoint: "http://localhost:4318"

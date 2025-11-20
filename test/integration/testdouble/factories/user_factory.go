@@ -50,7 +50,7 @@ func CreateLoginCommand(username, password string) *commands.LoginUser {
 
 func CreateToken(db *gorm.DB, userID entity.UserID, tokenValue string) {
 	tokenRepo := repository.NewTokenRepository(db)
-	token := entity.NewToken(tokenValue, userID)
+	token := entity.NewToken(tokenValue, tokenValue+"_refresh", userID) // Use same value for refresh token in tests
 	err := tokenRepo.Save(context.Background(), token)
 	Expect(err).NotTo(HaveOccurred())
 }

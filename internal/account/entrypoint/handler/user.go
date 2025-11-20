@@ -45,6 +45,7 @@ func (u *UserController) RegisterRoutes(r fiber.Router) {
 		{
 			authRoute.Post("/send-otp", u.SendOtp)
 			authRoute.Post("/verify-otp", u.VerifyOtp)
+			authRoute.Post("/refresh", u.RefreshToken)
 		}
 	}
 }
@@ -76,7 +77,7 @@ func (u *UserController) GenerateAvatarHandler(c fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		commands.RegisterUser	true	"RegisterUser request"
-//	@Success		200		{object}	httpapi.ResponseResult	"Registration successful"
+//	@Success		201		{object}	httpapi.ResponseResult	"Registration successful"
 //	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body or unknown provider"
 //	@Failure		409		{object}	httpapi.ResponseResult	"User already exists"
 //	@Failure		422		{object}	httpapi.ResponseResult	"Unprocessable input (validation failed)"
@@ -95,7 +96,10 @@ func (u *UserController) Register(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	return c.SendStatus(fiber.StatusNoContent)
+	return httpapi.ResSuccess(c, map[string]interface{}{
+		"success": true,
+		"message": "کاربر با موفقیت ثبت نام شد",
+	})
 }
 
 // Login godoc
@@ -120,15 +124,39 @@ func (u *UserController) Login(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	accessToken, err := u.userHandler.LoginHandler(ctx, cmd)
+	result, err := u.userHandler.LoginHandler(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	// Set token in response header
-	c.Set("Authorization", "Bearer "+accessToken)
+	// Set access token as httpOnly cookie
+	if result != nil && result.AccessToken != "" {
+		c.Cookie(&fiber.Cookie{
+			Name:     "access_token",
+			Value:    result.AccessToken,
+			HTTPOnly: true,
+			Secure:   false, // Set to true in production with HTTPS
+			SameSite: "Lax",
+			Path:     "/",
+		})
 
-	return httpapi.ResSuccess(c, map[string]string{"access": accessToken})
+		// Set refresh token as httpOnly cookie
+		if result.RefreshToken != "" {
+			c.Cookie(&fiber.Cookie{
+				Name:     "refresh_token",
+				Value:    result.RefreshToken,
+				HTTPOnly: true,
+				Secure:   false, // Set to true in production with HTTPS
+				SameSite: "Lax",
+				Path:     "/",
+			})
+		}
+	}
+
+	return httpapi.ResSuccess(c, map[string]interface{}{
+		"success": true,
+		"message": "ورود با موفقیت انجام شد",
+	})
 }
 
 // Logout godoc
@@ -162,6 +190,27 @@ func (u *UserController) Logout(c fiber.Ctx) error {
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
+
+	// Clear cookies
+	c.Cookie(&fiber.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		HTTPOnly: true,
+		Secure:   false,
+		SameSite: "Lax",
+		Path:     "/",
+		MaxAge:   -1, // Delete cookie
+	})
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		HTTPOnly: true,
+		Secure:   false,
+		SameSite: "Lax",
+		Path:     "/",
+		MaxAge:   -1, // Delete cookie
+	})
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -230,16 +279,32 @@ func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 		"user_exists": result.UserExists,
 	}
 
-	if result.Token != "" {
-		response["token"] = result.Token
-		// Set token in response header
-		c.Set("Authorization", "Bearer "+result.Token)
+	// Set tokens as httpOnly cookies if they exist
+	if result != nil && result.Token != "" {
+		c.Cookie(&fiber.Cookie{
+			Name:     "access_token",
+			Value:    result.Token,
+			HTTPOnly: true,
+			Secure:   false, // Set to true in production with HTTPS
+			SameSite: "Lax",
+			Path:     "/",
+		})
+
+		if result.RefreshToken != "" {
+			c.Cookie(&fiber.Cookie{
+				Name:     "refresh_token",
+				Value:    result.RefreshToken,
+				HTTPOnly: true,
+				Secure:   false, // Set to true in production with HTTPS
+				SameSite: "Lax",
+				Path:     "/",
+			})
+		}
 	}
 
 	if result.User != nil {
 		response["user"] = map[string]interface{}{
 			"id":         result.User.ID,
-			"user_name":  result.User.UserName,
 			"first_name": result.User.FirstName,
 			"last_name":  result.User.LastName,
 			"email":      result.User.Email,
@@ -248,4 +313,64 @@ func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 	}
 
 	return httpapi.ResSuccess(c, response)
+}
+
+// RefreshToken godoc
+//
+//	@Summary		Refresh access token
+//	@Description	Refreshes the access token using a valid refresh token from cookie
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	httpapi.ResponseResult	"Token refreshed successfully"
+//	@Failure		401	{object}	httpapi.ResponseResult	"Invalid or expired refresh token"
+//	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/public/auth/refresh [post]
+func (u *UserController) RefreshToken(c fiber.Ctx) error {
+	ctx := c.Context()
+
+	// Get refresh token from cookie
+	refreshToken := c.Cookies("refresh_token")
+	if refreshToken == "" || refreshToken == "null" {
+		return httpapi.ResError(c, errors.Unauthorized(accountphrases.UserNotFound))
+	}
+
+	result, err := u.userHandler.RefreshTokenHandler(ctx, refreshToken)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	// Set new tokens as httpOnly cookies (handle null cases)
+	if result == nil {
+		return httpapi.ResError(c, errors.Unauthorized(accountphrases.UserNotFound))
+	}
+
+	if result.AccessToken == "" {
+		return httpapi.ResError(c, errors.Unauthorized(accountphrases.UserNotFound))
+	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "access_token",
+		Value:    result.AccessToken,
+		HTTPOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: "Lax",
+		Path:     "/",
+	})
+
+	if result.RefreshToken != "" && result.RefreshToken != "null" {
+		c.Cookie(&fiber.Cookie{
+			Name:     "refresh_token",
+			Value:    result.RefreshToken,
+			HTTPOnly: true,
+			Secure:   false, // Set to true in production with HTTPS
+			SameSite: "Lax",
+			Path:     "/",
+		})
+	}
+
+	return httpapi.ResSuccess(c, map[string]interface{}{
+		"success": true,
+		"message": "توکن با موفقیت بروزرسانی شد",
+	})
 }

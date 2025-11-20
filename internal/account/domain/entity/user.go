@@ -19,7 +19,6 @@ type User struct {
 	UpdatedAt        time.Time
 	DeletedAt        gorm.DeletedAt `gorm:"index"`
 	AvatarIdentifier string         `json:"avatar_identifier" gorm:"avatar_identifier"`
-	UserName         string         `json:"user_name" gorm:"user_name"`
 	FirstName        string         `json:"first_name" gorm:"first_name"`
 	LastName         string         `json:"last_name" gorm:"last_name"`
 	Email            string         `json:"email" gorm:"email"`
@@ -29,7 +28,6 @@ type User struct {
 
 func NewUser(
 	avatarIdentifier string,
-	userName string,
 	firstName string,
 	lastName string,
 	email string,
@@ -38,7 +36,6 @@ func NewUser(
 ) *User {
 	user := &User{
 		AvatarIdentifier: avatarIdentifier,
-		UserName:         userName,
 		FirstName:        firstName,
 		LastName:         lastName,
 		Email:            email,
@@ -51,7 +48,6 @@ func NewUser(
 	user.AddEvent(&events.RegisterUserEvent{
 		UserID:           &userID,
 		AvatarIdentifier: user.AvatarIdentifier,
-		UserName:         user.UserName,
 		FirstName:        user.FirstName,
 		LastName:         user.LastName,
 		Email:            user.Email,

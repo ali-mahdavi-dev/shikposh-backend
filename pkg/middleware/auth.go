@@ -19,21 +19,35 @@ var errTokenDoesNotExist = errors.New("token does not exist")
 
 func (m *Middleware) AuthMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
-		// Get token from Authorization header
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
+		// Get token from cookie first, then fallback to Authorization header
+		var tokenStr string
+		
+		// Try to get from cookie
+		tokenStr = c.Cookies("access_token")
+		
+		// Fallback to Authorization header if cookie is empty
+		if tokenStr == "" {
+			authHeader := c.Get("Authorization")
+			if authHeader == "" {
+				if !m.IsAuthenticated {
+					return c.Next()
+				}
+				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Authorization required"})
+			}
+
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token format"})
+			}
+			tokenStr = parts[1]
+		}
+		
+		if tokenStr == "" {
 			if !m.IsAuthenticated {
 				return c.Next()
 			}
-			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Authorization header required"})
+			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Authorization required"})
 		}
-
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token format"})
-		}
-
-		tokenStr := parts[1]
 
 		// Parse JWT
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {

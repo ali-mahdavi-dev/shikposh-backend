@@ -83,8 +83,9 @@ type OtpConfig struct {
 }
 
 type JWTConfig struct {
-	AccessTokenExpireDuration time.Duration
-	Secret                    string
+	AccessTokenExpireDuration  time.Duration
+	RefreshTokenExpireDuration time.Duration
+	Secret                     string
 }
 
 type JaegerConfig struct {

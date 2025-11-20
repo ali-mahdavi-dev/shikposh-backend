@@ -5,12 +5,13 @@ import (
 	"errors"
 
 	"shikposh-backend/internal/account/domain/entity"
+
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"gorm.io/gorm"
 )
 
-var ErrTokenNotFound = errors.New("Token not found")
+var ErrTokenNotFound = errors.New("token not found")
 
 type TokenRepository interface {
 	adapter.BaseRepository[*entity.Token]
@@ -36,7 +37,7 @@ func (u *tokenGormRepository) Model(ctx context.Context) *gorm.DB {
 func (u *tokenGormRepository) FindByUserID(ctx context.Context, userID entity.UserID) (*entity.Token, error) {
 	token, err := u.FindByField(ctx, "user_id", uint64(userID))
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, adapter.ErrEntityNotFound) {
 			return nil, ErrTokenNotFound
 		}
 
