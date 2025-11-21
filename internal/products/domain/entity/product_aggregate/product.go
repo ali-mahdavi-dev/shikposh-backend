@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"shikposh-backend/internal/products/domain/commands"
+	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/internal/products/domain/events"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
@@ -38,11 +39,11 @@ type Product struct {
 	Details     []ProductDetail  `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to colors and variants maps
 	Specs       []ProductSpec    `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to map
 	CategoryID  uint64           `json:"category_id" gorm:"category_id"`
-	Tags        []string         `json:"tags,omitempty" gorm:"type:jsonb"`
+	Tags        []shared.Tag     `json:"-" gorm:"many2many:product_tags;"`
 	Image       string           `json:"image" gorm:"image"` // Main image (for backward compatibility)
 	IsNew       bool             `json:"is_new" gorm:"is_new;default:false"`
 	IsFeatured  bool             `json:"is_featured" gorm:"is_featured;default:false"`
-	Sizes       []string         `json:"sizes" gorm:"type:jsonb"`
+	Sizes       []shared.Size    `json:"-" gorm:"many2many:product_sizes;"`
 }
 
 func (p *Product) TableName() string {
@@ -57,8 +58,8 @@ func NewProduct(cmd *commands.CreateProduct) *Product {
 		Brand:       cmd.Brand,
 		Description: cmd.Description,
 		CategoryID:  cmd.CategoryID,
-		Tags:        cmd.Tags,
-		Sizes:       cmd.Sizes,
+		Tags:        []shared.Tag{},  // Tags will be set separately in command handler
+		Sizes:       []shared.Size{}, // Sizes will be set separately in command handler
 		Image:       cmd.Image,
 		IsNew:       cmd.IsNew,
 		IsFeatured:  cmd.IsFeatured,
@@ -92,12 +93,36 @@ func (p *Product) BeforeCreate(tx *gorm.DB) error {
 		p.Specs = []ProductSpec{}
 	}
 	if p.Tags == nil {
-		p.Tags = []string{}
+		p.Tags = []shared.Tag{}
 	}
 	if p.Sizes == nil {
-		p.Sizes = []string{}
+		p.Sizes = []shared.Size{}
 	}
 	return nil
+}
+
+// convertTagsToStringArray converts []shared.Tag to []string for JSON response
+func convertTagsToStringArray(tags []shared.Tag) []string {
+	if len(tags) == 0 {
+		return []string{}
+	}
+	result := make([]string, len(tags))
+	for i := range tags {
+		result[i] = tags[i].Name
+	}
+	return result
+}
+
+// convertSizesToStringArray converts []shared.Size to []string for JSON response
+func convertSizesToStringArray(sizes []shared.Size) []string {
+	if len(sizes) == 0 {
+		return []string{}
+	}
+	result := make([]string, len(sizes))
+	for i := range sizes {
+		result[i] = sizes[i].Name
+	}
+	return result
 }
 
 // ToMap converts Colors and Variants to map format for JSON response
@@ -129,13 +154,13 @@ func (p *Product) ToMap() map[string]interface{} {
 		"review_count": p.ReviewCount,
 		"description":  p.Description,
 		"category_id":  p.CategoryID,
-		"tags":         p.Tags,
+		"tags":         convertTagsToStringArray(p.Tags),
 		"image":        p.Image,
 		"price":        defaultPrice, // Default price from first detail
 		"discount":     defaultDiscount,
 		"is_new":       p.IsNew,
 		"is_featured":  p.IsFeatured,
-		"sizes":        p.Sizes,
+		"sizes":        convertSizesToStringArray(p.Sizes),
 		"created_at":   p.CreatedAt,
 	}
 

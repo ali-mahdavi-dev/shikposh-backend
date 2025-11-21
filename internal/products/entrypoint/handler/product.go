@@ -59,9 +59,9 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 	{
 		// Products
 		publicRoute.Get("/products", p.GetAllProducts)
-		publicRoute.Get("/products/:slug", p.GetProductBySlug)
 		publicRoute.Get("/products/featured", p.GetFeaturedProducts)
 		publicRoute.Get("/products/category/:category", p.GetProductsByCategory)
+		publicRoute.Get("/products/:slug", p.GetProductBySlug)
 
 		// Categories
 		publicRoute.Get("/categories", p.GetAllCategories)
@@ -81,28 +81,10 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 	}
 }
 
-// GetAllProducts godoc
-//
-//	@Summary		Get all products
-//	@Description	Retrieves all products with optional filtering
-//	@Tags			products
-//	@Accept			json
-//	@Produce		json
-//	@Param			q			query		string	false	"Search query"
-//	@Param			category	query		string	false	"Category slug"
-//	@Param			min			query		number	false	"Minimum price"
-//	@Param			max			query		number	false	"Maximum price"
-//	@Param			rating		query		number	false	"Minimum rating"
-//	@Param			featured	query		boolean	false	"Featured products only"
-//	@Param			tags		query		string	false	"Comma-separated tags"
-//	@Param			sort		query		string	false	"Sort order (price_asc, price_desc, rating, newest)"
-//	@Success		200			{object}	httpapi.ResponseResult
-//	@Router			/api/v1/public/products [get]
-func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
-	ctx := c.Context()
-
-	// Parse query parameters
+// parseProductFilters parses query parameters into ProductFilters
+func parseProductFilters(c fiber.Ctx) repository.ProductFilters {
 	filters := repository.ProductFilters{}
+
 	if q := c.Query("q"); q != "" {
 		filters.Query = &q
 	}
@@ -129,9 +111,8 @@ func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
 		filters.Featured = &featuredVal
 	}
 	if tags := c.Query("tags"); tags != "" {
-		// Parse comma-separated tags
 		tagList := strings.Split(tags, ",")
-		cleanedTags := []string{}
+		cleanedTags := make([]string, 0, len(tagList))
 		for _, tag := range tagList {
 			if trimmed := strings.TrimSpace(tag); trimmed != "" {
 				cleanedTags = append(cleanedTags, trimmed)
@@ -145,30 +126,57 @@ func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
 		filters.Sort = &sort
 	}
 
-	// Use filter if any filters are set, otherwise get all
-	var productsList []*productaggregate.Product
-	var err error
-	if filters.Query != nil || filters.Category != nil || filters.MinPrice != nil ||
+	return filters
+}
+
+// hasFilters checks if any filters are set
+func hasFilters(filters repository.ProductFilters) bool {
+	return filters.Query != nil || filters.Category != nil || filters.MinPrice != nil ||
 		filters.MaxPrice != nil || filters.Rating != nil || filters.Featured != nil ||
-		len(filters.Tags) > 0 || filters.Sort != nil {
-		productsList, err = p.productQueryHandler.GetFilteredProducts(ctx, filters)
+		len(filters.Tags) > 0 || filters.Sort != nil
+}
+
+// GetAllProducts godoc
+//
+//	@Summary		Get all products
+//	@Description	Retrieves all products with optional filtering (uses Elasticsearch only)
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			q			query		string	false	"Search query"
+//	@Param			category	query		string	false	"Category slug"
+//	@Param			min			query		number	false	"Minimum price"
+//	@Param			max			query		number	false	"Maximum price"
+//	@Param			rating		query		number	false	"Minimum rating"
+//	@Param			featured	query		boolean	false	"Featured products only"
+//	@Param			tags		query		string	false	"Comma-separated tags"
+//	@Param			sort		query		string	false	"Sort order (price_asc, price_desc, rating, newest)"
+//	@Success		200			{object}	httpapi.ResponseResult
+//	@Router			/api/v1/public/products [get]
+func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
+	ctx := c.Context()
+	filters := parseProductFilters(c)
+
+	var products []map[string]interface{}
+	var err error
+
+	if hasFilters(filters) {
+		products, err = p.productQueryHandler.GetFilteredProductsAsMaps(ctx, filters)
 	} else {
-		productsList, err = p.productQueryHandler.GetAllProducts(ctx)
+		products, err = p.productQueryHandler.GetAllProductsAsMaps(ctx)
 	}
 
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	// Convert to map format
-	productsMap := convertProductsToMap(productsList)
-	return httpapi.ResSuccess(c, productsMap)
+	return httpapi.ResSuccess(c, products)
 }
 
 // GetProductBySlug godoc
 //
 //	@Summary		Get product by slug
-//	@Description	Retrieves a single product by its slug
+//	@Description	Retrieves a single product by its slug (uses Elasticsearch only)
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
@@ -182,7 +190,7 @@ func (p *ProductHandler) GetProductBySlug(c fiber.Ctx) error {
 		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "slug is required"))
 	}
 
-	product, err := p.productQueryHandler.GetProductBySlug(ctx, slug)
+	productMap, err := p.productQueryHandler.GetProductBySlugAsMap(ctx, slug)
 	if err != nil {
 		if errors.Is(err, repository.ErrProductNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
@@ -190,8 +198,6 @@ func (p *ProductHandler) GetProductBySlug(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	// Convert to map format
-	productMap := product.ToMap()
 	return httpapi.ResSuccess(c, productMap)
 }
 
@@ -202,23 +208,18 @@ func (p *ProductHandler) GetProductByID(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	product, err := p.productQueryHandler.GetProductByID(ctx, id)
+	productMap, err := p.productQueryHandler.GetProductByIDAsMap(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrProductNotFound) {
-			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
-		}
 		return httpapi.ResError(c, err)
 	}
 
-	// Convert to map format
-	productMap := product.ToMap()
 	return httpapi.ResSuccess(c, productMap)
 }
 
 // GetFeaturedProducts godoc
 //
 //	@Summary		Get featured products
-//	@Description	Retrieves all featured products
+//	@Description	Retrieves all featured products (uses Elasticsearch only)
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
@@ -227,20 +228,18 @@ func (p *ProductHandler) GetProductByID(c fiber.Ctx) error {
 func (p *ProductHandler) GetFeaturedProducts(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	products, err := p.productQueryHandler.GetFeaturedProducts(ctx)
+	products, err := p.productQueryHandler.GetFeaturedProductsAsMaps(ctx)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	// Convert to map format
-	productsMap := convertProductsToMap(products)
-	return httpapi.ResSuccess(c, productsMap)
+	return httpapi.ResSuccess(c, products)
 }
 
 // GetProductsByCategory godoc
 //
 //	@Summary		Get products by category
-//	@Description	Retrieves all products in a specific category
+//	@Description	Retrieves all products in a specific category (uses Elasticsearch only)
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
@@ -251,7 +250,7 @@ func (p *ProductHandler) GetProductsByCategory(c fiber.Ctx) error {
 	ctx := c.Context()
 	categorySlug := c.Params("category")
 
-	products, err := p.productQueryHandler.GetProductsByCategory(ctx, categorySlug)
+	products, err := p.productQueryHandler.GetProductsByCategoryAsMaps(ctx, categorySlug)
 	if err != nil {
 		if errors.Is(err, repository.ErrCategoryNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Category not found"))
@@ -259,9 +258,7 @@ func (p *ProductHandler) GetProductsByCategory(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	// Convert to map format
-	productsMap := convertProductsToMap(products)
-	return httpapi.ResSuccess(c, productsMap)
+	return httpapi.ResSuccess(c, products)
 }
 
 // GetAllCategories godoc

@@ -26,6 +26,8 @@ type ProductRepository interface {
 	ClearFeatures(ctx context.Context, product *productaggregate.Product) error
 	ClearDetails(ctx context.Context, product *productaggregate.Product) error
 	ClearSpecs(ctx context.Context, product *productaggregate.Product) error
+	ClearTags(ctx context.Context, product *productaggregate.Product) error
+	ClearSizes(ctx context.Context, product *productaggregate.Product) error
 	ClearAllAssociations(ctx context.Context, product *productaggregate.Product) error
 }
 
@@ -67,6 +69,8 @@ func (r *productGormRepository) withPreloads(query *gorm.DB) *gorm.DB {
 		Preload("Specs", func(db *gorm.DB) *gorm.DB {
 			return db.Order("\"order\" ASC")
 		})
+		// Preload("Tags").
+		// Preload("Sizes")
 }
 
 func (r *productGormRepository) GetAll(ctx context.Context) ([]*productaggregate.Product, error) {
@@ -178,9 +182,11 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 	}
 
 	if len(filters.Tags) > 0 {
-		for _, tag := range filters.Tags {
-			query = query.Where("tags @> ?", `["`+tag+`"]`)
-		}
+		// Join with tags table and filter by tag names
+		query = query.Joins("JOIN product_tags ON products.id = product_tags.product_id").
+			Joins("JOIN tags ON product_tags.tag_id = tags.id").
+			Where("tags.name IN ?", filters.Tags).
+			Group("products.id")
 	}
 
 	// Apply sorting
@@ -220,6 +226,14 @@ func (r *productGormRepository) ClearSpecs(ctx context.Context, product *product
 	return r.Model(ctx).Association("Specs").Clear()
 }
 
+func (r *productGormRepository) ClearTags(ctx context.Context, product *productaggregate.Product) error {
+	return r.Model(ctx).Association("Tags").Clear()
+}
+
+func (r *productGormRepository) ClearSizes(ctx context.Context, product *productaggregate.Product) error {
+	return r.Model(ctx).Association("Sizes").Clear()
+}
+
 // clearDetailsAttachments loads details and clears their attachments
 func (r *productGormRepository) clearDetailsAttachments(ctx context.Context, product *productaggregate.Product) error {
 	// Load existing details to delete their attachments
@@ -254,5 +268,5 @@ func (r *productGormRepository) ClearAllAssociations(ctx context.Context, produc
 	}
 
 	// Delete all associations using Select
-	return r.Model(ctx).Select("Features", "Details", "Specs").Delete(product).Error
+	return r.Model(ctx).Select("Features", "Details", "Specs", "Tags", "Sizes").Delete(product).Error
 }

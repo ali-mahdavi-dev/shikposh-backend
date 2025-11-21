@@ -92,7 +92,7 @@ func (s *ProductHasTagSpecification) IsSatisfiedBy(product *productaggregate.Pro
 		return false
 	}
 	for _, t := range product.Tags {
-		if t == s.tag {
+		if t.Name == s.tag {
 			return true
 		}
 	}
@@ -116,7 +116,7 @@ func (s *ProductHasAnyTagSpecification) IsSatisfiedBy(product *productaggregate.
 	}
 	for _, productTag := range product.Tags {
 		for _, requiredTag := range s.tags {
-			if productTag == requiredTag {
+			if productTag.Name == requiredTag {
 				return true
 			}
 		}

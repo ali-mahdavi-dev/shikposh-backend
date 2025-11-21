@@ -8,6 +8,7 @@ import (
 	"shikposh-backend/internal/products/adapter/phrases"
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
+	"shikposh-backend/internal/products/domain/events"
 
 	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
 
@@ -34,6 +35,13 @@ func (h *ProductCommandHandler) DeleteProductHandler(ctx context.Context, cmd *c
 		if err := h.uow.Product(ctx).Remove(ctx, product, cmd.SoftDelete); err != nil {
 			return fmt.Errorf("ProductCommandHandler.DeleteProductHandler error deleting product: %w", err)
 		}
+
+		// Emit ProductDeletedEvent
+		productID := uint64(product.ID)
+		product.AddEvent(&events.ProductDeletedEvent{
+			ProductID:  &productID,
+			SoftDelete: cmd.SoftDelete,
+		})
 
 		return nil
 	})

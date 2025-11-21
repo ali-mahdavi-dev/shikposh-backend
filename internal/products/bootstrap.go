@@ -76,6 +76,8 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 	// event handlers
 	bus.AddEventHandler(
 		commandeventhandler.NewEventHandler(productEventHandler.ProductCreatedEvent),
+		commandeventhandler.NewEventHandler(productEventHandler.ProductUpdatedEvent),
+		commandeventhandler.NewEventHandler(productEventHandler.ProductDeletedEvent),
 	)
 
 	// Initialize outbox processor (reads from outbox and sends to Kafka)

@@ -66,10 +66,18 @@ func startServer(cfg *config.Config) error {
 
 	elasticsearch, err := initializeElasticsearch(cfg)
 	if err != nil {
-		logging.Warn("Failed to initialize Elasticsearch").
+		logging.Error("Failed to initialize Elasticsearch").
 			WithError(err).
+			WithString("host", cfg.Elasticsearch.Host).
+			WithString("port", cfg.Elasticsearch.Port).
 			Log()
 		// Continue without Elasticsearch - it's optional for now
+		elasticsearch = nil
+	} else {
+		logging.Info("Elasticsearch initialized successfully").
+			WithString("host", cfg.Elasticsearch.Host).
+			WithString("port", cfg.Elasticsearch.Port).
+			Log()
 	}
 
 	redis, err := initializeRedis(cfg)
@@ -215,6 +223,11 @@ func initializeRedis(cfg *config.Config) (redisx.Connection, error) {
 }
 
 func initializeElasticsearch(cfg *config.Config) (elasticsearchx.Connection, error) {
+	logging.Info("Initializing Elasticsearch connection").
+		WithString("host", cfg.Elasticsearch.Host).
+		WithString("port", cfg.Elasticsearch.Port).
+		Log()
+
 	esCfg := elasticsearchx.Config{
 		Host:     cfg.Elasticsearch.Host,
 		Port:     cfg.Elasticsearch.Port,

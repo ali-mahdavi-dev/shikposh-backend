@@ -1,0 +1,86 @@
+-- migrate:up
+-- Create tags table
+CREATE TABLE tags (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_tags_deleted_at ON tags(deleted_at);
+CREATE INDEX idx_tags_slug ON tags(slug);
+CREATE UNIQUE INDEX idx_tags_name_unique ON tags(name) WHERE deleted_at IS NULL;
+
+-- Create product_tags junction table for many-to-many relationship
+CREATE TABLE product_tags (
+    product_id BIGINT NOT NULL,
+    tag_id BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (product_id, tag_id),
+    CONSTRAINT fk_product_tags_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_product_tags_tag FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_product_tags_product_id ON product_tags(product_id);
+CREATE INDEX idx_product_tags_tag_id ON product_tags(tag_id);
+
+-- Migrate existing tags from products.tags JSONB column to the new tables
+-- This will extract unique tags from the JSONB array and create tag records
+DO $$
+DECLARE
+    product_record RECORD;
+    tag_name TEXT;
+    tag_slug TEXT;
+    tag_id_var BIGINT;
+    tag_array TEXT[];
+BEGIN
+    -- Loop through all products that have tags
+    FOR product_record IN 
+        SELECT id, tags FROM products WHERE tags IS NOT NULL AND tags::text != '[]'::text
+    LOOP
+        -- Parse the JSONB array
+        SELECT ARRAY(SELECT jsonb_array_elements_text(product_record.tags)) INTO tag_array;
+        
+        -- Process each tag
+        FOREACH tag_name IN ARRAY tag_array
+        LOOP
+            -- Generate slug from tag name (simple version - you might want to use a proper slug function)
+            tag_slug := lower(regexp_replace(tag_name, '[^a-zA-Z0-9]+', '-', 'g'));
+            tag_slug := trim(both '-' from tag_slug);
+            
+            -- Check if tag already exists, if not create it
+            SELECT id INTO tag_id_var FROM tags WHERE slug = tag_slug AND deleted_at IS NULL;
+            
+            IF tag_id_var IS NULL THEN
+                INSERT INTO tags (name, slug) 
+                VALUES (tag_name, tag_slug)
+                ON CONFLICT (slug) DO NOTHING
+                RETURNING id INTO tag_id_var;
+                
+                -- If still null (conflict), get the existing tag
+                IF tag_id_var IS NULL THEN
+                    SELECT id INTO tag_id_var FROM tags WHERE slug = tag_slug AND deleted_at IS NULL;
+                END IF;
+            END IF;
+            
+            -- Link product to tag if not already linked
+            IF tag_id_var IS NOT NULL THEN
+                INSERT INTO product_tags (product_id, tag_id)
+                VALUES (product_record.id, tag_id_var)
+                ON CONFLICT (product_id, tag_id) DO NOTHING;
+            END IF;
+        END LOOP;
+    END LOOP;
+END $$;
+
+-- migrate:down
+DROP INDEX IF EXISTS idx_product_tags_tag_id;
+DROP INDEX IF EXISTS idx_product_tags_product_id;
+DROP TABLE IF EXISTS product_tags;
+DROP INDEX IF EXISTS idx_tags_name_unique;
+DROP INDEX IF EXISTS idx_tags_slug;
+DROP INDEX IF EXISTS idx_tags_deleted_at;
+DROP TABLE IF EXISTS tags;
+

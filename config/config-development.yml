@@ -39,7 +39,7 @@ elasticsearch:
   host: localhost
   port: 9200
   username: elastic
-  password: ""
+  password: "@aA123456"
 password:
   includeChars: true
   includeDigits: true

@@ -10,6 +10,7 @@ import (
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/domain/entity/shared"
+	"shikposh-backend/internal/products/domain/events"
 	"shikposh-backend/internal/products/domain/specification"
 
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
@@ -58,10 +59,46 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 
 		product.Description = cmd.Description
 		if cmd.Tags != nil {
-			product.Tags = cmd.Tags
+			// Clear existing tags
+			if err := h.uow.Product(ctx).ClearTags(ctx, product); err != nil {
+				return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error clearing tags: %w", err)
+			}
+
+			// Find or create new tags
+			if len(cmd.Tags) > 0 {
+				tags := make([]shared.Tag, 0, len(cmd.Tags))
+				for _, tagName := range cmd.Tags {
+					tag, err := h.uow.Tag(ctx).FindOrCreateByName(ctx, tagName)
+					if err != nil {
+						return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error finding/creating tag: %w", err)
+					}
+					tags = append(tags, *tag)
+				}
+				product.Tags = tags
+			} else {
+				product.Tags = []shared.Tag{}
+			}
 		}
 		if cmd.Sizes != nil {
-			product.Sizes = cmd.Sizes
+			// Clear existing sizes
+			if err := h.uow.Product(ctx).ClearSizes(ctx, product); err != nil {
+				return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error clearing sizes: %w", err)
+			}
+
+			// Find or create new sizes
+			if len(cmd.Sizes) > 0 {
+				sizes := make([]shared.Size, 0, len(cmd.Sizes))
+				for _, sizeName := range cmd.Sizes {
+					size, err := h.uow.Size(ctx).FindOrCreateByName(ctx, sizeName)
+					if err != nil {
+						return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error finding/creating size: %w", err)
+					}
+					sizes = append(sizes, *size)
+				}
+				product.Sizes = sizes
+			} else {
+				product.Sizes = []shared.Size{}
+			}
 		}
 		if cmd.Image != nil {
 			product.Image = *cmd.Image
@@ -145,6 +182,22 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 		if err := h.uow.Product(ctx).Modify(ctx, product); err != nil {
 			return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error saving product: %w", err)
 		}
+
+		// Emit ProductUpdatedEvent
+		productID := uint64(product.ID)
+		product.AddEvent(&events.ProductUpdatedEvent{
+			ProductID:  &productID,
+			Name:       product.Name,
+			Slug:       product.Slug,
+			Brand:      product.Brand,
+			CategoryID: product.CategoryID,
+			Description: func() string {
+				if product.Description != nil {
+					return *product.Description
+				}
+				return ""
+			}(),
+		})
 
 		return nil
 	})

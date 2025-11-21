@@ -72,6 +72,32 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 			}
 		}
 
+		// Convert Tags - find or create tags by name
+		if len(cmd.Tags) > 0 {
+			tags := make([]shared.Tag, 0, len(cmd.Tags))
+			for _, tagName := range cmd.Tags {
+				tag, err := h.uow.Tag(ctx).FindOrCreateByName(ctx, tagName)
+				if err != nil {
+					return fmt.Errorf("ProductCommandHandler.CreateProductHandler error finding/creating tag: %w", err)
+				}
+				tags = append(tags, *tag)
+			}
+			product.Tags = tags
+		}
+
+		// Convert Sizes - find or create sizes by name
+		if len(cmd.Sizes) > 0 {
+			sizes := make([]shared.Size, 0, len(cmd.Sizes))
+			for _, sizeName := range cmd.Sizes {
+				size, err := h.uow.Size(ctx).FindOrCreateByName(ctx, sizeName)
+				if err != nil {
+					return fmt.Errorf("ProductCommandHandler.CreateProductHandler error finding/creating size: %w", err)
+				}
+				sizes = append(sizes, *size)
+			}
+			product.Sizes = sizes
+		}
+
 		// Validate product using specification pattern
 		canBePublishedSpec := specification.NewProductCanBePublishedSpecification()
 		if !canBePublishedSpec.IsSatisfiedBy(product) {
