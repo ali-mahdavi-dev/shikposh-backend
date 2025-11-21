@@ -69,8 +69,8 @@ func (r *productGormRepository) withPreloads(query *gorm.DB) *gorm.DB {
 		Preload("Specs", func(db *gorm.DB) *gorm.DB {
 			return db.Order("\"order\" ASC")
 		})
-		// Preload("Tags").
-		// Preload("Sizes")
+	// Preload("Tags").
+	// Preload("Sizes")
 }
 
 func (r *productGormRepository) GetAll(ctx context.Context) ([]*productaggregate.Product, error) {

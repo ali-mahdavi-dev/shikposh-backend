@@ -562,7 +562,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieves all products with optional filtering
+      description: Retrieves all products with optional filtering (uses Elasticsearch
+        only)
       parameters:
       - description: Search query
         in: query
@@ -632,7 +633,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieves a single product by its slug
+      description: Retrieves a single product by its slug (uses Elasticsearch only)
       parameters:
       - description: Product slug
         in: path
@@ -653,7 +654,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieves all products in a specific category
+      description: Retrieves all products in a specific category (uses Elasticsearch
+        only)
       parameters:
       - description: Category slug
         in: path
@@ -674,7 +676,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieves all featured products
+      description: Retrieves all featured products (uses Elasticsearch only)
       produces:
       - application/json
       responses:

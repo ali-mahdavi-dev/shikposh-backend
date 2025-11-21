@@ -22,6 +22,6 @@ type ProductUpdatedEvent struct {
 
 // ProductDeletedEvent is raised when a product is deleted
 type ProductDeletedEvent struct {
-	ProductID *uint64 `json:"product_id"`
-	SoftDelete bool   `json:"soft_delete"`
+	ProductID  *uint64 `json:"product_id"`
+	SoftDelete bool    `json:"soft_delete"`
 }

@@ -440,7 +440,7 @@ const docTemplate = `{
         },
         "/api/v1/public/products": {
             "get": {
-                "description": "Retrieves all products with optional filtering",
+                "description": "Retrieves all products with optional filtering (uses Elasticsearch only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -513,7 +513,7 @@ const docTemplate = `{
         },
         "/api/v1/public/products/category/{category}": {
             "get": {
-                "description": "Retrieves all products in a specific category",
+                "description": "Retrieves all products in a specific category (uses Elasticsearch only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -545,7 +545,7 @@ const docTemplate = `{
         },
         "/api/v1/public/products/featured": {
             "get": {
-                "description": "Retrieves all featured products",
+                "description": "Retrieves all featured products (uses Elasticsearch only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -601,7 +601,7 @@ const docTemplate = `{
         },
         "/api/v1/public/products/{slug}": {
             "get": {
-                "description": "Retrieves a single product by its slug",
+                "description": "Retrieves a single product by its slug (uses Elasticsearch only)",
                 "consumes": [
                     "application/json"
                 ],
