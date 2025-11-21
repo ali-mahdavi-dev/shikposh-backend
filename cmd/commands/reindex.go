@@ -50,6 +50,67 @@ func reindexProducts() error {
 	ctx := context.Background()
 	indexName := "products"
 
+	// Create index with mapping if it doesn't exist
+	mapping := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{
+				"type": "keyword",
+			},
+			"name": map[string]interface{}{
+				"type":     "text",
+				"analyzer": "standard",
+				"fields": map[string]interface{}{
+					"keyword": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			"slug": map[string]interface{}{
+				"type": "keyword",
+			},
+			"brand": map[string]interface{}{
+				"type":     "text",
+				"analyzer": "standard",
+				"fields": map[string]interface{}{
+					"keyword": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			"description": map[string]interface{}{
+				"type":     "text",
+				"analyzer": "standard",
+			},
+			"category_id": map[string]interface{}{
+				"type": "long",
+			},
+			"price": map[string]interface{}{
+				"type": "float",
+			},
+			"rating": map[string]interface{}{
+				"type": "float",
+			},
+			"is_featured": map[string]interface{}{
+				"type": "boolean",
+			},
+			"is_new": map[string]interface{}{
+				"type": "boolean",
+			},
+			"tags": map[string]interface{}{
+				"type": "keyword",
+			},
+			"created_at": map[string]interface{}{
+				"type": "date",
+			},
+		},
+	}
+
+	if err := elasticsearch.CreateIndex(ctx, indexName, mapping); err != nil {
+		return fmt.Errorf("failed to create index: %w", err)
+	}
+
+	logging.Info("Index created or already exists").WithString("index", indexName).Log()
+
 	successCount := 0
 	errorCount := 0
 
