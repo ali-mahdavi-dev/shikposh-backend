@@ -6,8 +6,6 @@ github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
-github.com/ali-mahdavi-dev/shikposh-framework v0.0.0-20251120133559-7d01993ad152 h1:AE3uejrsTz+Pc80HwouvEG5eueQx5zmIVgp2Jj5QEdc=
-github.com/ali-mahdavi-dev/shikposh-framework v0.0.0-20251120133559-7d01993ad152/go.mod h1:Gxk2FJ8uO/u5s82tsmIcct2AID3ji+Q2UjGPk0sGGsk=
 github.com/amacneil/dbmate/v2 v2.28.0 h1:4fAKHjp1k7yY5Mjn4pBm765qPMTs1hd1a2hV0t8pFas=
 github.com/amacneil/dbmate/v2 v2.28.0/go.mod h1:aFMv3X21dCZr3AMJVAYG1ft4/2ylcqrId2o8eqFBVmQ=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=

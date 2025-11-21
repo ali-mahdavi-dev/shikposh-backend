@@ -2,6 +2,7 @@ package products
 
 import (
 	"context"
+	"fmt"
 
 	"shikposh-backend/config"
 	"shikposh-backend/internal/products/adapter/phrases"
@@ -88,6 +89,13 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 
 	// Initialize Kafka consumer (consumes from Kafka and indexes in Elasticsearch)
 	if elasticsearch != nil {
+		// Ensure products index exists
+		if err := ensureProductsIndex(ctx, elasticsearch); err != nil {
+			logging.Warn("Failed to ensure products index exists").
+				WithError(err).
+				Log()
+		}
+
 		outboxConsumer := outbox.NewConsumer(uow, elasticsearch, kafkaService)
 		if outboxConsumer != nil {
 			go func() {
@@ -104,5 +112,83 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 
 	logging.Info("Products module bootstrapped successfully").Log()
 
+	return nil
+}
+
+// ensureProductsIndex creates the products index if it doesn't exist
+func ensureProductsIndex(ctx context.Context, elasticsearch elasticsearchx.Connection) error {
+	indexName := "products"
+
+	// Check if index exists
+	exists, err := elasticsearch.IndexExists(ctx, indexName)
+	if err != nil {
+		return fmt.Errorf("failed to check if index exists: %w", err)
+	}
+
+	if exists {
+		logging.Debug("Products index already exists").WithString("index", indexName).Log()
+		return nil
+	}
+
+	// Create index with mapping
+	mapping := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{
+				"type": "keyword",
+			},
+			"name": map[string]interface{}{
+				"type":     "text",
+				"analyzer": "standard",
+				"fields": map[string]interface{}{
+					"keyword": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			"slug": map[string]interface{}{
+				"type": "keyword",
+			},
+			"brand": map[string]interface{}{
+				"type":     "text",
+				"analyzer": "standard",
+				"fields": map[string]interface{}{
+					"keyword": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			"description": map[string]interface{}{
+				"type":     "text",
+				"analyzer": "standard",
+			},
+			"category_id": map[string]interface{}{
+				"type": "long",
+			},
+			"price": map[string]interface{}{
+				"type": "float",
+			},
+			"rating": map[string]interface{}{
+				"type": "float",
+			},
+			"is_featured": map[string]interface{}{
+				"type": "boolean",
+			},
+			"is_new": map[string]interface{}{
+				"type": "boolean",
+			},
+			"tags": map[string]interface{}{
+				"type": "keyword",
+			},
+			"created_at": map[string]interface{}{
+				"type": "date",
+			},
+		},
+	}
+
+	if err := elasticsearch.CreateIndex(ctx, indexName, mapping); err != nil {
+		return fmt.Errorf("failed to create index: %w", err)
+	}
+
+	logging.Info("Products index created successfully").WithString("index", indexName).Log()
 	return nil
 }
