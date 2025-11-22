@@ -61,15 +61,17 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 		publicRoute.Get("/products", p.GetAllProducts)
 		publicRoute.Get("/products/featured", p.GetFeaturedProducts)
 		publicRoute.Get("/products/category/:category", p.GetProductsByCategory)
+		// Reviews route must come before /products/:slug to avoid route conflict
+		publicRoute.Get("/products/:slug/reviews", p.GetReviewsByProductID)
 		publicRoute.Get("/products/:slug", p.GetProductBySlug)
 
 		// Categories
 		publicRoute.Get("/categories", p.GetAllCategories)
 
 		// Reviews
-		publicRoute.Get("/products/:id/reviews", p.GetReviewsByProductID)
+		publicRoute.Get("/reviews", p.GetReviews)
 		publicRoute.Post("/reviews", p.CreateReview)
-		publicRoute.Patch("/reviews/:id", p.UpdateReviewHelpful)
+		publicRoute.Patch("/reviews/:slug", p.UpdateReviewHelpful)
 	}
 
 	// Admin routes for product CRUD
@@ -283,22 +285,85 @@ func (p *ProductHandler) GetAllCategories(c fiber.Ctx) error {
 
 // GetReviewsByProductID godoc
 //
-//	@Summary		Get reviews by product ID
-//	@Description	Retrieves all reviews for a specific product
+//	@Summary		Get reviews by product slug
+//	@Description	Retrieves all reviews for a specific product by slug
 //	@Tags			reviews
 //	@Accept			json
 //	@Produce		json
-//	@Param			id	path		uint64	true	"Product ID"
-//	@Success		200	{object}	httpapi.ResponseResult
-//	@Router			/api/v1/public/products/{id}/reviews [get]
+//	@Param			slug	path		string	true	"Product slug"
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Router			/api/v1/public/products/{slug}/reviews [get]
 func (p *ProductHandler) GetReviewsByProductID(c fiber.Ctx) error {
 	ctx := c.Context()
-	productID, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	slug := c.Params("slug")
+	if slug == "" {
+		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "product slug is required"))
+	}
+
+	// Find product by slug first
+	product, err := p.productQueryHandler.GetProductBySlug(ctx, slug)
 	if err != nil {
+		if errors.Is(err, repository.ErrProductNotFound) {
+			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
+		}
 		return httpapi.ResError(c, err)
 	}
 
-	reviews, err := p.reviewQueryHandler.GetReviewsByProductID(ctx, productaggregate.ProductID(productID))
+	productID := product.ID
+
+	reviews, err := p.reviewQueryHandler.GetReviewsByProductID(ctx, productID)
+	if err != nil {
+		if errors.Is(err, repository.ErrProductNotFound) {
+			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
+		}
+		return httpapi.ResError(c, err)
+	}
+
+	// Return paginated response
+	pr := &httpapi.PaginationResult{
+		Total: int64(len(reviews)),
+		Skip:  0,
+		Limit: int64(len(reviews)),
+	}
+	return httpapi.ResPage(c, reviews, pr)
+}
+
+// GetReviews godoc
+//
+//	@Summary		Get reviews by product slug or ID
+//	@Description	Retrieves all reviews for a specific product. Accepts productId as query parameter (can be slug or numeric ID).
+//	@Tags			reviews
+//	@Accept			json
+//	@Produce		json
+//	@Param			productId	query		string	true	"Product slug or numeric ID"
+//	@Success		200			{object}	httpapi.ResponseResult
+//	@Router			/api/v1/public/reviews [get]
+func (p *ProductHandler) GetReviews(c fiber.Ctx) error {
+	ctx := c.Context()
+	productIdOrSlug := c.Query("productId")
+	if productIdOrSlug == "" {
+		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "productId query parameter is required"))
+	}
+
+	var productID productaggregate.ProductID
+
+	// Check if the parameter is numeric (ID)
+	if id, err := strconv.ParseUint(productIdOrSlug, 10, 64); err == nil {
+		// It's a numeric ID
+		productID = productaggregate.ProductID(id)
+	} else {
+		// It's a slug, need to find product by slug first
+		product, err := p.productQueryHandler.GetProductBySlug(ctx, productIdOrSlug)
+		if err != nil {
+			if errors.Is(err, repository.ErrProductNotFound) {
+				return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
+			}
+			return httpapi.ResError(c, err)
+		}
+		productID = product.ID
+	}
+
+	reviews, err := p.reviewQueryHandler.GetReviewsByProductID(ctx, productID)
 	if err != nil {
 		if errors.Is(err, repository.ErrProductNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Product not found"))
@@ -354,13 +419,13 @@ func (p *ProductHandler) CreateReview(c fiber.Ctx) error {
 //	@Tags			reviews
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		uint64							true	"Review ID"
+//	@Param			slug	path		uint64							true	"Review ID"
 //	@Param			request	body		commands.UpdateReviewHelpful	true	"UpdateReviewHelpful request"
 //	@Success		200		{object}	httpapi.ResponseResult
-//	@Router			/api/v1/public/reviews/{id} [patch]
+//	@Router			/api/v1/public/reviews/{slug} [patch]
 func (p *ProductHandler) UpdateReviewHelpful(c fiber.Ctx) error {
 	ctx := c.Context()
-	reviewID, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	reviewID, err := strconv.ParseUint(c.Params("slug"), 10, 64)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
