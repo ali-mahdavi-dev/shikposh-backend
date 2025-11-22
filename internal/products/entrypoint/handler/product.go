@@ -64,6 +64,7 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 		// Reviews route must come before /products/:slug to avoid route conflict
 		publicRoute.Get("/products/:slug/reviews", p.GetReviewsByProductID)
 		publicRoute.Get("/products/:slug", p.GetProductBySlug)
+		publicRoute.Post("/products/cart", p.GetProductsForCart)
 
 		// Categories
 		publicRoute.Get("/categories", p.GetAllCategories)
@@ -541,4 +542,68 @@ func (p *ProductHandler) DeleteProduct(c fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// GetProductsForCart godoc
+//
+//	@Summary		Get products for cart
+//	@Description	Retrieves products by IDs with only essential fields (name, image, price, discount)
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		[]string	true	"Array of product IDs"
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Router			/api/v1/public/products/cart [post]
+func (p *ProductHandler) GetProductsForCart(c fiber.Ctx) error {
+	ctx := c.Context()
+
+	var productIDs []string
+	// Parse JSON body directly without validation (since it's a simple slice)
+	if err := c.Bind().Body(&productIDs); err != nil {
+		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "Invalid request body: expected array of product IDs"))
+	}
+
+	if len(productIDs) == 0 {
+		return httpapi.ResSuccess(c, []interface{}{})
+	}
+
+	products, err := p.productQueryHandler.GetProductsByIDsAsMaps(ctx, productIDs)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	// Filter to only return name, image, price, discount, and id
+	filteredProducts := make([]map[string]interface{}, 0, len(products))
+	for _, product := range products {
+		filtered := map[string]interface{}{
+			"id": product["id"],
+		}
+
+		if name, ok := product["name"].(string); ok {
+			filtered["name"] = name
+		}
+		if image, ok := product["image"].(string); ok {
+			filtered["image"] = image
+		}
+		if price, ok := product["price"].(float64); ok {
+			filtered["price"] = price
+		} else if price, ok := product["price"].(int); ok {
+			filtered["price"] = float64(price)
+		}
+
+		// Check if discount exists
+		hasDiscount := false
+		if discount, ok := product["discount"].(float64); ok && discount > 0 {
+			hasDiscount = true
+			filtered["discount"] = discount
+		} else if discount, ok := product["discount"].(int); ok && discount > 0 {
+			hasDiscount = true
+			filtered["discount"] = float64(discount)
+		}
+		filtered["hasDiscount"] = hasDiscount
+
+		filteredProducts = append(filteredProducts, filtered)
+	}
+
+	return httpapi.ResSuccess(c, filteredProducts)
 }

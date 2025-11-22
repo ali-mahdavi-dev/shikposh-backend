@@ -752,6 +752,43 @@ func (h *ProductQueryHandler) executeElasticsearchQueryAsMaps(ctx context.Contex
 	return maps, nil
 }
 
+// GetProductsByIDsAsMaps returns products by IDs from Elasticsearch as maps (no database lookup)
+func (h *ProductQueryHandler) GetProductsByIDsAsMaps(ctx context.Context, productIDs []string) ([]map[string]interface{}, error) {
+	if h.elasticsearch == nil {
+		return nil, fmt.Errorf("elasticsearch is not available")
+	}
+
+	if len(productIDs) == 0 {
+		return []map[string]interface{}{}, nil
+	}
+
+	// Convert string IDs to interface slice for terms query
+	ids := make([]interface{}, len(productIDs))
+	for i, id := range productIDs {
+		ids[i] = id
+	}
+
+	searchQuery := map[string]interface{}{
+		"query": map[string]interface{}{
+			"terms": map[string]interface{}{
+				"id": ids,
+			},
+		},
+		"size": len(productIDs),
+	}
+
+	maps, err := h.executeElasticsearchQueryAsMaps(ctx, searchQuery)
+	if err != nil {
+		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+	}
+
+	logging.Debug("Products by IDs retrieved from Elasticsearch as maps").
+		WithInt("count", len(maps)).
+		Log()
+
+	return maps, nil
+}
+
 // mapToProduct converts a map (from Elasticsearch) to Product entity
 func (h *ProductQueryHandler) mapToProduct(ctx context.Context, data map[string]interface{}) (*productaggregate.Product, error) {
 	// Get product ID
