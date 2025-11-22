@@ -21,6 +21,7 @@ type ProductRepository interface {
 	FindByCategoryID(ctx context.Context, categoryID entity.CategoryID) ([]*productaggregate.Product, error)
 	FindByCategorySlug(ctx context.Context, categorySlug string) ([]*productaggregate.Product, error)
 	FindFeatured(ctx context.Context) ([]*productaggregate.Product, error)
+	FindFeaturedForReindex(ctx context.Context) ([]*productaggregate.Product, error)
 	Search(ctx context.Context, query string) ([]*productaggregate.Product, error)
 	Filter(ctx context.Context, filters ProductFilters) ([]*productaggregate.Product, error)
 	ClearFeatures(ctx context.Context, product *productaggregate.Product) error
@@ -71,6 +72,18 @@ func (r *productGormRepository) withPreloads(query *gorm.DB) *gorm.DB {
 		})
 	// Preload("Tags").
 	// Preload("Sizes")
+}
+
+// withPreloadsWithoutImages applies preloads without Images (for reindexing)
+func (r *productGormRepository) withPreloadsWithoutImages(query *gorm.DB) *gorm.DB {
+	return query.
+		Preload("Details").
+		Preload("Features", func(db *gorm.DB) *gorm.DB {
+			return db.Order("\"order\" ASC")
+		}).
+		Preload("Specs", func(db *gorm.DB) *gorm.DB {
+			return db.Order("\"order\" ASC")
+		})
 }
 
 func (r *productGormRepository) GetAll(ctx context.Context) ([]*productaggregate.Product, error) {
@@ -128,6 +141,19 @@ func (r *productGormRepository) FindByCategorySlug(ctx context.Context, category
 func (r *productGormRepository) FindFeatured(ctx context.Context) ([]*productaggregate.Product, error) {
 	var products []*productaggregate.Product
 	err := r.withPreloads(r.Model(ctx)).Where("is_featured = ?", true).Find(&products).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range products {
+		r.SetSeen(p)
+	}
+	return products, nil
+}
+
+// FindFeaturedForReindex returns featured products without Images preload (for reindexing)
+func (r *productGormRepository) FindFeaturedForReindex(ctx context.Context) ([]*productaggregate.Product, error) {
+	var products []*productaggregate.Product
+	err := r.withPreloadsWithoutImages(r.Model(ctx)).Where("is_featured = ?", true).Find(&products).Error
 	if err != nil {
 		return nil, err
 	}

@@ -117,12 +117,14 @@ func reindexProducts() error {
 	// Get all products from database and index them
 	err = uow.Do(ctx, func(ctx context.Context) error {
 		productRepo := uow.Product(ctx)
-		allProducts, err := productRepo.GetAll(ctx)
+		// Use FindFeaturedForReindex to get only featured products without Images preload
+		// This avoids the preload issue with Images
+		allProducts, err := productRepo.FindFeaturedForReindex(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to get products: %w", err)
+			return fmt.Errorf("failed to get featured products: %w", err)
 		}
 
-		logging.Info("Starting reindex process").
+		logging.Info("Starting reindex process for featured products").
 			WithInt("total_products", len(allProducts)).
 			Log()
 
