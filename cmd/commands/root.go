@@ -30,6 +30,7 @@ func init() {
 	rootCmd.AddCommand(runHTTPServerCMD())
 	rootCmd.AddCommand(migrateCmd())
 	rootCmd.AddCommand(reindexCmd())
+	rootCmd.AddCommand(updateImagesCmd())
 }
 
 func Execute() {

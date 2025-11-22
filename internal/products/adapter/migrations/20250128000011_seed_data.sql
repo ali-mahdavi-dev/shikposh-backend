@@ -15,12 +15,12 @@ SELECT
     'کت و شلوار زنانه کلاسیک',
     'women-classic-suit',
     'شیک‌پوش',
-    4.5,
+    5,
     120,
     'کت و شلوار زنانه کلاسیک با طراحی مدرن و کیفیت عالی. مناسب برای مجالس و محیط‌های کاری.',
     (SELECT id FROM categories WHERE slug = 'women-clothing' LIMIT 1),
     '["کلاسیک", "رسمی", "کت و شلوار"]'::jsonb,
-    'https://example.com/images/women-suit.jpg',
+    '/images/Women-Formal.avif',
     false,
     true,
     '["S", "M", "L", "XL"]'::jsonb
@@ -31,14 +31,14 @@ SELECT
     'کیف دستی چرمی زنانه',
     'women-leather-handbag',
     'شیک‌پوش',
-    4.8,
+    2.8,
     95,
     'کیف دستی چرمی با کیفیت بالا و طراحی شیک. مناسب برای استفاده روزمره و مجالس.',
     (SELECT id FROM categories WHERE slug = 'bags-shoes' LIMIT 1),
     '["چرم", "کیف دستی", "کلاسیک"]'::jsonb,
-    'https://example.com/images/handbag.jpg',
-    true,
-    true,
+    '/images/handbag.jpg',
+    false,
+    false,
     '[]'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM products WHERE slug = 'women-leather-handbag');
 
@@ -47,14 +47,14 @@ SELECT
     'گردنبند طلا با نگین',
     'gold-necklace-with-gem',
     'شیک‌پوش',
-    4.7,
+    3.7,
     150,
     'گردنبند طلای 18 عیار با نگین الماس. طراحی مدرن و لوکس.',
     (SELECT id FROM categories WHERE slug = 'jewelry' LIMIT 1),
     '["طلا", "الماس", "لوکس"]'::jsonb,
-    'https://example.com/images/jewelry.jpg',
-    false,
+    '/images/jewelry.jpg',
     true,
+    false,
     '[]'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM products WHERE slug = 'gold-necklace-with-gem');
 
@@ -68,8 +68,8 @@ SELECT
     'کت و شلوار مردانه رسمی با برش عالی و پارچه مرغوب. مناسب برای مجالس و محیط کار.',
     (SELECT id FROM categories WHERE slug = 'men-clothing' LIMIT 1),
     '["رسمی", "کت و شلوار", "کلاسیک"]'::jsonb,
-    'https://example.com/images/suit-Top.jpg',
-    false,
+    '/images/suit-Top.jpg',
+    true,
     true,
     '["44", "46", "48", "50", "52"]'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM products WHERE slug = 'men-formal-suit');
@@ -84,7 +84,7 @@ SELECT
     'کفش چرمی مردانه با کیفیت عالی و طراحی کلاسیک. مناسب برای مجالس و محیط کار.',
     (SELECT id FROM categories WHERE slug = 'bags-shoes' LIMIT 1),
     '["چرم", "رسمی", "کلاسیک"]'::jsonb,
-    'https://example.com/images/shoes.jpg',
+    '/images/shoes.jpg',
     true,
     true,
     '["40", "41", "42", "43", "44", "45"]'::jsonb
@@ -100,7 +100,7 @@ SELECT
     'دستبند نقره دست‌ساز با طراحی سنتی و مدرن. مناسب برای هدیه.',
     (SELECT id FROM categories WHERE slug = 'jewelry' LIMIT 1),
     '["نقره", "دست‌ساز", "سنتی"]'::jsonb,
-    'https://example.com/images/jewelry.jpg',
+    '/images/jewelry.jpg',
     false,
     true,
     '[]'::jsonb
@@ -116,7 +116,7 @@ SELECT
     'شال حریر ابریشمی با طرح‌های زیبا و رنگ‌بندی متنوع. مناسب برای تمام فصول.',
     (SELECT id FROM categories WHERE slug = 'accessories' LIMIT 1),
     '["ابریشم", "شال", "لوکس"]'::jsonb,
-    'https://example.com/images/harir.jpeg',
+    '/images/harir.jpeg',
     true,
     true,
     '[]'::jsonb
