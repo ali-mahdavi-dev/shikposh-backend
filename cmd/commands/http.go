@@ -235,12 +235,31 @@ func initializeElasticsearch(cfg *config.Config) (elasticsearchx.Connection, err
 		Password: cfg.Elasticsearch.Password,
 	}
 
-	conn, err := elasticsearchx.NewElasticsearchConnection(esCfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize elasticsearch: %w", err)
-	}
+	// Use a timeout context to prevent blocking startup for too long
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
-	return conn, nil
+	type result struct {
+		conn elasticsearchx.Connection
+		err  error
+	}
+	resultChan := make(chan result, 1)
+
+	// Run initialization in a goroutine to make it cancellable
+	go func() {
+		conn, err := elasticsearchx.NewElasticsearchConnection(esCfg)
+		resultChan <- result{conn: conn, err: err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("elasticsearch initialization timeout after 3 seconds: %w", ctx.Err())
+	case r := <-resultChan:
+		if r.err != nil {
+			return nil, fmt.Errorf("failed to initialize elasticsearch: %w", r.err)
+		}
+		return r.conn, nil
+	}
 }
 
 func createFiberApp(cfg *config.Config) *fiber.App {
