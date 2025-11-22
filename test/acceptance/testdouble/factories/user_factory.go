@@ -24,7 +24,7 @@ func NewUserFactory(db *gorm.DB) *UserFactory {
 func (f *UserFactory) CreateRegisterCommand(username, email, password string) *commands.RegisterUser {
 	return &commands.RegisterUser{
 		AvatarIdentifier: "avatar123",
-		UserName:         username,
+		Phone:            username, // Phone is used as username identifier
 		FirstName:        "John",
 		LastName:         "Doe",
 		Email:            email,
@@ -35,7 +35,7 @@ func (f *UserFactory) CreateRegisterCommand(username, email, password string) *c
 // CreateLoginCommand creates a login user command
 func (f *UserFactory) CreateLoginCommand(username, password string) *commands.LoginUser {
 	return &commands.LoginUser{
-		UserName: username,
+		Phone:    username, // Phone is used as username identifier
 		Password: password,
 	}
 }
@@ -51,7 +51,7 @@ func (f *UserFactory) CreateLogoutCommand(userID uint64) *commands.Logout {
 func (f *UserFactory) CreateUser(username, email, password string) *entity.User {
 	userRepo := repository.NewUserRepository(f.db)
 	user := &entity.User{
-		UserName:  username,
+		Phone:     username, // Phone is used as username identifier
 		FirstName: "John",
 		LastName:  "Doe",
 		Email:     email,

@@ -4,10 +4,11 @@ import (
 	"context"
 
 	"shikposh-backend/internal/account/service_layer/command_handler"
-	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
 	"shikposh-backend/test/acceptance/testdouble/builders"
 	"shikposh-backend/test/acceptance/testdouble/factories"
 	"shikposh-backend/test/acceptance/testdouble/helpers"
+
+	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -42,8 +43,8 @@ var _ = Describe("User Registration Acceptance Scenarios", func() {
 
 			// Phase 3: Verify (Assert) - Verify user registration
 			Expect(err).NotTo(HaveOccurred())
-			user := helpers.FindUserByUsername(builder.DB, "newuser")
-			Expect(user.UserName).To(Equal("newuser"))
+			user := helpers.FindUserByPhone(builder.DB, "newuser")
+			Expect(user.Phone).To(Equal("newuser"))
 			Expect(user.Email).To(Equal("newuser@example.com"))
 			helpers.VerifyPasswordHashed(user.Password, "password123")
 
@@ -100,7 +101,7 @@ var _ = Describe("User Registration Acceptance Scenarios", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Phase 1: Setup (Arrange) - Prepare logout command
-			user := helpers.FindUserByUsername(builder.DB, "logoutuser")
+			user := helpers.FindUserByPhone(builder.DB, "logoutuser")
 			logoutCmd := factory.CreateLogoutCommand(uint64(user.ID))
 
 			// Phase 2: Exercise (Act) - Logout user

@@ -11,10 +11,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// FindUserByUsername finds a user by username
-func FindUserByUsername(db *gorm.DB, username string) *entity.User {
+// FindUserByPhone finds a user by phone (used as username)
+func FindUserByPhone(db *gorm.DB, phone string) *entity.User {
 	userRepo := repository.NewUserRepository(db)
-	user, err := userRepo.FindByUserName(context.Background(), username)
+	user, err := userRepo.FindByPhone(context.Background(), phone)
 	Expect(err).NotTo(HaveOccurred())
 	return user
 }
@@ -45,10 +45,10 @@ func VerifyTokenRemoved(db *gorm.DB, userID entity.UserID) {
 	Expect(err).To(HaveOccurred())
 }
 
-// VerifyUserCount verifies the count of users with given username
-func VerifyUserCount(db *gorm.DB, username string, expectedCount int) {
+// VerifyUserCount verifies the count of users with given phone (used as username)
+func VerifyUserCount(db *gorm.DB, phone string, expectedCount int) {
 	userRepo := repository.NewUserRepository(db)
-	users, err := userRepo.FindByField(context.Background(), "user_name", username)
+	users, err := userRepo.FindByField(context.Background(), "phone", phone)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(users).To(HaveLen(expectedCount))
 }
