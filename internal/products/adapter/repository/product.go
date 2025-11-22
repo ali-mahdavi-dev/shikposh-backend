@@ -22,6 +22,7 @@ type ProductRepository interface {
 	FindByCategorySlug(ctx context.Context, categorySlug string) ([]*productaggregate.Product, error)
 	FindFeatured(ctx context.Context) ([]*productaggregate.Product, error)
 	FindFeaturedForReindex(ctx context.Context) ([]*productaggregate.Product, error)
+	FindAllForReindex(ctx context.Context) ([]*productaggregate.Product, error)
 	Search(ctx context.Context, query string) ([]*productaggregate.Product, error)
 	Filter(ctx context.Context, filters ProductFilters) ([]*productaggregate.Product, error)
 	ClearFeatures(ctx context.Context, product *productaggregate.Product) error
@@ -154,6 +155,19 @@ func (r *productGormRepository) FindFeatured(ctx context.Context) ([]*productagg
 func (r *productGormRepository) FindFeaturedForReindex(ctx context.Context) ([]*productaggregate.Product, error) {
 	var products []*productaggregate.Product
 	err := r.withPreloadsWithoutImages(r.Model(ctx)).Where("is_featured = ?", true).Find(&products).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range products {
+		r.SetSeen(p)
+	}
+	return products, nil
+}
+
+// FindAllForReindex returns all products without Images preload (for reindexing)
+func (r *productGormRepository) FindAllForReindex(ctx context.Context) ([]*productaggregate.Product, error) {
+	var products []*productaggregate.Product
+	err := r.withPreloadsWithoutImages(r.Model(ctx)).Find(&products).Error
 	if err != nil {
 		return nil, err
 	}
