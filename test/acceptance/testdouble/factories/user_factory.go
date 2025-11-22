@@ -21,10 +21,10 @@ func NewUserFactory(db *gorm.DB) *UserFactory {
 }
 
 // CreateRegisterCommand creates a register user command
-func (f *UserFactory) CreateRegisterCommand(username, email, password string) *commands.RegisterUser {
+func (f *UserFactory) CreateRegisterCommand(phone, email, password string) *commands.RegisterUser {
 	return &commands.RegisterUser{
 		AvatarIdentifier: "avatar123",
-		Phone:            username, // Phone is used as username identifier
+		Phone:            phone,
 		FirstName:        "John",
 		LastName:         "Doe",
 		Email:            email,
@@ -33,9 +33,9 @@ func (f *UserFactory) CreateRegisterCommand(username, email, password string) *c
 }
 
 // CreateLoginCommand creates a login user command
-func (f *UserFactory) CreateLoginCommand(username, password string) *commands.LoginUser {
+func (f *UserFactory) CreateLoginCommand(phone, password string) *commands.LoginUser {
 	return &commands.LoginUser{
-		Phone:    username, // Phone is used as username identifier
+		Phone:    phone,
 		Password: password,
 	}
 }
@@ -48,10 +48,10 @@ func (f *UserFactory) CreateLogoutCommand(userID uint64) *commands.Logout {
 }
 
 // CreateUser creates a user in database
-func (f *UserFactory) CreateUser(username, email, password string) *entity.User {
+func (f *UserFactory) CreateUser(phone, email, password string) *entity.User {
 	userRepo := repository.NewUserRepository(f.db)
 	user := &entity.User{
-		Phone:     username, // Phone is used as username identifier
+		Phone:     phone,
 		FirstName: "John",
 		LastName:  "Doe",
 		Email:     email,

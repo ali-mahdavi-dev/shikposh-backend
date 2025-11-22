@@ -7,6 +7,7 @@ import (
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
+	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/internal/products/service_layer/command_handler"
 
 	. "github.com/onsi/gomega"
@@ -50,14 +51,33 @@ func (f *ProductFactory) CreateProduct(name, brand string, categoryID uint64) *p
 	}
 
 	productRepo := repository.NewProductRepository(f.db)
+	tagRepo := repository.NewTagRepository(f.db)
+	sizeRepo := repository.NewSizeRepository(f.db)
+
+	// Convert Tags from []string to []shared.Tag
+	tags := make([]shared.Tag, 0, len(cmd.Tags))
+	for _, tagName := range cmd.Tags {
+		tag, err := tagRepo.FindOrCreateByName(context.Background(), tagName)
+		Expect(err).NotTo(HaveOccurred())
+		tags = append(tags, *tag)
+	}
+
+	// Convert Sizes from []string to []shared.Size
+	sizes := make([]shared.Size, 0, len(cmd.Sizes))
+	for _, sizeName := range cmd.Sizes {
+		size, err := sizeRepo.FindOrCreateByName(context.Background(), sizeName)
+		Expect(err).NotTo(HaveOccurred())
+		sizes = append(sizes, *size)
+	}
+
 	product := &productaggregate.Product{
 		Name:        cmd.Name,
 		Slug:        command_handler.GenerateSlug(cmd.Name),
 		Brand:       cmd.Brand,
 		Description: cmd.Description,
 		CategoryID:  categoryID,
-		Tags:        cmd.Tags,
-		Sizes:       cmd.Sizes,
+		Tags:        tags,
+		Sizes:       sizes,
 	}
 	err := productRepo.Save(context.Background(), product)
 	Expect(err).NotTo(HaveOccurred())
