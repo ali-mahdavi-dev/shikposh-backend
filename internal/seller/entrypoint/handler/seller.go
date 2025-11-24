@@ -27,7 +27,6 @@ func (h *SellerHandler) RegisterRoutes(r fiber.Router) {
 		// Sellers
 		publicRoute.Get("/sellers", h.GetAllSellers)
 		publicRoute.Get("/sellers/:id", h.GetSellerByID)
-		publicRoute.Get("/products/:productId/seller", h.GetSellerByProductID)
 	}
 }
 
@@ -93,34 +92,6 @@ func (h *SellerHandler) GetSellerByID(c fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, repository.ErrSellerNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Seller not found"))
-		}
-		return httpapi.ResError(c, err)
-	}
-
-	return httpapi.ResSuccess(c, seller)
-}
-
-// GetSellerByProductID godoc
-//
-//	@Summary		Get seller by product ID
-//	@Description	Retrieves the seller for a specific product
-//	@Tags			sellers
-//	@Accept			json
-//	@Produce		json
-//	@Param			productId	path		string	true	"Product ID"
-//	@Success		200			{object}	httpapi.ResponseResult
-//	@Router			/api/v1/public/products/{productId}/seller [get]
-func (h *SellerHandler) GetSellerByProductID(c fiber.Ctx) error {
-	ctx := c.Context()
-	productID := c.Params("productId")
-	if productID == "" {
-		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "productId is required"))
-	}
-
-	seller, err := h.sellerQueryHandler.GetSellerByProductID(ctx, productID)
-	if err != nil {
-		if errors.Is(err, repository.ErrSellerNotFound) {
-			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Seller not found for this product"))
 		}
 		return httpapi.ResError(c, err)
 	}

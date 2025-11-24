@@ -204,21 +204,6 @@ func (p *ProductHandler) GetProductBySlug(c fiber.Ctx) error {
 	return httpapi.ResSuccess(c, productMap)
 }
 
-func (p *ProductHandler) GetProductByID(c fiber.Ctx) error {
-	ctx := c.Context()
-	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
-	if err != nil {
-		return httpapi.ResError(c, err)
-	}
-
-	productMap, err := p.productQueryHandler.GetProductByIDAsMap(ctx, id)
-	if err != nil {
-		return httpapi.ResError(c, err)
-	}
-
-	return httpapi.ResSuccess(c, productMap)
-}
-
 // GetFeaturedProducts godoc
 //
 //	@Summary		Get featured products
