@@ -511,6 +511,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/public/products/cart": {
+            "post": {
+                "description": "Retrieves products by IDs with only essential fields (name, image, price, discount)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get products for cart",
+                "parameters": [
+                    {
+                        "description": "Array of product IDs",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/public/products/category/{category}": {
             "get": {
                 "description": "Retrieves all products in a specific category (uses Elasticsearch only)",
@@ -566,9 +603,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/public/products/{id}/reviews": {
+        "/api/v1/public/products/{productId}/seller": {
             "get": {
-                "description": "Retrieves all reviews for a specific product",
+                "description": "Retrieves the seller for a specific product",
                 "consumes": [
                     "application/json"
                 ],
@@ -576,15 +613,14 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "reviews"
+                    "sellers"
                 ],
-                "summary": "Get reviews by product ID",
+                "summary": "Get seller by product ID",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "format": "int64",
+                        "type": "string",
                         "description": "Product ID",
-                        "name": "id",
+                        "name": "productId",
                         "in": "path",
                         "required": true
                     }
@@ -612,6 +648,38 @@ const docTemplate = `{
                     "products"
                 ],
                 "summary": "Get product by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/products/{slug}/reviews": {
+            "get": {
+                "description": "Retrieves all reviews for a specific product by slug",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Get reviews by product slug",
                 "parameters": [
                     {
                         "type": "string",
@@ -690,6 +758,36 @@ const docTemplate = `{
             }
         },
         "/api/v1/public/reviews": {
+            "get": {
+                "description": "Retrieves all reviews for a specific product. Accepts productId as query parameter (can be slug or numeric ID).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Get reviews by product slug or ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product slug or numeric ID",
+                        "name": "productId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Creates a new review for a product",
                 "consumes": [
@@ -723,7 +821,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/public/reviews/{id}": {
+        "/api/v1/public/reviews/{slug}": {
             "patch": {
                 "description": "Increments helpful or notHelpful count for a review",
                 "consumes": [
@@ -741,7 +839,7 @@ const docTemplate = `{
                         "type": "integer",
                         "format": "int64",
                         "description": "Review ID",
-                        "name": "id",
+                        "name": "slug",
                         "in": "path",
                         "required": true
                     },
@@ -753,6 +851,75 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/commands.UpdateReviewHelpful"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/sellers": {
+            "get": {
+                "description": "Retrieves all sellers with optional filtering",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Get all sellers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category",
+                        "name": "categories_like",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/sellers/{id}": {
+            "get": {
+                "description": "Retrieves a single seller by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Get seller by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {

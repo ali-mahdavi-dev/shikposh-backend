@@ -38,9 +38,9 @@ func (h *SellerHandler) RegisterRoutes(r fiber.Router) {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			q			query		string	false	"Search query"
+//	@Param			q				query		string	false	"Search query"
 //	@Param			categories_like	query		string	false	"Filter by category"
-//	@Success		200			{object}	httpapi.ResponseResult
+//	@Success		200				{object}	httpapi.ResponseResult
 //	@Router			/api/v1/public/sellers [get]
 func (h *SellerHandler) GetAllSellers(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -79,8 +79,8 @@ func (h *SellerHandler) GetAllSellers(c fiber.Ctx) error {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string	true	"Seller ID"
-//	@Success		200		{object}	httpapi.ResponseResult
+//	@Param			id	path		string	true	"Seller ID"
+//	@Success		200	{object}	httpapi.ResponseResult
 //	@Router			/api/v1/public/sellers/{id} [get]
 func (h *SellerHandler) GetSellerByID(c fiber.Ctx) error {
 	ctx := c.Context()
