@@ -74,7 +74,7 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 
 		// Convert Tags - find or create tags by name
 		if len(cmd.Tags) > 0 {
-			tags := make([]shared.Tag, 0, len(cmd.Tags))
+			tags := make([]product_aggregate.Tag, 0, len(cmd.Tags))
 			for _, tagName := range cmd.Tags {
 				tag, err := h.uow.Tag(ctx).FindOrCreateByName(ctx, tagName)
 				if err != nil {
@@ -87,7 +87,7 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 
 		// Convert Sizes - find or create sizes by name
 		if len(cmd.Sizes) > 0 {
-			sizes := make([]shared.Size, 0, len(cmd.Sizes))
+			sizes := make([]product_aggregate.Size, 0, len(cmd.Sizes))
 			for _, sizeName := range cmd.Sizes {
 				size, err := h.uow.Size(ctx).FindOrCreateByName(ctx, sizeName)
 				if err != nil {

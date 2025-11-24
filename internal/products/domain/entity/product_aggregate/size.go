@@ -1,4 +1,4 @@
-package shared
+package product_aggregate
 
 import (
 	"time"
@@ -8,12 +8,12 @@ import (
 	"gorm.io/gorm"
 )
 
-type TagID uint64
+type SizeID uint64
 
-// Tag represents a tag that can be associated with products
-type Tag struct {
+// Size represents a size that can be associated with products
+type Size struct {
 	adapter.BaseEntity
-	ID        TagID `gorm:"primaryKey"`
+	ID        SizeID `gorm:"primaryKey"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
@@ -21,6 +21,6 @@ type Tag struct {
 	Slug      string         `json:"slug" gorm:"slug;uniqueIndex;not null"`
 }
 
-func (t *Tag) TableName() string {
-	return "tags"
+func (s *Size) TableName() string {
+	return "sizes"
 }

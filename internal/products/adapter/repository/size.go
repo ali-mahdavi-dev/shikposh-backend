@@ -3,9 +3,8 @@ package repository
 import (
 	"context"
 	"errors"
+	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"strings"
-
-	"shikposh-backend/internal/products/domain/entity/shared"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
@@ -15,29 +14,29 @@ import (
 var ErrSizeNotFound = errors.New("size not found")
 
 type SizeRepository interface {
-	adapter.BaseRepository[*shared.Size]
-	FindByName(ctx context.Context, name string) (*shared.Size, error)
-	FindOrCreateByName(ctx context.Context, name string) (*shared.Size, error)
-	FindByNames(ctx context.Context, names []string) ([]*shared.Size, error)
+	adapter.BaseRepository[*product_aggregate.Size]
+	FindByName(ctx context.Context, name string) (*product_aggregate.Size, error)
+	FindOrCreateByName(ctx context.Context, name string) (*product_aggregate.Size, error)
+	FindByNames(ctx context.Context, names []string) ([]*product_aggregate.Size, error)
 }
 
 type sizeGormRepository struct {
-	adapter.BaseRepository[*shared.Size]
+	adapter.BaseRepository[*product_aggregate.Size]
 	db *gorm.DB
 }
 
 func NewSizeRepository(db *gorm.DB) SizeRepository {
 	return &sizeGormRepository{
-		BaseRepository: adapter.NewGormRepository[*shared.Size](db),
+		BaseRepository: adapter.NewGormRepository[*product_aggregate.Size](db),
 		db:             db,
 	}
 }
 
 func (r *sizeGormRepository) Model(ctx context.Context) *gorm.DB {
-	return r.db.WithContext(ctx).Model(&shared.Size{})
+	return r.db.WithContext(ctx).Model(&product_aggregate.Size{})
 }
 
-func (r *sizeGormRepository) FindByName(ctx context.Context, name string) (*shared.Size, error) {
+func (r *sizeGormRepository) FindByName(ctx context.Context, name string) (*product_aggregate.Size, error) {
 	size, err := r.FindByField(ctx, "name", name)
 	if err != nil {
 		if errors.Is(err, adapter.ErrEntityNotFound) {
@@ -63,7 +62,7 @@ func generateSizeSlug(name string) string {
 	return strings.Trim(result.String(), "-")
 }
 
-func (r *sizeGormRepository) FindOrCreateByName(ctx context.Context, name string) (*shared.Size, error) {
+func (r *sizeGormRepository) FindOrCreateByName(ctx context.Context, name string) (*product_aggregate.Size, error) {
 	// Try to find existing size by name
 	size, err := r.FindByName(ctx, name)
 	if err == nil {
@@ -75,7 +74,7 @@ func (r *sizeGormRepository) FindOrCreateByName(ctx context.Context, name string
 
 	// Size doesn't exist, create it
 	slug := generateSizeSlug(name)
-	size = &shared.Size{
+	size = &product_aggregate.Size{
 		Name: name,
 		Slug: slug,
 	}
@@ -94,12 +93,12 @@ func (r *sizeGormRepository) FindOrCreateByName(ctx context.Context, name string
 	return size, nil
 }
 
-func (r *sizeGormRepository) FindByNames(ctx context.Context, names []string) ([]*shared.Size, error) {
+func (r *sizeGormRepository) FindByNames(ctx context.Context, names []string) ([]*product_aggregate.Size, error) {
 	if len(names) == 0 {
-		return []*shared.Size{}, nil
+		return []*product_aggregate.Size{}, nil
 	}
 
-	var sizes []*shared.Size
+	var sizes []*product_aggregate.Size
 	err := r.Model(ctx).Where("name IN ?", names).Find(&sizes).Error
 	if err != nil {
 		return nil, err

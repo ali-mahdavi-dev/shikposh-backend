@@ -66,7 +66,7 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 
 			// Find or create new tags
 			if len(cmd.Tags) > 0 {
-				tags := make([]shared.Tag, 0, len(cmd.Tags))
+				tags := make([]product_aggregate.Tag, 0, len(cmd.Tags))
 				for _, tagName := range cmd.Tags {
 					tag, err := h.uow.Tag(ctx).FindOrCreateByName(ctx, tagName)
 					if err != nil {
@@ -76,7 +76,7 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 				}
 				product.Tags = tags
 			} else {
-				product.Tags = []shared.Tag{}
+				product.Tags = []product_aggregate.Tag{}
 			}
 		}
 		if cmd.Sizes != nil {
@@ -87,7 +87,7 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 
 			// Find or create new sizes
 			if len(cmd.Sizes) > 0 {
-				sizes := make([]shared.Size, 0, len(cmd.Sizes))
+				sizes := make([]product_aggregate.Size, 0, len(cmd.Sizes))
 				for _, sizeName := range cmd.Sizes {
 					size, err := h.uow.Size(ctx).FindOrCreateByName(ctx, sizeName)
 					if err != nil {
@@ -97,7 +97,7 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 				}
 				product.Sizes = sizes
 			} else {
-				product.Sizes = []shared.Size{}
+				product.Sizes = []product_aggregate.Size{}
 			}
 		}
 		if cmd.Image != nil {

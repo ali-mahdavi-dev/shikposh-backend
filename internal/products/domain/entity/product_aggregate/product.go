@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/internal/products/domain/events"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
@@ -39,11 +38,11 @@ type Product struct {
 	Details     []ProductDetail  `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to colors and variants maps
 	Specs       []ProductSpec    `json:"-" gorm:"foreignKey:ProductID"` // Aggregate Entity - Not in JSON, will be converted to map
 	CategoryID  uint64           `json:"category_id" gorm:"category_id"`
-	Tags        []shared.Tag     `json:"-" gorm:"many2many:product_tags;"`
+	Tags        []Tag            `json:"-" gorm:"many2many:product_tags;"`
 	Image       string           `json:"image" gorm:"image"` // Main image (for backward compatibility)
 	IsNew       bool             `json:"is_new" gorm:"is_new;default:false"`
 	IsFeatured  bool             `json:"is_featured" gorm:"is_featured;default:false"`
-	Sizes       []shared.Size    `json:"-" gorm:"many2many:product_sizes;"`
+	Sizes       []Size           `json:"-" gorm:"many2many:product_sizes;"`
 }
 
 func (p *Product) TableName() string {
@@ -58,8 +57,8 @@ func NewProduct(cmd *commands.CreateProduct) *Product {
 		Brand:       cmd.Brand,
 		Description: cmd.Description,
 		CategoryID:  cmd.CategoryID,
-		Tags:        []shared.Tag{},  // Tags will be set separately in command handler
-		Sizes:       []shared.Size{}, // Sizes will be set separately in command handler
+		Tags:        []Tag{},  // Tags will be set separately in command handler
+		Sizes:       []Size{}, // Sizes will be set separately in command handler
 		Image:       cmd.Image,
 		IsNew:       cmd.IsNew,
 		IsFeatured:  cmd.IsFeatured,
@@ -93,16 +92,16 @@ func (p *Product) BeforeCreate(tx *gorm.DB) error {
 		p.Specs = []ProductSpec{}
 	}
 	if p.Tags == nil {
-		p.Tags = []shared.Tag{}
+		p.Tags = []Tag{}
 	}
 	if p.Sizes == nil {
-		p.Sizes = []shared.Size{}
+		p.Sizes = []Size{}
 	}
 	return nil
 }
 
-// convertTagsToStringArray converts []shared.Tag to []string for JSON response
-func convertTagsToStringArray(tags []shared.Tag) []string {
+// convertTagsToStringArray converts []Tag to []string for JSON response
+func convertTagsToStringArray(tags []Tag) []string {
 	if len(tags) == 0 {
 		return []string{}
 	}
@@ -113,8 +112,8 @@ func convertTagsToStringArray(tags []shared.Tag) []string {
 	return result
 }
 
-// convertSizesToStringArray converts []shared.Size to []string for JSON response
-func convertSizesToStringArray(sizes []shared.Size) []string {
+// convertSizesToStringArray converts []Size to []string for JSON response
+func convertSizesToStringArray(sizes []Size) []string {
 	if len(sizes) == 0 {
 		return []string{}
 	}

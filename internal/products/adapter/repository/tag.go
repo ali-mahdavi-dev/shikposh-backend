@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"shikposh-backend/internal/products/domain/entity/shared"
+	"shikposh-backend/internal/products/domain/entity/product_aggregate"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
@@ -15,29 +15,29 @@ import (
 var ErrTagNotFound = errors.New("tag not found")
 
 type TagRepository interface {
-	adapter.BaseRepository[*shared.Tag]
-	FindByName(ctx context.Context, name string) (*shared.Tag, error)
-	FindOrCreateByName(ctx context.Context, name string) (*shared.Tag, error)
-	FindByNames(ctx context.Context, names []string) ([]*shared.Tag, error)
+	adapter.BaseRepository[*product_aggregate.Tag]
+	FindByName(ctx context.Context, name string) (*product_aggregate.Tag, error)
+	FindOrCreateByName(ctx context.Context, name string) (*product_aggregate.Tag, error)
+	FindByNames(ctx context.Context, names []string) ([]*product_aggregate.Tag, error)
 }
 
 type tagGormRepository struct {
-	adapter.BaseRepository[*shared.Tag]
+	adapter.BaseRepository[*product_aggregate.Tag]
 	db *gorm.DB
 }
 
 func NewTagRepository(db *gorm.DB) TagRepository {
 	return &tagGormRepository{
-		BaseRepository: adapter.NewGormRepository[*shared.Tag](db),
+		BaseRepository: adapter.NewGormRepository[*product_aggregate.Tag](db),
 		db:             db,
 	}
 }
 
 func (r *tagGormRepository) Model(ctx context.Context) *gorm.DB {
-	return r.db.WithContext(ctx).Model(&shared.Tag{})
+	return r.db.WithContext(ctx).Model(&product_aggregate.Tag{})
 }
 
-func (r *tagGormRepository) FindByName(ctx context.Context, name string) (*shared.Tag, error) {
+func (r *tagGormRepository) FindByName(ctx context.Context, name string) (*product_aggregate.Tag, error) {
 	tag, err := r.FindByField(ctx, "name", name)
 	if err != nil {
 		if errors.Is(err, adapter.ErrEntityNotFound) {
@@ -63,7 +63,7 @@ func generateSlug(name string) string {
 	return strings.Trim(result.String(), "-")
 }
 
-func (r *tagGormRepository) FindOrCreateByName(ctx context.Context, name string) (*shared.Tag, error) {
+func (r *tagGormRepository) FindOrCreateByName(ctx context.Context, name string) (*product_aggregate.Tag, error) {
 	// Try to find existing tag by name
 	tag, err := r.FindByName(ctx, name)
 	if err == nil {
@@ -75,7 +75,7 @@ func (r *tagGormRepository) FindOrCreateByName(ctx context.Context, name string)
 
 	// Tag doesn't exist, create it
 	slug := generateSlug(name)
-	tag = &shared.Tag{
+	tag = &product_aggregate.Tag{
 		Name: name,
 		Slug: slug,
 	}
@@ -94,12 +94,12 @@ func (r *tagGormRepository) FindOrCreateByName(ctx context.Context, name string)
 	return tag, nil
 }
 
-func (r *tagGormRepository) FindByNames(ctx context.Context, names []string) ([]*shared.Tag, error) {
+func (r *tagGormRepository) FindByNames(ctx context.Context, names []string) ([]*product_aggregate.Tag, error) {
 	if len(names) == 0 {
-		return []*shared.Tag{}, nil
+		return []*product_aggregate.Tag{}, nil
 	}
 
-	var tags []*shared.Tag
+	var tags []*product_aggregate.Tag
 	err := r.Model(ctx).Where("name IN ?", names).Find(&tags).Error
 	if err != nil {
 		return nil, err
