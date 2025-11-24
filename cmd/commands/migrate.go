@@ -10,6 +10,7 @@ import (
 
 	accountMigrations "shikposh-backend/internal/account/adapter/migrations"
 	productsMigrations "shikposh-backend/internal/products/adapter/migrations"
+	sellerMigrations "shikposh-backend/internal/seller/adapter/migrations"
 
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"
@@ -38,7 +39,11 @@ func dbmateDB() *dbmate.DB {
 
 	dbConn := dbmate.New(u)
 	// Combine both account and products migrations
-	combinedFS := combineFS(accountMigrations.Migrations, productsMigrations.Migrations)
+	combinedFS := combineFS(
+		accountMigrations.Migrations,
+		productsMigrations.Migrations,
+		sellerMigrations.Migrations,
+	)
 	dbConn.FS = combinedFS
 	dbConn.MigrationsDir = []string{"./"}
 	dbConn.AutoDumpSchema = false

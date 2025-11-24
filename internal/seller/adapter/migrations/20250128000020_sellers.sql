@@ -1,0 +1,31 @@
+-- migrate:up
+CREATE TABLE sellers (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR(255) NOT NULL,
+    avatar VARCHAR(500),
+    description TEXT,
+    rating DECIMAL(3,2) DEFAULT 0.00,
+    verified BOOLEAN DEFAULT false,
+    location VARCHAR(255),
+    response_time VARCHAR(100),
+    social_media JSONB DEFAULT '{}'::jsonb,
+    categories JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_sellers_deleted_at ON sellers(deleted_at);
+CREATE INDEX idx_sellers_verified ON sellers(verified);
+CREATE INDEX idx_sellers_rating ON sellers(rating);
+CREATE INDEX idx_sellers_categories ON sellers USING GIN(categories);
+CREATE INDEX idx_sellers_name ON sellers(name);
+
+-- migrate:down
+DROP INDEX IF EXISTS idx_sellers_name;
+DROP INDEX IF EXISTS idx_sellers_categories;
+DROP INDEX IF EXISTS idx_sellers_rating;
+DROP INDEX IF EXISTS idx_sellers_verified;
+DROP INDEX IF EXISTS idx_sellers_deleted_at;
+DROP TABLE IF EXISTS sellers;
+

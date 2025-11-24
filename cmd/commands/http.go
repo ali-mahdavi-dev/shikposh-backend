@@ -21,6 +21,7 @@ import (
 	config "shikposh-backend/config"
 	"shikposh-backend/internal/account"
 	"shikposh-backend/internal/products"
+	"shikposh-backend/internal/seller"
 	mw "shikposh-backend/pkg/middleware"
 
 	frameworkmiddleware "github.com/ali-mahdavi-dev/shikposh-framework/api/middleware"
@@ -340,6 +341,10 @@ func setupRoutes(components *serverComponents, cfg *config.Config) error {
 
 	if err := products.Bootstrap(components.server, components.db, cfg, components.elasticsearch); err != nil {
 		return fmt.Errorf("failed to bootstrap products module: %w", err)
+	}
+
+	if err := seller.Bootstrap(components.server, components.db, cfg); err != nil {
+		return fmt.Errorf("failed to bootstrap seller module: %w", err)
 	}
 
 	return nil

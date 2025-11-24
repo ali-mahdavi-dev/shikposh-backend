@@ -7,6 +7,7 @@ import (
 
 	accountrepository "shikposh-backend/internal/account/adapter/repository"
 	productrepository "shikposh-backend/internal/products/adapter/repository"
+	sellerrepository "shikposh-backend/internal/seller/adapter/repository"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 )
@@ -26,6 +27,9 @@ type PGUnitOfWork interface {
 	Tag(ctx context.Context) productrepository.TagRepository
 	Size(ctx context.Context) productrepository.SizeRepository
 	Outbox(ctx context.Context) productrepository.OutboxRepository
+
+	// seller repositories
+	Seller(ctx context.Context) sellerrepository.SellerRepository
 }
 
 type pgUnitOfWork struct {
@@ -102,4 +106,11 @@ func (uow *pgUnitOfWork) Outbox(ctx context.Context) productrepository.OutboxRep
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "outbox", func(session *gorm.DB) adapter.SeenedRepository {
 		return productrepository.NewOutboxRepository(session)
 	}).(productrepository.OutboxRepository)
+}
+
+// Seller returns the SellerRepository instance for the current transaction.
+func (uow *pgUnitOfWork) Seller(ctx context.Context) sellerrepository.SellerRepository {
+	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "seller", func(session *gorm.DB) adapter.SeenedRepository {
+		return sellerrepository.NewSellerRepository(session)
+	}).(sellerrepository.SellerRepository)
 }
