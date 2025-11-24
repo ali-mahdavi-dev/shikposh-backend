@@ -29,7 +29,7 @@ func NewProductQueryHandler(uow unitofwork.PGUnitOfWork, elasticsearch elasticse
 
 func (h *ProductQueryHandler) GetAllProducts(ctx context.Context) ([]*productaggregate.Product, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
 	}
 
 	// Use match_all query to get all products
@@ -42,7 +42,7 @@ func (h *ProductQueryHandler) GetAllProducts(ctx context.Context) ([]*productagg
 
 	products, err := h.executeElasticsearchQuery(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve all products from elasticsearch: %w", err)
 	}
 
 	logging.Debug("All products retrieved from Elasticsearch").
@@ -55,7 +55,7 @@ func (h *ProductQueryHandler) GetAllProducts(ctx context.Context) ([]*productagg
 // GetAllProductsAsMaps returns products from Elasticsearch as maps (no database lookup)
 func (h *ProductQueryHandler) GetAllProductsAsMaps(ctx context.Context) ([]map[string]interface{}, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
 	}
 
 	searchQuery := map[string]interface{}{
@@ -67,7 +67,7 @@ func (h *ProductQueryHandler) GetAllProductsAsMaps(ctx context.Context) ([]map[s
 
 	maps, err := h.executeElasticsearchQueryAsMaps(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve all products as maps from elasticsearch: %w", err)
 	}
 
 	logging.Debug("All products retrieved from Elasticsearch as maps").
@@ -79,26 +79,37 @@ func (h *ProductQueryHandler) GetAllProductsAsMaps(ctx context.Context) ([]map[s
 
 func (h *ProductQueryHandler) GetProductByID(ctx context.Context, id uint64) (*productaggregate.Product, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	if id == 0 {
+		return nil, fmt.Errorf("product id cannot be zero")
 	}
 
 	productID := strconv.FormatUint(id, 10)
 	doc, err := h.elasticsearch.GetDocument(ctx, h.indexName, productID)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch get document failed: %w", err)
+		return nil, fmt.Errorf("failed to get product document from elasticsearch (id=%d, index=%s): %w", id, h.indexName, err)
+	}
+
+	if doc == nil {
+		return nil, repository.ErrProductNotFound
 	}
 
 	// Extract _source from Elasticsearch response
 	source, ok := doc["_source"].(map[string]interface{})
 	if !ok {
 		// If _source doesn't exist, try using the doc itself
+		if len(doc) == 0 {
+			return nil, fmt.Errorf("empty document returned from elasticsearch for product id=%d", id)
+		}
 		source = doc
 	}
 
 	// Convert Elasticsearch document to Product entity
 	product, err := h.mapToProduct(ctx, source)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert Elasticsearch document to product: %w", err)
+		return nil, fmt.Errorf("failed to convert elasticsearch document to product (id=%d): %w", id, err)
 	}
 
 	logging.Debug("Product retrieved from Elasticsearch").
@@ -111,19 +122,30 @@ func (h *ProductQueryHandler) GetProductByID(ctx context.Context, id uint64) (*p
 // GetProductByIDAsMap returns product from Elasticsearch as map (no database lookup)
 func (h *ProductQueryHandler) GetProductByIDAsMap(ctx context.Context, id uint64) (map[string]interface{}, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	if id == 0 {
+		return nil, fmt.Errorf("product id cannot be zero")
 	}
 
 	productID := strconv.FormatUint(id, 10)
 	doc, err := h.elasticsearch.GetDocument(ctx, h.indexName, productID)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch get document failed: %w", err)
+		return nil, fmt.Errorf("failed to get product document from elasticsearch (id=%d, index=%s): %w", id, h.indexName, err)
+	}
+
+	if doc == nil {
+		return nil, repository.ErrProductNotFound
 	}
 
 	// Extract _source from Elasticsearch response
 	source, ok := doc["_source"].(map[string]interface{})
 	if !ok {
 		// If _source doesn't exist, try using the doc itself
+		if len(doc) == 0 {
+			return nil, fmt.Errorf("empty document returned from elasticsearch for product id=%d", id)
+		}
 		source = doc
 	}
 
@@ -136,7 +158,11 @@ func (h *ProductQueryHandler) GetProductByIDAsMap(ctx context.Context, id uint64
 
 func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string) (*productaggregate.Product, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	if slug == "" {
+		return nil, fmt.Errorf("product slug cannot be empty")
 	}
 
 	// Search for product by slug in Elasticsearch
@@ -151,7 +177,7 @@ func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string)
 
 	products, err := h.executeElasticsearchQuery(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to search product by slug from elasticsearch (slug=%s): %w", slug, err)
 	}
 
 	if len(products) == 0 {
@@ -168,7 +194,11 @@ func (h *ProductQueryHandler) GetProductBySlug(ctx context.Context, slug string)
 // GetProductBySlugAsMap returns product from Elasticsearch as map (no database lookup)
 func (h *ProductQueryHandler) GetProductBySlugAsMap(ctx context.Context, slug string) (map[string]interface{}, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	if slug == "" {
+		return nil, fmt.Errorf("product slug cannot be empty")
 	}
 
 	searchQuery := map[string]interface{}{
@@ -182,7 +212,7 @@ func (h *ProductQueryHandler) GetProductBySlugAsMap(ctx context.Context, slug st
 
 	maps, err := h.executeElasticsearchQueryAsMaps(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to search product by slug from elasticsearch (slug=%s): %w", slug, err)
 	}
 
 	if len(maps) == 0 {
@@ -198,7 +228,7 @@ func (h *ProductQueryHandler) GetProductBySlugAsMap(ctx context.Context, slug st
 
 func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*productaggregate.Product, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
 	}
 
 	// Search for featured products in Elasticsearch
@@ -213,7 +243,7 @@ func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*produ
 
 	products, err := h.executeElasticsearchQuery(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve featured products from elasticsearch: %w", err)
 	}
 
 	logging.Debug("Featured products retrieved from Elasticsearch").
@@ -226,7 +256,7 @@ func (h *ProductQueryHandler) GetFeaturedProducts(ctx context.Context) ([]*produ
 // GetFeaturedProductsAsMaps returns featured products from Elasticsearch as maps (no database lookup)
 func (h *ProductQueryHandler) GetFeaturedProductsAsMaps(ctx context.Context) ([]map[string]interface{}, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
 	}
 
 	searchQuery := map[string]interface{}{
@@ -240,7 +270,7 @@ func (h *ProductQueryHandler) GetFeaturedProductsAsMaps(ctx context.Context) ([]
 
 	maps, err := h.executeElasticsearchQueryAsMaps(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve featured products as maps from elasticsearch: %w", err)
 	}
 
 	logging.Debug("Featured products retrieved from Elasticsearch as maps").
@@ -252,7 +282,11 @@ func (h *ProductQueryHandler) GetFeaturedProductsAsMaps(ctx context.Context) ([]
 
 func (h *ProductQueryHandler) GetProductsByCategory(ctx context.Context, categorySlug string) ([]*productaggregate.Product, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	if categorySlug == "" {
+		return nil, fmt.Errorf("category slug cannot be empty")
 	}
 
 	// First, get category ID from slug
@@ -266,7 +300,11 @@ func (h *ProductQueryHandler) GetProductsByCategory(ctx context.Context, categor
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get category ID from slug: %w", err)
+		return nil, fmt.Errorf("failed to get category ID from slug (slug=%s): %w", categorySlug, err)
+	}
+
+	if categoryID == 0 {
+		return nil, fmt.Errorf("invalid category ID retrieved for slug=%s", categorySlug)
 	}
 
 	// Search for products by category_id in Elasticsearch
@@ -281,7 +319,7 @@ func (h *ProductQueryHandler) GetProductsByCategory(ctx context.Context, categor
 
 	products, err := h.executeElasticsearchQuery(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve products by category from elasticsearch (category_slug=%s, category_id=%d): %w", categorySlug, categoryID, err)
 	}
 
 	logging.Debug("Products by category retrieved from Elasticsearch").
@@ -296,7 +334,11 @@ func (h *ProductQueryHandler) GetProductsByCategory(ctx context.Context, categor
 // GetProductsByCategoryAsMaps returns products by category from Elasticsearch as maps (no database lookup)
 func (h *ProductQueryHandler) GetProductsByCategoryAsMaps(ctx context.Context, categorySlug string) ([]map[string]interface{}, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	if categorySlug == "" {
+		return nil, fmt.Errorf("category slug cannot be empty")
 	}
 
 	// First, get category ID from slug
@@ -310,7 +352,11 @@ func (h *ProductQueryHandler) GetProductsByCategoryAsMaps(ctx context.Context, c
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get category ID from slug: %w", err)
+		return nil, fmt.Errorf("failed to get category ID from slug (slug=%s): %w", categorySlug, err)
+	}
+
+	if categoryID == 0 {
+		return nil, fmt.Errorf("invalid category ID retrieved for slug=%s", categorySlug)
 	}
 
 	// Search for products by category_id in Elasticsearch
@@ -325,7 +371,7 @@ func (h *ProductQueryHandler) GetProductsByCategoryAsMaps(ctx context.Context, c
 
 	maps, err := h.executeElasticsearchQueryAsMaps(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve products by category as maps from elasticsearch (category_slug=%s, category_id=%d): %w", categorySlug, categoryID, err)
 	}
 
 	logging.Debug("Products by category retrieved from Elasticsearch as maps").
@@ -339,12 +385,16 @@ func (h *ProductQueryHandler) GetProductsByCategoryAsMaps(ctx context.Context, c
 
 func (h *ProductQueryHandler) SearchProducts(ctx context.Context, searchQuery string) ([]*productaggregate.Product, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	if searchQuery == "" {
+		return nil, fmt.Errorf("search query cannot be empty")
 	}
 
 	products, err := h.searchInElasticsearch(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to search products in elasticsearch (query=%s): %w", searchQuery, err)
 	}
 
 	logging.Debug("Products searched from Elasticsearch").
@@ -357,7 +407,24 @@ func (h *ProductQueryHandler) SearchProducts(ctx context.Context, searchQuery st
 
 func (h *ProductQueryHandler) GetFilteredProducts(ctx context.Context, filters repository.ProductFilters) ([]*productaggregate.Product, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	// Validate price range if both min and max are provided
+	if filters.MinPrice != nil && filters.MaxPrice != nil {
+		if *filters.MinPrice > *filters.MaxPrice {
+			return nil, fmt.Errorf("invalid price range: min_price (%.2f) cannot be greater than max_price (%.2f)", *filters.MinPrice, *filters.MaxPrice)
+		}
+		if *filters.MinPrice < 0 || *filters.MaxPrice < 0 {
+			return nil, fmt.Errorf("invalid price range: prices cannot be negative")
+		}
+	}
+
+	// Validate rating if provided
+	if filters.Rating != nil {
+		if *filters.Rating < 0 || *filters.Rating > 5 {
+			return nil, fmt.Errorf("invalid rating: rating must be between 0 and 5, got %.2f", *filters.Rating)
+		}
 	}
 
 	// Convert category slug to category_id if needed for Elasticsearch
@@ -373,13 +440,16 @@ func (h *ProductQueryHandler) GetFilteredProducts(ctx context.Context, filters r
 			return nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert category slug to ID: %w", err)
+			return nil, fmt.Errorf("failed to convert category slug to ID (slug=%s): %w", *filters.Category, err)
+		}
+		if categoryID != nil && *categoryID == 0 {
+			return nil, fmt.Errorf("invalid category ID retrieved for slug=%s", *filters.Category)
 		}
 	}
 
 	products, err := h.searchInElasticsearchWithFilters(ctx, filters, categoryID)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve filtered products from elasticsearch: %w", err)
 	}
 
 	logging.Debug("Products filtered from Elasticsearch").
@@ -392,7 +462,24 @@ func (h *ProductQueryHandler) GetFilteredProducts(ctx context.Context, filters r
 // GetFilteredProductsAsMaps returns filtered products from Elasticsearch as maps (no database lookup)
 func (h *ProductQueryHandler) GetFilteredProductsAsMaps(ctx context.Context, filters repository.ProductFilters) ([]map[string]interface{}, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
+	}
+
+	// Validate price range if both min and max are provided
+	if filters.MinPrice != nil && filters.MaxPrice != nil {
+		if *filters.MinPrice > *filters.MaxPrice {
+			return nil, fmt.Errorf("invalid price range: min_price (%.2f) cannot be greater than max_price (%.2f)", *filters.MinPrice, *filters.MaxPrice)
+		}
+		if *filters.MinPrice < 0 || *filters.MaxPrice < 0 {
+			return nil, fmt.Errorf("invalid price range: prices cannot be negative")
+		}
+	}
+
+	// Validate rating if provided
+	if filters.Rating != nil {
+		if *filters.Rating < 0 || *filters.Rating > 5 {
+			return nil, fmt.Errorf("invalid rating: rating must be between 0 and 5, got %.2f", *filters.Rating)
+		}
 	}
 
 	// Convert category slug to category_id if needed for Elasticsearch
@@ -408,14 +495,17 @@ func (h *ProductQueryHandler) GetFilteredProductsAsMaps(ctx context.Context, fil
 			return nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert category slug to ID: %w", err)
+			return nil, fmt.Errorf("failed to convert category slug to ID (slug=%s): %w", *filters.Category, err)
+		}
+		if categoryID != nil && *categoryID == 0 {
+			return nil, fmt.Errorf("invalid category ID retrieved for slug=%s", *filters.Category)
 		}
 	}
 
 	query := h.buildElasticsearchQueryWithFilters(filters, categoryID)
 	maps, err := h.executeElasticsearchQueryAsMaps(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve filtered products as maps from elasticsearch: %w", err)
 	}
 
 	logging.Debug("Products filtered from Elasticsearch as maps").
@@ -674,38 +764,56 @@ func (h *ProductQueryHandler) buildSortClause(sort string) []map[string]interfac
 
 // executeElasticsearchQuery executes the Elasticsearch query and converts results to products
 func (h *ProductQueryHandler) executeElasticsearchQuery(ctx context.Context, query map[string]interface{}) ([]*productaggregate.Product, error) {
+	if query == nil {
+		return nil, fmt.Errorf("elasticsearch query cannot be nil")
+	}
+
 	result, err := h.elasticsearch.Search(ctx, h.indexName, query)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("elasticsearch search operation failed (index=%s): %w", h.indexName, err)
+	}
+
+	if result == nil {
+		return nil, fmt.Errorf("empty response from elasticsearch (index=%s)", h.indexName)
 	}
 
 	// Extract hits from result
 	hits, ok := result["hits"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid elasticsearch response format")
+		return nil, fmt.Errorf("invalid elasticsearch response format: missing or invalid 'hits' field (index=%s)", h.indexName)
 	}
 
 	hitsArray, ok := hits["hits"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid hits format")
+		return nil, fmt.Errorf("invalid elasticsearch response format: missing or invalid 'hits.hits' array (index=%s)", h.indexName)
 	}
 
 	products := make([]*productaggregate.Product, 0, len(hitsArray))
-	for _, hit := range hitsArray {
+	var conversionErrors []error
+
+	for i, hit := range hitsArray {
 		hitMap, ok := hit.(map[string]interface{})
 		if !ok {
+			logging.Warn("Skipping invalid hit format in elasticsearch response").
+				WithInt("hit_index", i).
+				Log()
 			continue
 		}
 
 		source, ok := hitMap["_source"].(map[string]interface{})
 		if !ok {
+			logging.Warn("Skipping hit with missing _source field").
+				WithInt("hit_index", i).
+				Log()
 			continue
 		}
 
 		product, err := h.mapToProduct(ctx, source)
 		if err != nil {
+			conversionErrors = append(conversionErrors, fmt.Errorf("hit at index %d: %w", i, err))
 			logging.Warn("Failed to convert Elasticsearch hit to product").
 				WithError(err).
+				WithInt("hit_index", i).
 				Log()
 			continue
 		}
@@ -713,36 +821,55 @@ func (h *ProductQueryHandler) executeElasticsearchQuery(ctx context.Context, que
 		products = append(products, product)
 	}
 
+	// If we had conversion errors but no successful conversions, return an error
+	if len(conversionErrors) > 0 && len(products) == 0 {
+		return nil, fmt.Errorf("failed to convert any elasticsearch hits to products: %v", conversionErrors[0])
+	}
+
 	return products, nil
 }
 
 // executeElasticsearchQueryAsMaps executes the Elasticsearch query and returns results as maps (no database lookup)
 func (h *ProductQueryHandler) executeElasticsearchQueryAsMaps(ctx context.Context, query map[string]interface{}) ([]map[string]interface{}, error) {
+	if query == nil {
+		return nil, fmt.Errorf("elasticsearch query cannot be nil")
+	}
+
 	result, err := h.elasticsearch.Search(ctx, h.indexName, query)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("elasticsearch search operation failed (index=%s): %w", h.indexName, err)
+	}
+
+	if result == nil {
+		return nil, fmt.Errorf("empty response from elasticsearch (index=%s)", h.indexName)
 	}
 
 	// Extract hits from result
 	hits, ok := result["hits"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid elasticsearch response format")
+		return nil, fmt.Errorf("invalid elasticsearch response format: missing or invalid 'hits' field (index=%s)", h.indexName)
 	}
 
 	hitsArray, ok := hits["hits"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid hits format")
+		return nil, fmt.Errorf("invalid elasticsearch response format: missing or invalid 'hits.hits' array (index=%s)", h.indexName)
 	}
 
 	maps := make([]map[string]interface{}, 0, len(hitsArray))
-	for _, hit := range hitsArray {
+	for i, hit := range hitsArray {
 		hitMap, ok := hit.(map[string]interface{})
 		if !ok {
+			logging.Warn("Skipping invalid hit format in elasticsearch response").
+				WithInt("hit_index", i).
+				Log()
 			continue
 		}
 
 		source, ok := hitMap["_source"].(map[string]interface{})
 		if !ok {
+			logging.Warn("Skipping hit with missing _source field").
+				WithInt("hit_index", i).
+				Log()
 			continue
 		}
 
@@ -755,35 +882,46 @@ func (h *ProductQueryHandler) executeElasticsearchQueryAsMaps(ctx context.Contex
 // GetProductsByIDsAsMaps returns products by IDs from Elasticsearch as maps (no database lookup)
 func (h *ProductQueryHandler) GetProductsByIDsAsMaps(ctx context.Context, productIDs []string) ([]map[string]interface{}, error) {
 	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch is not available")
+		return nil, fmt.Errorf("elasticsearch connection is not initialized")
 	}
 
 	if len(productIDs) == 0 {
 		return []map[string]interface{}{}, nil
 	}
 
-	// Convert string IDs to interface slice for terms query
-	ids := make([]interface{}, len(productIDs))
+	// Validate and filter out empty IDs
+	validIDs := make([]interface{}, 0, len(productIDs))
 	for i, id := range productIDs {
-		ids[i] = id
+		if id == "" {
+			logging.Warn("Skipping empty product ID in request").
+				WithInt("index", i).
+				Log()
+			continue
+		}
+		validIDs = append(validIDs, id)
+	}
+
+	if len(validIDs) == 0 {
+		return nil, fmt.Errorf("no valid product IDs provided")
 	}
 
 	searchQuery := map[string]interface{}{
 		"query": map[string]interface{}{
 			"terms": map[string]interface{}{
-				"id": ids,
+				"id": validIDs,
 			},
 		},
-		"size": len(productIDs),
+		"size": len(validIDs),
 	}
 
 	maps, err := h.executeElasticsearchQueryAsMaps(ctx, searchQuery)
 	if err != nil {
-		return nil, fmt.Errorf("elasticsearch search failed: %w", err)
+		return nil, fmt.Errorf("failed to retrieve products by IDs from elasticsearch (count=%d): %w", len(validIDs), err)
 	}
 
 	logging.Debug("Products by IDs retrieved from Elasticsearch as maps").
-		WithInt("count", len(maps)).
+		WithInt("requested_count", len(validIDs)).
+		WithInt("returned_count", len(maps)).
 		Log()
 
 	return maps, nil

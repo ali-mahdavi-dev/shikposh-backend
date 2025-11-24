@@ -70,9 +70,10 @@ func (r *productGormRepository) withPreloads(query *gorm.DB) *gorm.DB {
 		}).
 		Preload("Specs", func(db *gorm.DB) *gorm.DB {
 			return db.Order("\"order\" ASC")
-		})
-	// Preload("Tags").
-	// Preload("Sizes")
+		}).
+		Preload("Tags").
+		Preload("Sizes").
+		Preload("Colors")
 }
 
 // withPreloadsWithoutImages applies preloads without Images (for reindexing)

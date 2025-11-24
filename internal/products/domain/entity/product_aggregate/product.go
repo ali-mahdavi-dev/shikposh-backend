@@ -43,6 +43,7 @@ type Product struct {
 	IsNew       bool             `json:"is_new" gorm:"is_new;default:false"`
 	IsFeatured  bool             `json:"is_featured" gorm:"is_featured;default:false"`
 	Sizes       []Size           `json:"-" gorm:"many2many:product_sizes;"`
+	Colors      []Color          `json:"-" gorm:"many2many:product_colors;"`
 }
 
 func (p *Product) TableName() string {
@@ -57,8 +58,9 @@ func NewProduct(cmd *commands.CreateProduct) *Product {
 		Brand:       cmd.Brand,
 		Description: cmd.Description,
 		CategoryID:  cmd.CategoryID,
-		Tags:        []Tag{},  // Tags will be set separately in command handler
-		Sizes:       []Size{}, // Sizes will be set separately in command handler
+		Tags:        []Tag{},   // Tags will be set separately in command handler
+		Sizes:       []Size{},  // Sizes will be set separately in command handler
+		Colors:      []Color{}, // Colors will be set separately in command handler
 		Image:       cmd.Image,
 		IsNew:       cmd.IsNew,
 		IsFeatured:  cmd.IsFeatured,
@@ -97,6 +99,9 @@ func (p *Product) BeforeCreate(tx *gorm.DB) error {
 	if p.Sizes == nil {
 		p.Sizes = []Size{}
 	}
+	if p.Colors == nil {
+		p.Colors = []Color{}
+	}
 	return nil
 }
 
@@ -124,55 +129,82 @@ func convertSizesToStringArray(sizes []Size) []string {
 	return result
 }
 
-// ToMap converts Colors and Variants to map format for JSON response
+// convertColorsToArray converts []Color to array of color objects for JSON response
+func convertColorsToArray(colors []Color) []map[string]interface{} {
+	if len(colors) == 0 {
+		return []map[string]interface{}{}
+	}
+	result := make([]map[string]interface{}, len(colors))
+	for i := range colors {
+		result[i] = map[string]interface{}{
+			"id":   colors[i].ID,
+			"name": colors[i].Name,
+			"hex":  colors[i].Hex,
+		}
+	}
+	return result
+}
+
+// ToMap converts Product to map format for JSON response (new structure)
 func (p *Product) ToMap() map[string]interface{} {
-	// Get default price from first detail if exists, otherwise use 0
+	// Get price, stock, discount from first detail if exists, otherwise use defaults
 	defaultPrice := 0.0
+	defaultOriginalPrice := 0.0
+	defaultStock := 0
 	defaultDiscount := 0
-	var defaultOriginalPrice *float64
 
 	if len(p.Details) > 0 {
+		// Use first detail with price > 0
 		for i := range p.Details {
 			if p.Details[i].Price > 0 {
 				defaultPrice = p.Details[i].Price
+				defaultStock = p.Details[i].Stock
 				defaultDiscount = p.Details[i].Discount
 				if p.Details[i].OriginalPrice != nil {
-					defaultOriginalPrice = p.Details[i].OriginalPrice
+					defaultOriginalPrice = *p.Details[i].OriginalPrice
+				} else {
+					defaultOriginalPrice = defaultPrice
 				}
 				break
 			}
 		}
+	} else {
+		defaultOriginalPrice = defaultPrice
 	}
 
-	result := map[string]interface{}{
-		"id":           strconv.FormatUint(uint64(p.ID), 10),
-		"name":         p.Name,
-		"slug":         p.Slug,
-		"brand":        p.Brand,
-		"rating":       p.Rating,
-		"review_count": p.ReviewCount,
-		"description":  p.Description,
-		"category_id":  p.CategoryID,
-		"tags":         convertTagsToStringArray(p.Tags),
-		"image":        p.Image,
-		"price":        defaultPrice, // Default price from first detail
-		"discount":     defaultDiscount,
-		"is_new":       p.IsNew,
-		"is_featured":  p.IsFeatured,
-		"sizes":        convertSizesToStringArray(p.Sizes),
-		"created_at":   p.CreatedAt,
+	// Build images map: { "colorId": [urls] }
+	imagesMap := make(map[string][]string)
+
+	// Group images by color ID from Colors array
+	// First, initialize images map for all colors
+	for i := range p.Colors {
+		colorID := strconv.FormatUint(uint64(p.Colors[i].ID), 10)
+		imagesMap[colorID] = []string{}
 	}
 
-	if defaultOriginalPrice != nil {
-		result["original_price"] = *defaultOriginalPrice
-	}
-
-	// Convert Details to colors and variants maps
-	colorsMap := make(map[string]map[string]interface{})
-	variantsMap := make(map[string]map[string]map[string]interface{})
-
+	// Then, add images from Details based on color matching
 	for i := range p.Details {
 		detail := &p.Details[i]
+		if detail.ColorKey == nil {
+			continue
+		}
+
+		// Find matching color ID from Colors array
+		var colorID string
+		for j := range p.Colors {
+			// Match by name, slug, or colorKey
+			if p.Colors[j].Name == *detail.ColorKey ||
+				p.Colors[j].Slug == *detail.ColorKey ||
+				strconv.FormatUint(uint64(p.Colors[j].ID), 10) == *detail.ColorKey {
+				colorID = strconv.FormatUint(uint64(p.Colors[j].ID), 10)
+				break
+			}
+		}
+
+		// If color not found, skip this detail
+		if colorID == "" {
+			continue
+		}
 
 		// Convert images from attachments
 		images := make([]string, 0)
@@ -183,64 +215,89 @@ func (p *Product) ToMap() map[string]interface{} {
 			}
 		}
 
-		// If has color_key but no size_key, it's a color definition
-		if detail.ColorKey != nil && detail.SizeKey == nil {
-			colorKey := *detail.ColorKey
-			colorMap := map[string]interface{}{}
-			if detail.ColorName != nil {
-				colorMap["name"] = *detail.ColorName
-			}
-			if detail.Stock > 0 {
-				colorMap["stock"] = detail.Stock
-			}
-			if detail.Discount > 0 {
-				colorMap["discount"] = detail.Discount
-			}
-			colorsMap[colorKey] = colorMap
-		}
-
-		// If has both color_key and size_key, it's a variant
-		if detail.ColorKey != nil && detail.SizeKey != nil {
-			colorKey := *detail.ColorKey
-			sizeKey := *detail.SizeKey
-
-			if variantsMap[colorKey] == nil {
-				variantsMap[colorKey] = make(map[string]map[string]interface{})
-			}
-
-			variantData := map[string]interface{}{
-				"price":    detail.Price,
-				"stock":    detail.Stock,
-				"discount": detail.Discount,
-				"images":   images,
-			}
-
-			if detail.OriginalPrice != nil {
-				variantData["original_price"] = *detail.OriginalPrice
-			}
-
-			variantsMap[colorKey][sizeKey] = variantData
+		// Add images to map (append to existing)
+		if len(images) > 0 {
+			imagesMap[colorID] = append(imagesMap[colorID], images...)
 		}
 	}
 
-	result["colors"] = colorsMap
-	result["variants"] = variantsMap
-
-	// Convert Features to array (ordered by order field)
-	featuresArray := make([]string, 0, len(p.Features))
-	for i := range p.Features {
-		feature := &p.Features[i]
-		featuresArray = append(featuresArray, feature.Feature)
+	// If no images from details, use thumbnail for first color
+	if len(imagesMap) == 0 || (len(imagesMap) > 0 && p.Image != "") {
+		// Use first color ID or "1" as default
+		if len(p.Colors) > 0 {
+			firstColorID := strconv.FormatUint(uint64(p.Colors[0].ID), 10)
+			if len(imagesMap[firstColorID]) == 0 && p.Image != "" {
+				imagesMap[firstColorID] = []string{p.Image}
+			}
+		} else if p.Image != "" {
+			imagesMap["1"] = []string{p.Image}
+		}
 	}
-	result["features"] = featuresArray
 
-	// Convert Specs to map (ordered by order field)
-	specsMap := make(map[string]string)
+	// Remove empty image arrays
+	for colorID, images := range imagesMap {
+		if len(images) == 0 {
+			delete(imagesMap, colorID)
+		}
+	}
+
+	// Build categories array: [{id, name}]
+	categoriesArray := []map[string]interface{}{
+		{
+			"id":   p.CategoryID,
+			"name": "همه", // Default name, should be loaded from Category entity if needed
+		},
+	}
+
+	// Build colors array: [{id, name, hex}]
+	colorsArray := convertColorsToArray(p.Colors)
+
+	// Build specs array: [{key, value}]
+	specsArray := make([]map[string]interface{}, 0, len(p.Specs))
 	for i := range p.Specs {
 		spec := &p.Specs[i]
-		specsMap[spec.Key] = spec.Value
+		specsArray = append(specsArray, map[string]interface{}{
+			"key":   spec.Key,
+			"value": spec.Value,
+		})
 	}
-	result["specs"] = specsMap
 
+	// Build result with new structure
+	result := map[string]interface{}{
+		"id":             uint64(p.ID),
+		"seller_id":      1, // TODO: Add seller_id to Product entity
+		"brand":          p.Brand,
+		"title":          p.Name, // Map Name to title
+		"slug":           p.Slug,
+		"description":    p.Description,
+		"thumbnail":      p.Image, // Map Image to thumbnail
+		"categories":     categoriesArray,
+		"discount":       defaultDiscount,
+		"stock":          defaultStock,
+		"original_price": defaultOriginalPrice,
+		"price":          defaultPrice,
+		"rating":         p.Rating,
+		"is_featured":    p.IsFeatured,
+		"is_new":         p.IsNew,
+		"created_at":     p.CreatedAt,
+		"colors":         colorsArray,
+		"tags":           convertTagsToStringArray(p.Tags),
+		"features":       convertFeaturesToArray(p.Features),
+		"specs":          specsArray,
+		"images":         imagesMap,
+	}
+
+	return result
+}
+
+// convertFeaturesToArray converts []ProductFeature to []string for JSON response
+func convertFeaturesToArray(features []ProductFeature) []string {
+	if len(features) == 0 {
+		return []string{}
+	}
+	result := make([]string, len(features))
+	for i := range features {
+		result[i] = features[i].Feature
+	}
 	return result
 }
