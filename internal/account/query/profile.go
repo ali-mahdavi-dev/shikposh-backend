@@ -1,9 +1,6 @@
 package query
 
 import (
-	"context"
-
-	"shikposh-backend/internal/account/domain/entity"
 	unitofwork "shikposh-backend/internal/unit_of_work"
 )
 
@@ -13,30 +10,4 @@ type ProfileQueryHandler struct {
 
 func NewProfileQueryHandler(uow unitofwork.PGUnitOfWork) *ProfileQueryHandler {
 	return &ProfileQueryHandler{uow: uow}
-}
-
-func (h *ProfileQueryHandler) GetProfileByID(ctx context.Context, id uint64) (*entity.Profile, error) {
-	var profile *entity.Profile
-	err := h.uow.Do(ctx, func(ctx context.Context) error {
-		var err error
-		profile, err = h.uow.Profile(ctx).FindByID(ctx, id)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	return profile, err
-}
-
-func (h *ProfileQueryHandler) GetProfileByUserID(ctx context.Context, userID entity.UserID) (*entity.Profile, error) {
-	var profile *entity.Profile
-	err := h.uow.Do(ctx, func(ctx context.Context) error {
-		var err error
-		profile, err = h.uow.Profile(ctx).FindByUserID(ctx, userID)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	return profile, err
 }
