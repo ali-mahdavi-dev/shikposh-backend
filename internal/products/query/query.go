@@ -12,14 +12,6 @@ import (
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
 )
 
-type ReviewQueryHandler struct {
-	uow unitofwork.PGUnitOfWork
-}
-
-func NewReviewQueryHandler(uow unitofwork.PGUnitOfWork) *ReviewQueryHandler {
-	return &ReviewQueryHandler{uow: uow}
-}
-
 type ProductQueryHandler struct {
 	uow           unitofwork.PGUnitOfWork
 	elasticsearch elasticsearchx.Connection

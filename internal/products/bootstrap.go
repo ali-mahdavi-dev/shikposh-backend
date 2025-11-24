@@ -37,10 +37,8 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 	// Initialize query handlers
 	productQueryHandler := query.NewProductQueryHandler(uow, elasticsearch)
 	categoryQueryHandler := query.NewCategoryQueryHandler(uow)
-	reviewQueryHandler := query.NewReviewQueryHandler(uow)
 
 	// Initialize command handlers
-	reviewHandler := command_handler.NewReviewCommandHandler(uow)
 	productHandler := command_handler.NewProductCommandHandler(uow)
 
 	// Initialize event handlers
@@ -50,8 +48,6 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 	productHTTPHandler := handler.NewProductHandler(
 		productQueryHandler,
 		categoryQueryHandler,
-		reviewQueryHandler,
-		reviewHandler,
 		productHandler,
 		bus,
 	)
@@ -67,8 +63,6 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 
 	// command handlers
 	bus.AddCommandHandler(
-		commandeventhandler.NewCommandHandler(reviewHandler.CreateReviewHandler),
-		commandeventhandler.NewCommandHandler(reviewHandler.UpdateReviewHelpfulHandler),
 		commandeventhandler.NewCommandHandler(productHandler.CreateProductHandler),
 		commandeventhandler.NewCommandHandler(productHandler.UpdateProductHandler),
 		commandeventhandler.NewCommandHandler(productHandler.DeleteProductHandler),

@@ -884,14 +884,6 @@ Interactive API documentation is available at:
 | ------ | --------------------------- | ------------------- |
 | `GET`  | `/api/v1/public/categories` | List all categories |
 
-#### ⭐ Reviews
-
-| Method  | Endpoint                              | Description                 |
-| ------- | ------------------------------------- | --------------------------- |
-| `GET`   | `/api/v1/public/products/:id/reviews` | Get product reviews         |
-| `POST`  | `/api/v1/public/reviews`              | Create a review             |
-| `PATCH` | `/api/v1/public/reviews/:id`          | Update review helpful count |
-
 #### 👤 User Profile
 
 | Method | Endpoint                          | Description      |

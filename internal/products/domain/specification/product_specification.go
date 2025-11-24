@@ -46,21 +46,6 @@ func (s *ProductHasMinimumRatingSpecification) IsSatisfiedBy(product *productagg
 	return product != nil && product.Rating >= s.minRating
 }
 
-// ProductHasMinimumReviewCountSpecification checks if a product has a minimum number of reviews
-type ProductHasMinimumReviewCountSpecification struct {
-	minReviewCount int
-}
-
-func NewProductHasMinimumReviewCountSpecification(minReviewCount int) specification.Specification[*productaggregate.Product] {
-	return &ProductHasMinimumReviewCountSpecification{
-		minReviewCount: minReviewCount,
-	}
-}
-
-func (s *ProductHasMinimumReviewCountSpecification) IsSatisfiedBy(product *productaggregate.Product) bool {
-	return product != nil && product.ReviewCount >= s.minReviewCount
-}
-
 // ProductInCategorySpecification checks if a product belongs to a specific category
 type ProductInCategorySpecification struct {
 	categoryID uint64
@@ -209,30 +194,4 @@ func (s *ProductCanBePublishedSpecification) IsSatisfiedBy(product *productaggre
 	}
 
 	return hasValidPrice
-}
-
-// ProductIsVerifiedSpecification checks if a product is verified
-// A product is verified if it has minimum rating and review count
-type ProductIsVerifiedSpecification struct {
-	minRating      float64
-	minReviewCount int
-}
-
-func NewProductIsVerifiedSpecification(minRating float64, minReviewCount int) specification.Specification[*productaggregate.Product] {
-	return &ProductIsVerifiedSpecification{
-		minRating:      minRating,
-		minReviewCount: minReviewCount,
-	}
-}
-
-func (s *ProductIsVerifiedSpecification) IsSatisfiedBy(product *productaggregate.Product) bool {
-	if product == nil {
-		return false
-	}
-
-	ratingSpec := NewProductHasMinimumRatingSpecification(s.minRating)
-	reviewCountSpec := NewProductHasMinimumReviewCountSpecification(s.minReviewCount)
-
-	combinedSpec := specification.NewBuilder(ratingSpec).And(reviewCountSpec)
-	return combinedSpec.IsSatisfiedBy(product)
 }

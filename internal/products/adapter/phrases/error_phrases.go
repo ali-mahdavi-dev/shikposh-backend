@@ -8,7 +8,6 @@ import (
 const (
 	CategoryNotFound  phrases.MessagePhrase = "Products.Category.NotFound"
 	ProductNotFound   phrases.MessagePhrase = "Products.Product.NotFound"
-	ReviewNotFound    phrases.MessagePhrase = "Products.Review.NotFound"
 	ProductSlugExists phrases.MessagePhrase = "Products.Product.SlugExists"
 )
 
@@ -19,13 +18,11 @@ func RegisterProductsPhrases() {
 		phrases.Fa: {
 			CategoryNotFound:  "دسته‌بندی پیدا نشد",
 			ProductNotFound:   "محصول پیدا نشد",
-			ReviewNotFound:    "نظر پیدا نشد",
 			ProductSlugExists: "محصولی با این slug از قبل وجود دارد",
 		},
 		phrases.En: {
 			CategoryNotFound:  "Category not found",
 			ProductNotFound:   "Product not found",
-			ReviewNotFound:    "Review not found",
 			ProductSlugExists: "Product with this slug already exists",
 		},
 	})

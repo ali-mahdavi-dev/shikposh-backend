@@ -23,7 +23,6 @@ type PGUnitOfWork interface {
 	// product repositories
 	Product(ctx context.Context) productrepository.ProductRepository
 	Category(ctx context.Context) productrepository.CategoryRepository
-	Review(ctx context.Context) productrepository.ReviewRepository
 	Tag(ctx context.Context) productrepository.TagRepository
 	Size(ctx context.Context) productrepository.SizeRepository
 	Outbox(ctx context.Context) productrepository.OutboxRepository
@@ -78,13 +77,6 @@ func (uow *pgUnitOfWork) Category(ctx context.Context) productrepository.Categor
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "category", func(session *gorm.DB) adapter.SeenedRepository {
 		return productrepository.NewCategoryRepository(session)
 	}).(productrepository.CategoryRepository)
-}
-
-// Review returns the ReviewRepository instance for the current transaction.
-func (uow *pgUnitOfWork) Review(ctx context.Context) productrepository.ReviewRepository {
-	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "review", func(session *gorm.DB) adapter.SeenedRepository {
-		return productrepository.NewReviewRepository(session)
-	}).(productrepository.ReviewRepository)
 }
 
 // Tag returns the TagRepository instance for the current transaction.
