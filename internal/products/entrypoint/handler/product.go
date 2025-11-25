@@ -61,6 +61,7 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 
 		// Categories
 		publicRoute.Get("/categories", p.GetAllCategories)
+		publicRoute.Get("/categories/:slug", p.GetCategoryBySlug)
 	}
 
 	// Admin routes for product CRUD
@@ -255,6 +256,34 @@ func (p *ProductHandler) GetAllCategories(c fiber.Ctx) error {
 	}
 
 	return httpapi.ResSuccess(c, categories)
+}
+
+// GetCategoryBySlug godoc
+//
+//	@Summary		Get category by slug
+//	@Description	Retrieves a single category by its slug
+//	@Tags			categories
+//	@Accept			json
+//	@Produce		json
+//	@Param			slug	path		string	true	"Category slug"
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Router			/api/v1/public/categories/{slug} [get]
+func (p *ProductHandler) GetCategoryBySlug(c fiber.Ctx) error {
+	ctx := c.Context()
+	slug := c.Params("slug")
+	if slug == "" {
+		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "slug is required"))
+	}
+
+	category, err := p.categoryQueryHandler.GetCategoryBySlug(ctx, slug)
+	if err != nil {
+		if errors.Is(err, repository.ErrCategoryNotFound) {
+			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "Category not found"))
+		}
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResSuccess(c, category)
 }
 
 // CreateProduct godoc
