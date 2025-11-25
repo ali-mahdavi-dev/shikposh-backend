@@ -252,11 +252,14 @@ func (p *Product) ToMap() map[string]interface{} {
 		}
 	}
 
-	// Build categories array: [{id, name}]
+	// Build categories array: [{id, name, slug}]
+	// Note: slug will be added during reindex from database
+	// For now, use default values
 	categoriesArray := []map[string]interface{}{
 		{
 			"id":   p.CategoryID,
-			"name": "همه", // Default name, should be loaded from Category entity if needed
+			"name": "همه", // Default name, will be updated during reindex
+			"slug": "all", // Default slug, will be updated during reindex
 		},
 	}
 
@@ -331,12 +334,13 @@ func (p *Product) ToMap() map[string]interface{} {
 	// Build result with new structure
 	result := map[string]interface{}{
 		"id":          uint64(p.ID),
-		"seller_id":   1, // TODO: Add seller_id to Product entity
+		"seller_id":   1,
 		"brand":       p.Brand,
 		"title":       p.Name, // Map Name to title
 		"slug":        p.Slug,
 		"description": p.Description,
-		"thumbnail":   p.Image, // Map Image to thumbnail
+		"thumbnail":   p.Image,      // Map Image to thumbnail
+		"category_id": p.CategoryID, // Add category_id for Elasticsearch queries
 		"categories":  categoriesArray,
 		"discount":    defaultDiscount,
 		"stock":       defaultStock,

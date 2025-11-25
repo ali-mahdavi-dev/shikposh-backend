@@ -169,6 +169,9 @@ func ensureProductsIndex(ctx context.Context, elasticsearch elasticsearchx.Conne
 			"created_at": map[string]interface{}{
 				"type": "date",
 			},
+			"category_id": map[string]interface{}{
+				"type": "integer",
+			},
 			"categories": map[string]interface{}{
 				"type": "nested",
 				"properties": map[string]interface{}{
@@ -177,6 +180,9 @@ func ensureProductsIndex(ctx context.Context, elasticsearch elasticsearchx.Conne
 					},
 					"name": map[string]interface{}{
 						"type": "text",
+					},
+					"slug": map[string]interface{}{
+						"type": "keyword",
 					},
 				},
 			},

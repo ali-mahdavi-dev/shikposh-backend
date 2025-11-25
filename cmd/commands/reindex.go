@@ -95,6 +95,9 @@ func reindexProducts() error {
 			"created_at": map[string]interface{}{
 				"type": "date",
 			},
+			"category_id": map[string]interface{}{
+				"type": "integer",
+			},
 			"categories": map[string]interface{}{
 				"type": "nested",
 				"properties": map[string]interface{}{
@@ -103,6 +106,9 @@ func reindexProducts() error {
 					},
 					"name": map[string]interface{}{
 						"type": "text",
+					},
+					"slug": map[string]interface{}{
+						"type": "keyword",
 					},
 				},
 			},
@@ -180,9 +186,25 @@ func reindexProducts() error {
 			WithInt("total_products", len(allProducts)).
 			Log()
 
+		categoryRepo := uow.Category(ctx)
+
 		for _, product := range allProducts {
 			productMap := product.ToMap()
 			productIDStr := strconv.FormatUint(uint64(product.ID), 10)
+
+			// Get category slug and name from database and update categories array
+			if product.CategoryID > 0 {
+				category, err := categoryRepo.FindByID(ctx, product.CategoryID)
+				if err == nil && category != nil {
+					// Update categories array in productMap
+					if categoriesRaw, ok := productMap["categories"].([]interface{}); ok && len(categoriesRaw) > 0 {
+						if categoryMap, ok := categoriesRaw[0].(map[string]interface{}); ok {
+							categoryMap["slug"] = category.Slug
+							categoryMap["name"] = category.Name
+						}
+					}
+				}
+			}
 
 			if err := elasticsearch.IndexDocument(ctx, indexName, productIDStr, productMap); err != nil {
 				errorCount++
