@@ -26,6 +26,7 @@ type PGUnitOfWork interface {
 	Tag(ctx context.Context) productrepository.TagRepository
 	Size(ctx context.Context) productrepository.SizeRepository
 	Outbox(ctx context.Context) productrepository.OutboxRepository
+	Wishlist(ctx context.Context) productrepository.WishlistRepository
 
 	// seller repositories
 	Seller(ctx context.Context) sellerrepository.SellerRepository
@@ -98,6 +99,13 @@ func (uow *pgUnitOfWork) Outbox(ctx context.Context) productrepository.OutboxRep
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "outbox", func(session *gorm.DB) adapter.SeenedRepository {
 		return productrepository.NewOutboxRepository(session)
 	}).(productrepository.OutboxRepository)
+}
+
+// Wishlist returns the WishlistRepository instance for the current transaction.
+func (uow *pgUnitOfWork) Wishlist(ctx context.Context) productrepository.WishlistRepository {
+	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "wishlist", func(session *gorm.DB) adapter.SeenedRepository {
+		return productrepository.NewWishlistRepository(session)
+	}).(productrepository.WishlistRepository)
 }
 
 // Seller returns the SellerRepository instance for the current transaction.

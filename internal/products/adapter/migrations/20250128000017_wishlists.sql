@@ -1,0 +1,16 @@
+-- migrate:up
+-- Create wishlists table
+CREATE TABLE IF NOT EXISTS wishlists (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, product_id)
+);
+
+-- CREATE INDEX idx_wishlists_user_id ON wishlists(user_id);
+-- CREATE INDEX idx_wishlists_product_id ON wishlists(product_id);
+
+-- migrate:down
+DROP TABLE IF EXISTS wishlists;
+

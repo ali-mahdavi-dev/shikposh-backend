@@ -7,9 +7,11 @@ import (
 )
 
 type ProductManagementRouter struct {
-	Product *handler.ProductHandler
+	Product  *handler.ProductHandler
+	Wishlist *handler.WishlistHandler
 }
 
 func NewProductsRouter(router fiber.Router, controller ProductManagementRouter) {
 	controller.Product.RegisterRoutes(router)
+	controller.Wishlist.RegisterRoutes(router)
 }

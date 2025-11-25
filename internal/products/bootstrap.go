@@ -51,9 +51,11 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 		productHandler,
 		bus,
 	)
+	wishlistHandler := handler.NewWishlistHandler(uow)
 
 	entrypoint.NewProductsRouter(router, entrypoint.ProductManagementRouter{
-		Product: productHTTPHandler,
+		Product:  productHTTPHandler,
+		Wishlist: wishlistHandler,
 	})
 
 	// register command middlewares
