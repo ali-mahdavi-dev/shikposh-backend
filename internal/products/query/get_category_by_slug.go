@@ -18,4 +18,3 @@ func (h *CategoryQueryHandler) GetCategoryBySlug(ctx context.Context, slug strin
 	})
 	return category, err
 }
-

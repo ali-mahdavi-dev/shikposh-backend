@@ -603,38 +603,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/public/products/{productId}/seller": {
-            "get": {
-                "description": "Retrieves the seller for a specific product",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sellers"
-                ],
-                "summary": "Get seller by product ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Product ID",
-                        "name": "productId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/public/products/{slug}": {
             "get": {
                 "description": "Retrieves a single product by its slug (uses Elasticsearch only)",
@@ -648,38 +616,6 @@ const docTemplate = `{
                     "products"
                 ],
                 "summary": "Get product by slug",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Product slug",
-                        "name": "slug",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/public/products/{slug}/reviews": {
-            "get": {
-                "description": "Retrieves all reviews for a specific product by slug",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reviews"
-                ],
-                "summary": "Get reviews by product slug",
                 "parameters": [
                     {
                         "type": "string",
@@ -750,112 +686,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/public/reviews": {
-            "get": {
-                "description": "Retrieves all reviews for a specific product. Accepts productId as query parameter (can be slug or numeric ID).",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reviews"
-                ],
-                "summary": "Get reviews by product slug or ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Product slug or numeric ID",
-                        "name": "productId",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Creates a new review for a product",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reviews"
-                ],
-                "summary": "Create a review",
-                "parameters": [
-                    {
-                        "description": "CreateReview request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/commands.CreateReview"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/public/reviews/{slug}": {
-            "patch": {
-                "description": "Increments helpful or notHelpful count for a review",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reviews"
-                ],
-                "summary": "Update review helpful count",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Review ID",
-                        "name": "slug",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "UpdateReviewHelpful request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/commands.UpdateReviewHelpful"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -1003,36 +833,6 @@ const docTemplate = `{
                 }
             }
         },
-        "commands.CreateReview": {
-            "type": "object",
-            "required": [
-                "comment",
-                "product_id",
-                "rating",
-                "user_id",
-                "user_name"
-            ],
-            "properties": {
-                "comment": {
-                    "type": "string",
-                    "minLength": 10
-                },
-                "product_id": {
-                    "type": "integer"
-                },
-                "rating": {
-                    "type": "integer",
-                    "maximum": 5,
-                    "minimum": 1
-                },
-                "user_id": {
-                    "type": "integer"
-                },
-                "user_name": {
-                    "type": "string"
-                }
-            }
-        },
         "commands.LoginUser": {
             "type": "object",
             "required": [
@@ -1150,17 +950,6 @@ const docTemplate = `{
                 }
             }
         },
-        "commands.ReviewHelpfulType": {
-            "type": "string",
-            "enum": [
-                "helpful",
-                "notHelpful"
-            ],
-            "x-enum-varnames": [
-                "ReviewHelpfulTypeHelpful",
-                "ReviewHelpfulTypeNotHelpful"
-            ]
-        },
         "commands.SendOtp": {
             "type": "object",
             "required": [
@@ -1250,21 +1039,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                }
-            }
-        },
-        "commands.UpdateReviewHelpful": {
-            "type": "object",
-            "required": [
-                "review_id",
-                "type"
-            ],
-            "properties": {
-                "review_id": {
-                    "type": "integer"
-                },
-                "type": {
-                    "$ref": "#/definitions/commands.ReviewHelpfulType"
                 }
             }
         },

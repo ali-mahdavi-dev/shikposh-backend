@@ -37,4 +37,3 @@ func (h *SellerQueryHandler) SearchSellers(ctx context.Context, query string) ([
 
 	return result, nil
 }
-

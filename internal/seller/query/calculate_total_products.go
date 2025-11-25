@@ -14,4 +14,3 @@ func (h *SellerQueryHandler) calculateTotalProducts(ctx context.Context, sellerI
 	// For now, return 0
 	return 0, nil
 }
-

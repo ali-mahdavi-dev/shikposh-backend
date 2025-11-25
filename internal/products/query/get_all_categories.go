@@ -18,4 +18,3 @@ func (h *CategoryQueryHandler) GetAllCategories(ctx context.Context) ([]*entity.
 	})
 	return categories, err
 }
-

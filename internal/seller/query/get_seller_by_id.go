@@ -45,4 +45,3 @@ func (h *SellerQueryHandler) GetSellerByID(ctx context.Context, id string) (map[
 
 	return result, nil
 }
-

@@ -47,28 +47,6 @@ definitions:
     - name
     - slug
     type: object
-  commands.CreateReview:
-    properties:
-      comment:
-        minLength: 10
-        type: string
-      product_id:
-        type: integer
-      rating:
-        maximum: 5
-        minimum: 1
-        type: integer
-      user_id:
-        type: integer
-      user_name:
-        type: string
-    required:
-    - comment
-    - product_id
-    - rating
-    - user_id
-    - user_name
-    type: object
   commands.LoginUser:
     properties:
       password:
@@ -149,14 +127,6 @@ definitions:
     - last_name
     - phone
     type: object
-  commands.ReviewHelpfulType:
-    enum:
-    - helpful
-    - notHelpful
-    type: string
-    x-enum-varnames:
-    - ReviewHelpfulTypeHelpful
-    - ReviewHelpfulTypeNotHelpful
   commands.SendOtp:
     properties:
       phone:
@@ -220,16 +190,6 @@ definitions:
     - id
     - name
     - slug
-    type: object
-  commands.UpdateReviewHelpful:
-    properties:
-      review_id:
-        type: integer
-      type:
-        $ref: '#/definitions/commands.ReviewHelpfulType'
-    required:
-    - review_id
-    - type
     type: object
   commands.VerifyOtp:
     properties:
@@ -607,27 +567,6 @@ paths:
       summary: Get all products
       tags:
       - products
-  /api/v1/public/products/{productId}/seller:
-    get:
-      consumes:
-      - application/json
-      description: Retrieves the seller for a specific product
-      parameters:
-      - description: Product ID
-        in: path
-        name: productId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-      summary: Get seller by product ID
-      tags:
-      - sellers
   /api/v1/public/products/{slug}:
     get:
       consumes:
@@ -649,27 +588,6 @@ paths:
       summary: Get product by slug
       tags:
       - products
-  /api/v1/public/products/{slug}/reviews:
-    get:
-      consumes:
-      - application/json
-      description: Retrieves all reviews for a specific product by slug
-      parameters:
-      - description: Product slug
-        in: path
-        name: slug
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-      summary: Get reviews by product slug
-      tags:
-      - reviews
   /api/v1/public/products/cart:
     post:
       consumes:
@@ -771,77 +689,6 @@ paths:
       summary: Register a new user
       tags:
       - users
-  /api/v1/public/reviews:
-    get:
-      consumes:
-      - application/json
-      description: Retrieves all reviews for a specific product. Accepts productId
-        as query parameter (can be slug or numeric ID).
-      parameters:
-      - description: Product slug or numeric ID
-        in: query
-        name: productId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-      summary: Get reviews by product slug or ID
-      tags:
-      - reviews
-    post:
-      consumes:
-      - application/json
-      description: Creates a new review for a product
-      parameters:
-      - description: CreateReview request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/commands.CreateReview'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-      summary: Create a review
-      tags:
-      - reviews
-  /api/v1/public/reviews/{slug}:
-    patch:
-      consumes:
-      - application/json
-      description: Increments helpful or notHelpful count for a review
-      parameters:
-      - description: Review ID
-        format: int64
-        in: path
-        name: slug
-        required: true
-        type: integer
-      - description: UpdateReviewHelpful request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/commands.UpdateReviewHelpful'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-      summary: Update review helpful count
-      tags:
-      - reviews
   /api/v1/public/sellers:
     get:
       consumes:

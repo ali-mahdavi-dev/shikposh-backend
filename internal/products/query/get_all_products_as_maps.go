@@ -31,4 +31,3 @@ func (h *ProductQueryHandler) GetAllProductsAsMaps(ctx context.Context) ([]map[s
 
 	return maps, nil
 }
-

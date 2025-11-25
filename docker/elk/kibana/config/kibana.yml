@@ -9,10 +9,10 @@ elasticsearch.hosts: [http://elasticsearch:9200]
 monitoring.ui.container.elasticsearch.enabled: true
 monitoring.ui.container.logstash.enabled: true
 
-## X-Pack security credentials
+## X-Pack security credentials (disabled for development)
 #
-elasticsearch.username: kibana_system
-elasticsearch.password: ${KIBANA_SYSTEM_PASSWORD}
+# elasticsearch.username: kibana_system
+# elasticsearch.password: ${KIBANA_SYSTEM_PASSWORD}
 
 ## Fleet
 ## https://www.elastic.co/guide/en/kibana/current/fleet-settings-kb.html

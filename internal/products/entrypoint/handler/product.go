@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -385,31 +386,88 @@ func (p *ProductHandler) GetProductsForCart(c fiber.Ctx) error {
 	// Filter to only return name, image, price, discount, and id
 	filteredProducts := make([]map[string]interface{}, 0, len(products))
 	for _, product := range products {
-		filtered := map[string]interface{}{
-			"id": product["id"],
+		filtered := map[string]interface{}{}
+
+		// Get ID (convert to string if needed)
+		id := ""
+		if idVal, ok := product["id"]; ok {
+			switch v := idVal.(type) {
+			case string:
+				id = v
+			case float64:
+				id = fmt.Sprintf("%.0f", v)
+			case int:
+				id = strconv.Itoa(v)
+			case int64:
+				id = strconv.FormatInt(v, 10)
+			case uint64:
+				id = strconv.FormatUint(v, 10)
+			default:
+				id = fmt.Sprintf("%v", idVal)
+			}
+		}
+		filtered["id"] = id
+
+		// Get name (from "title" field in Elasticsearch)
+		if title, ok := product["title"].(string); ok && title != "" {
+			filtered["name"] = title
+		} else {
+			filtered["name"] = ""
 		}
 
-		if name, ok := product["name"].(string); ok {
-			filtered["name"] = name
-		}
-		if image, ok := product["image"].(string); ok {
-			filtered["image"] = image
-		}
-		if price, ok := product["price"].(float64); ok {
-			filtered["price"] = price
-		} else if price, ok := product["price"].(int); ok {
-			filtered["price"] = float64(price)
+		// Get slug
+		if slug, ok := product["slug"].(string); ok && slug != "" {
+			filtered["slug"] = slug
+		} else {
+			filtered["slug"] = ""
 		}
 
-		// Check if discount exists
+		// Get image (prefer first image from images object, fallback to thumbnail)
+		image := ""
+		if imagesMap, ok := product["images"].(map[string]interface{}); ok && imagesMap != nil {
+			// Get first image from first color
+			for _, colorImages := range imagesMap {
+				if imagesArray, ok := colorImages.([]interface{}); ok && len(imagesArray) > 0 {
+					if firstImage, ok := imagesArray[0].(string); ok && firstImage != "" {
+						image = firstImage
+						break
+					}
+				}
+			}
+		}
+		// Fallback to thumbnail if no image found
+		if image == "" {
+			if thumbnail, ok := product["thumbnail"].(string); ok && thumbnail != "" {
+				image = thumbnail
+			}
+		}
+		filtered["image"] = image
+
+		// Get price
+		price := 0.0
+		if priceVal, ok := product["price"].(float64); ok {
+			price = priceVal
+		} else if priceVal, ok := product["price"].(int); ok {
+			price = float64(priceVal)
+		} else if priceVal, ok := product["price"].(int64); ok {
+			price = float64(priceVal)
+		}
+		filtered["price"] = price
+
+		// Get discount
+		discount := 0.0
 		hasDiscount := false
-		if discount, ok := product["discount"].(float64); ok && discount > 0 {
+		if discountVal, ok := product["discount"].(float64); ok && discountVal > 0 {
+			discount = discountVal
 			hasDiscount = true
-			filtered["discount"] = discount
-		} else if discount, ok := product["discount"].(int); ok && discount > 0 {
+		} else if discountVal, ok := product["discount"].(int); ok && discountVal > 0 {
+			discount = float64(discountVal)
 			hasDiscount = true
-			filtered["discount"] = float64(discount)
+		} else if discountVal, ok := product["discount"].(int64); ok && discountVal > 0 {
+			discount = float64(discountVal)
+			hasDiscount = true
 		}
+		filtered["discount"] = discount
 		filtered["hasDiscount"] = hasDiscount
 
 		filteredProducts = append(filteredProducts, filtered)

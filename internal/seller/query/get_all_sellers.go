@@ -37,4 +37,3 @@ func (h *SellerQueryHandler) GetAllSellers(ctx context.Context) ([]map[string]in
 
 	return result, nil
 }
-

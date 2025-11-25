@@ -37,4 +37,3 @@ func (h *SellerQueryHandler) GetSellersByCategory(ctx context.Context, category 
 
 	return result, nil
 }
-
