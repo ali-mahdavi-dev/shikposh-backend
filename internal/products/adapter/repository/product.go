@@ -42,6 +42,7 @@ type ProductFilters struct {
 	Featured *bool
 	Tags     []string
 	Sort     *string
+	Limit    *int
 }
 
 type productGormRepository struct {
@@ -239,6 +240,8 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 			query = query.Order("price DESC")
 		case "rating":
 			query = query.Order("rating DESC")
+		case "discount_desc":
+			query = query.Order("discount DESC")
 		case "newest":
 			query = query.Order("created_at DESC")
 		default:
@@ -246,6 +249,11 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 		}
 	} else {
 		query = query.Order("created_at DESC")
+	}
+
+	// Apply limit
+	if filters.Limit != nil && *filters.Limit > 0 {
+		query = query.Limit(*filters.Limit)
 	}
 
 	var products []*productaggregate.Product

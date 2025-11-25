@@ -18,12 +18,12 @@ type User struct {
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	DeletedAt        gorm.DeletedAt `gorm:"index"`
-	AvatarIdentifier string         `json:"avatar_identifier" gorm:"avatar_identifier"`
-	FirstName        string         `json:"first_name" gorm:"first_name"`
-	LastName         string         `json:"last_name" gorm:"last_name"`
-	Email            string         `json:"email" gorm:"email"`
-	Phone            string         `json:"phone" gorm:"phone;uniqueIndex"`
-	Password         string         `json:"password" gorm:"password"`
+	AvatarIdentifier string         `json:"avatar_identifier" gorm:"column:avatar_identifier"`
+	FirstName        string         `json:"first_name" gorm:"column:first_name"`
+	LastName         string         `json:"last_name" gorm:"column:last_name"`
+	Email            string         `json:"email" gorm:"column:email"`
+	Phone            string         `json:"phone" gorm:"column:phone;uniqueIndex"`
+	Password         string         `json:"password" gorm:"column:password"`
 }
 
 func NewUser(

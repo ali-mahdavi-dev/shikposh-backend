@@ -201,6 +201,10 @@ func (h *ProductQueryHandler) buildSortClause(sort string) []map[string]interfac
 		return []map[string]interface{}{
 			{"rating": map[string]interface{}{"order": "desc"}},
 		}
+	case "discount_desc":
+		return []map[string]interface{}{
+			{"discount": map[string]interface{}{"order": "desc"}},
+		}
 	case "newest":
 		return []map[string]interface{}{
 			{"created_at": map[string]interface{}{"order": "desc"}},
@@ -362,12 +366,18 @@ func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Conte
 		})
 	}
 
+	// Determine size
+	size := 100
+	if filters.Limit != nil && *filters.Limit > 0 {
+		size = *filters.Limit
+	}
+
 	// Build the final query
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
 			"bool": boolQuery,
 		},
-		"size": 100,
+		"size": size,
 	}
 
 	// Add sorting if provided

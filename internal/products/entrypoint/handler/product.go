@@ -117,6 +117,11 @@ func parseProductFilters(c fiber.Ctx) repository.ProductFilters {
 	if sort := c.Query("sort"); sort != "" {
 		filters.Sort = &sort
 	}
+	if limit := c.Query("limit"); limit != "" {
+		if limitVal := cast.ToInt(limit); limitVal > 0 {
+			filters.Limit = &limitVal
+		}
+	}
 
 	return filters
 }
@@ -125,7 +130,7 @@ func parseProductFilters(c fiber.Ctx) repository.ProductFilters {
 func hasFilters(filters repository.ProductFilters) bool {
 	return filters.Query != nil || filters.Category != nil || filters.MinPrice != nil ||
 		filters.MaxPrice != nil || filters.Rating != nil || filters.Featured != nil ||
-		len(filters.Tags) > 0 || filters.Sort != nil
+		len(filters.Tags) > 0 || filters.Sort != nil || filters.Limit != nil
 }
 
 // GetAllProducts godoc
