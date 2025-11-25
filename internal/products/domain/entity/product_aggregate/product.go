@@ -129,6 +129,21 @@ func convertSizesToStringArray(sizes []Size) []string {
 	return result
 }
 
+// convertSizesToArray converts []Size to array of size objects for JSON response
+func convertSizesToArray(sizes []Size) []map[string]interface{} {
+	if len(sizes) == 0 {
+		return []map[string]interface{}{}
+	}
+	result := make([]map[string]interface{}, len(sizes))
+	for i := range sizes {
+		result[i] = map[string]interface{}{
+			"id":   sizes[i].ID,
+			"name": sizes[i].Name,
+		}
+	}
+	return result
+}
+
 // convertColorsToArray converts []Color to array of color objects for JSON response
 func convertColorsToArray(colors []Color) []map[string]interface{} {
 	if len(colors) == 0 {
@@ -262,6 +277,55 @@ func (p *Product) ToMap() map[string]interface{} {
 		})
 	}
 
+	// Build sizes array: [{id, name}]
+	sizesArray := convertSizesToArray(p.Sizes)
+
+	// Build variant map: { "colorId": { "sizeId": { "stock": number } } }
+	variantMap := make(map[string]map[string]map[string]interface{})
+	for i := range p.Details {
+		detail := &p.Details[i]
+		if detail.ColorKey == nil || detail.SizeKey == nil {
+			continue
+		}
+
+		// Find matching color ID from Colors array
+		var colorID string
+		for j := range p.Colors {
+			if p.Colors[j].Name == *detail.ColorKey ||
+				p.Colors[j].Slug == *detail.ColorKey ||
+				strconv.FormatUint(uint64(p.Colors[j].ID), 10) == *detail.ColorKey {
+				colorID = strconv.FormatUint(uint64(p.Colors[j].ID), 10)
+				break
+			}
+		}
+
+		// Find matching size ID from Sizes array
+		var sizeID string
+		for j := range p.Sizes {
+			if p.Sizes[j].Name == *detail.SizeKey ||
+				p.Sizes[j].Slug == *detail.SizeKey ||
+				strconv.FormatUint(uint64(p.Sizes[j].ID), 10) == *detail.SizeKey {
+				sizeID = strconv.FormatUint(uint64(p.Sizes[j].ID), 10)
+				break
+			}
+		}
+
+		// If color or size not found, skip this detail
+		if colorID == "" || sizeID == "" {
+			continue
+		}
+
+		// Initialize nested maps if needed
+		if variantMap[colorID] == nil {
+			variantMap[colorID] = make(map[string]map[string]interface{})
+		}
+
+		// Add stock for this color-size combination
+		variantMap[colorID][sizeID] = map[string]interface{}{
+			"stock": detail.Stock,
+		}
+	}
+
 	// Build result with new structure
 	result := map[string]interface{}{
 		"id":             uint64(p.ID),
@@ -281,6 +345,8 @@ func (p *Product) ToMap() map[string]interface{} {
 		"is_new":         p.IsNew,
 		"created_at":     p.CreatedAt,
 		"colors":         colorsArray,
+		"sizes":          sizesArray,
+		"variant":        variantMap,
 		"tags":           convertTagsToStringArray(p.Tags),
 		"features":       convertFeaturesToArray(p.Features),
 		"specs":          specsArray,

@@ -56,36 +56,35 @@ func reindexProducts() error {
 			"id": map[string]interface{}{
 				"type": "keyword",
 			},
-			"name": map[string]interface{}{
-				"type":     "text",
-				"analyzer": "standard",
-				"fields": map[string]interface{}{
-					"keyword": map[string]interface{}{
-						"type": "keyword",
-					},
-				},
+			"seller_id": map[string]interface{}{
+				"type": "integer",
+			},
+			"brand": map[string]interface{}{
+				"type": "text",
+			},
+			"title": map[string]interface{}{
+				"type": "text",
 			},
 			"slug": map[string]interface{}{
 				"type": "keyword",
 			},
-			"brand": map[string]interface{}{
-				"type":     "text",
-				"analyzer": "standard",
-				"fields": map[string]interface{}{
-					"keyword": map[string]interface{}{
-						"type": "keyword",
-					},
-				},
-			},
 			"description": map[string]interface{}{
-				"type":     "text",
-				"analyzer": "standard",
+				"type": "text",
 			},
-			"category_id": map[string]interface{}{
-				"type": "long",
+			"thumbnail": map[string]interface{}{
+				"type": "keyword",
+			},
+			"discount": map[string]interface{}{
+				"type": "integer",
+			},
+			"stock": map[string]interface{}{
+				"type": "integer",
+			},
+			"original_price": map[string]interface{}{
+				"type": "integer",
 			},
 			"price": map[string]interface{}{
-				"type": "float",
+				"type": "integer",
 			},
 			"rating": map[string]interface{}{
 				"type": "float",
@@ -96,11 +95,67 @@ func reindexProducts() error {
 			"is_new": map[string]interface{}{
 				"type": "boolean",
 			},
+			"created_at": map[string]interface{}{
+				"type": "date",
+			},
+			"categories": map[string]interface{}{
+				"type": "nested",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type": "integer",
+					},
+					"name": map[string]interface{}{
+						"type": "text",
+					},
+				},
+			},
+			"colors": map[string]interface{}{
+				"type": "nested",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type": "integer",
+					},
+					"name": map[string]interface{}{
+						"type": "text",
+					},
+					"hex": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
+			"sizes": map[string]interface{}{
+				"type": "nested",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type": "integer",
+					},
+					"name": map[string]interface{}{
+						"type": "keyword",
+					},
+				},
+			},
 			"tags": map[string]interface{}{
 				"type": "keyword",
 			},
-			"created_at": map[string]interface{}{
-				"type": "date",
+			"features": map[string]interface{}{
+				"type": "text",
+			},
+			"specs": map[string]interface{}{
+				"type": "nested",
+				"properties": map[string]interface{}{
+					"key": map[string]interface{}{
+						"type": "keyword",
+					},
+					"value": map[string]interface{}{
+						"type": "text",
+					},
+				},
+			},
+			"images": map[string]interface{}{
+				"type": "object",
+			},
+			"variant": map[string]interface{}{
+				"type": "object",
 			},
 		},
 	}
