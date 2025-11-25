@@ -44,6 +44,8 @@ type Product struct {
 	IsFeatured  bool             `json:"is_featured" gorm:"is_featured;default:false"`
 	Sizes       []Size           `json:"-" gorm:"many2many:product_sizes;"`
 	Colors      []Color          `json:"-" gorm:"many2many:product_colors;"`
+	Price       float64          `json:"price" gorm:"price;default:0"`
+	OriginPrice *float64         `json:"origin_price,omitempty" gorm:"origin_price"`
 }
 
 func (p *Product) TableName() string {
@@ -66,6 +68,8 @@ func NewProduct(cmd *commands.CreateProduct) *Product {
 		IsFeatured:  cmd.IsFeatured,
 		Rating:      0,
 		ReviewCount: 0,
+		Price:       cmd.Price,
+		OriginPrice: cmd.OriginPrice,
 	}
 	productID := uint64(product.ID)
 	categoryID := uint64(product.CategoryID)
@@ -164,7 +168,6 @@ func convertColorsToArray(colors []Color) []map[string]interface{} {
 func (p *Product) ToMap() map[string]interface{} {
 	// Get price, stock, discount from first detail if exists, otherwise use defaults
 	defaultPrice := 0.0
-	defaultOriginalPrice := 0.0
 	defaultStock := 0
 	defaultDiscount := 0
 
@@ -175,16 +178,9 @@ func (p *Product) ToMap() map[string]interface{} {
 				defaultPrice = p.Details[i].Price
 				defaultStock = p.Details[i].Stock
 				defaultDiscount = p.Details[i].Discount
-				if p.Details[i].OriginalPrice != nil {
-					defaultOriginalPrice = *p.Details[i].OriginalPrice
-				} else {
-					defaultOriginalPrice = defaultPrice
-				}
 				break
 			}
 		}
-	} else {
-		defaultOriginalPrice = defaultPrice
 	}
 
 	// Build images map: { "colorId": [urls] }
@@ -326,31 +322,41 @@ func (p *Product) ToMap() map[string]interface{} {
 		}
 	}
 
+	// Use product-level price if available, otherwise use defaultPrice from details
+	productPrice := defaultPrice
+	if p.Price > 0 {
+		productPrice = p.Price
+	}
+
 	// Build result with new structure
 	result := map[string]interface{}{
-		"id":             uint64(p.ID),
-		"seller_id":      1, // TODO: Add seller_id to Product entity
-		"brand":          p.Brand,
-		"title":          p.Name, // Map Name to title
-		"slug":           p.Slug,
-		"description":    p.Description,
-		"thumbnail":      p.Image, // Map Image to thumbnail
-		"categories":     categoriesArray,
-		"discount":       defaultDiscount,
-		"stock":          defaultStock,
-		"original_price": defaultOriginalPrice,
-		"price":          defaultPrice,
-		"rating":         p.Rating,
-		"is_featured":    p.IsFeatured,
-		"is_new":         p.IsNew,
-		"created_at":     p.CreatedAt,
-		"colors":         colorsArray,
-		"sizes":          sizesArray,
-		"variant":        variantMap,
-		"tags":           convertTagsToStringArray(p.Tags),
-		"features":       convertFeaturesToArray(p.Features),
-		"specs":          specsArray,
-		"images":         imagesMap,
+		"id":          uint64(p.ID),
+		"seller_id":   1, // TODO: Add seller_id to Product entity
+		"brand":       p.Brand,
+		"title":       p.Name, // Map Name to title
+		"slug":        p.Slug,
+		"description": p.Description,
+		"thumbnail":   p.Image, // Map Image to thumbnail
+		"categories":  categoriesArray,
+		"discount":    defaultDiscount,
+		"stock":       defaultStock,
+		"price":       productPrice,
+		"rating":      p.Rating,
+		"is_featured": p.IsFeatured,
+		"is_new":      p.IsNew,
+		"created_at":  p.CreatedAt,
+		"colors":      colorsArray,
+		"sizes":       sizesArray,
+		"variant":     variantMap,
+		"tags":        convertTagsToStringArray(p.Tags),
+		"features":    convertFeaturesToArray(p.Features),
+		"specs":       specsArray,
+		"images":      imagesMap,
+	}
+
+	// Add origin_price if available
+	if p.OriginPrice != nil {
+		result["origin_price"] = *p.OriginPrice
 	}
 
 	return result

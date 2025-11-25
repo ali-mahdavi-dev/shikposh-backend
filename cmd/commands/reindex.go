@@ -80,9 +80,6 @@ func reindexProducts() error {
 			"stock": map[string]interface{}{
 				"type": "integer",
 			},
-			"original_price": map[string]interface{}{
-				"type": "integer",
-			},
 			"price": map[string]interface{}{
 				"type": "integer",
 			},

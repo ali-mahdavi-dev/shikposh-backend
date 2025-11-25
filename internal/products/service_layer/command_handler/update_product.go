@@ -109,6 +109,12 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 		if cmd.IsFeatured != nil {
 			product.IsFeatured = *cmd.IsFeatured
 		}
+		if cmd.Price != nil {
+			product.Price = *cmd.Price
+		}
+		if cmd.OriginPrice != nil {
+			product.OriginPrice = cmd.OriginPrice
+		}
 
 		// Update Features if provided
 		if cmd.Features != nil {

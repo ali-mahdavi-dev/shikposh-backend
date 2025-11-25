@@ -11,6 +11,8 @@ type CreateProduct struct {
 	Image       string                `json:"image"`
 	IsNew       bool                  `json:"is_new"`
 	IsFeatured  bool                  `json:"is_featured"`
+	Price       float64               `json:"price" validate:"min=0"`
+	OriginPrice *float64              `json:"origin_price,omitempty" validate:"omitempty,min=0"`
 	Features    []ProductFeatureInput `json:"features"`
 	Details     []ProductDetailInput  `json:"details"`
 	Specs       []ProductSpecInput    `json:"specs"`
@@ -22,14 +24,13 @@ type ProductFeatureInput struct {
 }
 
 type ProductDetailInput struct {
-	ColorKey      *string  `json:"color_key,omitempty"`
-	ColorName     *string  `json:"color_name,omitempty"`
-	SizeKey       *string  `json:"size_key,omitempty"`
-	Price         float64  `json:"price" validate:"required,min=0"`
-	OriginalPrice *float64 `json:"original_price,omitempty"`
-	Stock         int      `json:"stock" validate:"min=0"`
-	Discount      int      `json:"discount" validate:"min=0,max=100"`
-	Images        []string `json:"images"`
+	ColorKey  *string  `json:"color_key,omitempty"`
+	ColorName *string  `json:"color_name,omitempty"`
+	SizeKey   *string  `json:"size_key,omitempty"`
+	Price     float64  `json:"price" validate:"required,min=0"`
+	Stock     int      `json:"stock" validate:"min=0"`
+	Discount  int      `json:"discount" validate:"min=0,max=100"`
+	Images    []string `json:"images"`
 }
 
 type ProductSpecInput struct {
@@ -50,6 +51,8 @@ type UpdateProduct struct {
 	Image       *string               `json:"image,omitempty"`
 	IsNew       *bool                 `json:"is_new,omitempty"`
 	IsFeatured  *bool                 `json:"is_featured,omitempty"`
+	Price       *float64              `json:"price,omitempty" validate:"omitempty,min=0"`
+	OriginPrice *float64              `json:"origin_price,omitempty" validate:"omitempty,min=0"`
 	Features    []ProductFeatureInput `json:"features,omitempty"`
 	Details     []ProductDetailInput  `json:"details,omitempty"`
 	Specs       []ProductSpecInput    `json:"specs,omitempty"`

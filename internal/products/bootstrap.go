@@ -154,9 +154,6 @@ func ensureProductsIndex(ctx context.Context, elasticsearch elasticsearchx.Conne
 			"stock": map[string]interface{}{
 				"type": "integer",
 			},
-			"original_price": map[string]interface{}{
-				"type": "integer",
-			},
 			"price": map[string]interface{}{
 				"type": "integer",
 			},
