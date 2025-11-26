@@ -83,6 +83,9 @@ func parseProductFilters(c fiber.Ctx) repository.ProductFilters {
 	if category := c.Query("category"); category != "" {
 		filters.Category = &category
 	}
+	if categoryName := c.Query("category_name"); categoryName != "" {
+		filters.CategoryName = &categoryName
+	}
 	if min := c.Query("min"); min != "" {
 		if minPrice := cast.ToFloat64(min); minPrice > 0 {
 			filters.MinPrice = &minPrice
@@ -142,6 +145,7 @@ func hasFilters(filters repository.ProductFilters) bool {
 //	@Produce		json
 //	@Param			q			query		string	false	"Search query"
 //	@Param			category	query		string	false	"Category slug"
+//	@Param			category_name	query		string	false	"Category name (search)"
 //	@Param			min			query		number	false	"Minimum price"
 //	@Param			max			query		number	false	"Maximum price"
 //	@Param			rating		query		number	false	"Minimum rating"

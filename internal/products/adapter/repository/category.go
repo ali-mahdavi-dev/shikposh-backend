@@ -17,6 +17,7 @@ type CategoryRepository interface {
 	adapter.BaseRepository[*entity.Category]
 	GetAll(ctx context.Context) ([]*entity.Category, error)
 	FindBySlug(ctx context.Context, slug string) (*entity.Category, error)
+	FindByName(ctx context.Context, name string) (*entity.Category, error)
 }
 
 type categoryGormRepository struct {
@@ -49,6 +50,17 @@ func (r *categoryGormRepository) GetAll(ctx context.Context) ([]*entity.Category
 
 func (r *categoryGormRepository) FindBySlug(ctx context.Context, slug string) (*entity.Category, error) {
 	category, err := r.FindByField(ctx, "slug", slug)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrCategoryNotFound
+		}
+		return nil, err
+	}
+	return category, nil
+}
+
+func (r *categoryGormRepository) FindByName(ctx context.Context, name string) (*entity.Category, error) {
+	category, err := r.FindByField(ctx, "name", name)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrCategoryNotFound

@@ -34,15 +34,16 @@ type ProductRepository interface {
 }
 
 type ProductFilters struct {
-	Query    *string
-	Category *string
-	MinPrice *float64
-	MaxPrice *float64
-	Rating   *float64
-	Featured *bool
-	Tags     []string
-	Sort     *string
-	Limit    *int
+	Query        *string
+	Category     *string
+	CategoryName *string
+	MinPrice     *float64
+	MaxPrice     *float64
+	Rating       *float64
+	Featured     *bool
+	Tags         []string
+	Sort         *string
+	Limit        *int
 }
 
 type productGormRepository struct {

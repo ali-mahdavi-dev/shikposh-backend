@@ -50,6 +50,22 @@ func (h *ProductQueryHandler) GetFilteredProductsAsMaps(ctx context.Context, fil
 		if categoryID != nil && *categoryID == 0 {
 			return nil, fmt.Errorf("invalid category ID retrieved for slug=%s", *filters.Category)
 		}
+	} else if filters.CategoryName != nil && *filters.CategoryName != "" {
+		err := h.uow.Do(ctx, func(ctx context.Context) error {
+			category, err := h.uow.Category(ctx).FindByName(ctx, *filters.CategoryName)
+			if err != nil {
+				return err
+			}
+			id := uint64(category.ID)
+			categoryID = &id
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert category name to ID (name=%s): %w", *filters.CategoryName, err)
+		}
+		if categoryID != nil && *categoryID == 0 {
+			return nil, fmt.Errorf("invalid category ID retrieved for name=%s", *filters.CategoryName)
+		}
 	}
 
 	query := h.buildElasticsearchQueryWithFilters(filters, categoryID)
