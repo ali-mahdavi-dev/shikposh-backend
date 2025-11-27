@@ -42,12 +42,23 @@ type SyncWishlistRequest struct {
 	ProductIDs []uint64 `json:"product_ids"`
 }
 
-// GetWishlist returns all wishlist items for the authenticated user
+// GetWishlist godoc
+//
+//	@Summary		Get user's wishlist
+//	@Description	Returns all wishlist product IDs for the authenticated user
+//	@Tags			wishlist
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	httpapi.ResponseResult
+//	@Failure		401	{object}	httpapi.ResponseResult	"User not authenticated"
+//	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/wishlist [get]
 func (w *WishlistHandler) GetWishlist(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	userID := c.Get("user_id")
-	if userID == "" {
+	userID := c.Locals("user_id")
+	if userID == nil {
 		return httpapi.ResError(c, errors.Unauthorized("USER_NOT_AUTHENTICATED"))
 	}
 
@@ -61,12 +72,25 @@ func (w *WishlistHandler) GetWishlist(c fiber.Ctx) error {
 	})
 }
 
-// AddToWishlist adds a product to the user's wishlist
+// AddToWishlist godoc
+//
+//	@Summary		Add product to wishlist
+//	@Description	Adds a product to the authenticated user's wishlist
+//	@Tags			wishlist
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		AddToWishlistRequest	true	"Product ID to add"
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
+//	@Failure		401		{object}	httpapi.ResponseResult	"User not authenticated"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/wishlist [post]
 func (w *WishlistHandler) AddToWishlist(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	userID := c.Get("user_id")
-	if userID == "" {
+	userID := c.Locals("user_id")
+	if userID == nil {
 		return httpapi.ResError(c, errors.Unauthorized("USER_NOT_AUTHENTICATED"))
 	}
 
@@ -86,12 +110,25 @@ func (w *WishlistHandler) AddToWishlist(c fiber.Ctx) error {
 	})
 }
 
-// RemoveFromWishlist removes a product from the user's wishlist
+// RemoveFromWishlist godoc
+//
+//	@Summary		Remove product from wishlist
+//	@Description	Removes a product from the authenticated user's wishlist
+//	@Tags			wishlist
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			productId	path		uint64	true	"Product ID to remove"
+//	@Success		200			{object}	httpapi.ResponseResult
+//	@Failure		401			{object}	httpapi.ResponseResult	"User not authenticated"
+//	@Failure		404			{object}	httpapi.ResponseResult	"Product not in wishlist"
+//	@Failure		500			{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/wishlist/{productId} [delete]
 func (w *WishlistHandler) RemoveFromWishlist(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	userID := c.Get("user_id")
-	if userID == "" {
+	userID := c.Locals("user_id")
+	if userID == nil {
 		return httpapi.ResError(c, errors.Unauthorized("USER_NOT_AUTHENTICATED"))
 	}
 
@@ -108,12 +145,25 @@ func (w *WishlistHandler) RemoveFromWishlist(c fiber.Ctx) error {
 	})
 }
 
-// ToggleWishlist toggles a product in the user's wishlist
+// ToggleWishlist godoc
+//
+//	@Summary		Toggle product in wishlist
+//	@Description	Adds product to wishlist if not exists, removes if exists
+//	@Tags			wishlist
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		ToggleWishlistRequest	true	"Product ID to toggle"
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
+//	@Failure		401		{object}	httpapi.ResponseResult	"User not authenticated"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/wishlist/toggle [post]
 func (w *WishlistHandler) ToggleWishlist(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	userID := c.Get("user_id")
-	if userID == "" {
+	userID := c.Locals("user_id")
+	if userID == nil {
 		return httpapi.ResError(c, errors.Unauthorized("USER_NOT_AUTHENTICATED"))
 	}
 
@@ -151,12 +201,25 @@ func (w *WishlistHandler) ToggleWishlist(c fiber.Ctx) error {
 	})
 }
 
-// SyncWishlist syncs local wishlist with server
+// SyncWishlist godoc
+//
+//	@Summary		Sync wishlist with server
+//	@Description	Merges local wishlist with server wishlist for authenticated user
+//	@Tags			wishlist
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		SyncWishlistRequest	true	"Product IDs from local storage"
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
+//	@Failure		401		{object}	httpapi.ResponseResult	"User not authenticated"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/wishlist/sync [post]
 func (w *WishlistHandler) SyncWishlist(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	userID := c.Get("user_id")
-	if userID == "" {
+	userID := c.Locals("user_id")
+	if userID == nil {
 		return httpapi.ResError(c, errors.Unauthorized("USER_NOT_AUTHENTICATED"))
 	}
 

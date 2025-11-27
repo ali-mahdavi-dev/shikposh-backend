@@ -36,12 +36,12 @@ func (o *OtpService) GenerateOTP() string {
 }
 
 // SendOTP stores OTP in Redis with expiration
-func (o *OtpService) SendOTP(ctx context.Context, phone string, otpType string) (string, error) {
+func (o *OtpService) SendOTP(ctx context.Context, phone string) (string, error) {
 	// Generate OTP
 	otp := o.GenerateOTP()
 
-	// Create Redis key: otp:{type}:{phone}
-	key := fmt.Sprintf("otp:%s:%s", otpType, phone)
+	// Create Redis key: otp:{phone}
+	key := fmt.Sprintf("otp:%s", phone)
 
 	// Store OTP in Redis with expiration
 	expiration := o.cfg.Otp.ExpireTime * time.Second
@@ -55,7 +55,6 @@ func (o *OtpService) SendOTP(ctx context.Context, phone string, otpType string) 
 	logging.Info("OTP generated and stored").
 		WithString("phone", phone).
 		WithString("otp", otp).
-		WithString("type", otpType).
 		WithString("expires_in", expiration.String()).
 		Log()
 
@@ -63,9 +62,9 @@ func (o *OtpService) SendOTP(ctx context.Context, phone string, otpType string) 
 }
 
 // VerifyOTP verifies the OTP code
-func (o *OtpService) VerifyOTP(ctx context.Context, phone string, otp string, otpType string) (bool, error) {
+func (o *OtpService) VerifyOTP(ctx context.Context, phone string, otp string) (bool, error) {
 	// Create Redis key
-	key := fmt.Sprintf("otp:%s:%s", otpType, phone)
+	key := fmt.Sprintf("otp:%s", phone)
 
 	// Get OTP from Redis
 	storedOTP, err := o.redis.GetValue(ctx, key)
@@ -74,14 +73,12 @@ func (o *OtpService) VerifyOTP(ctx context.Context, phone string, otp string, ot
 		if errors.Is(err, redis.Nil) {
 			logging.Warn("OTP verification failed: OTP not found or expired").
 				WithString("phone", phone).
-				WithString("type", otpType).
 				Log()
 			return false, nil // Return false, nil (not an error, just invalid OTP)
 		}
 		// For other Redis errors, return error
 		logging.Warn("OTP verification failed: Redis error").
 			WithString("phone", phone).
-			WithString("type", otpType).
 			WithError(err).
 			Log()
 		return false, fmt.Errorf("OtpService.VerifyOTP failed to get OTP: %w", err)
@@ -91,7 +88,6 @@ func (o *OtpService) VerifyOTP(ctx context.Context, phone string, otp string, ot
 	if storedOTP != otp {
 		logging.Warn("OTP verification failed: invalid OTP").
 			WithString("phone", phone).
-			WithString("type", otpType).
 			Log()
 		return false, nil
 	}
@@ -101,7 +97,6 @@ func (o *OtpService) VerifyOTP(ctx context.Context, phone string, otp string, ot
 
 	logging.Info("OTP verified successfully").
 		WithString("phone", phone).
-		WithString("type", otpType).
 		Log()
 
 	return true, nil

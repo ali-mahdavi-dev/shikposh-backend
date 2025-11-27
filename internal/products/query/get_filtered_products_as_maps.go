@@ -32,43 +32,26 @@ func (h *ProductQueryHandler) GetFilteredProductsAsMaps(ctx context.Context, fil
 		}
 	}
 
-	// Convert category slug to category_id if needed for Elasticsearch
-	var categoryID *uint64
+	// Get category slug for Elasticsearch nested query
+	var categorySlug *string
 	if filters.Category != nil && *filters.Category != "" {
-		err := h.uow.Do(ctx, func(ctx context.Context) error {
-			category, err := h.uow.Category(ctx).FindBySlug(ctx, *filters.Category)
-			if err != nil {
-				return err
-			}
-			id := uint64(category.ID)
-			categoryID = &id
-			return nil
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert category slug to ID (slug=%s): %w", *filters.Category, err)
-		}
-		if categoryID != nil && *categoryID == 0 {
-			return nil, fmt.Errorf("invalid category ID retrieved for slug=%s", *filters.Category)
-		}
+		categorySlug = filters.Category
 	} else if filters.CategoryName != nil && *filters.CategoryName != "" {
+		// Convert category name to slug
 		err := h.uow.Do(ctx, func(ctx context.Context) error {
 			category, err := h.uow.Category(ctx).FindByName(ctx, *filters.CategoryName)
 			if err != nil {
 				return err
 			}
-			id := uint64(category.ID)
-			categoryID = &id
+			categorySlug = &category.Slug
 			return nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert category name to ID (name=%s): %w", *filters.CategoryName, err)
-		}
-		if categoryID != nil && *categoryID == 0 {
-			return nil, fmt.Errorf("invalid category ID retrieved for name=%s", *filters.CategoryName)
+			return nil, fmt.Errorf("failed to convert category name to slug (name=%s): %w", *filters.CategoryName, err)
 		}
 	}
 
-	query := h.buildElasticsearchQueryWithFilters(filters, categoryID)
+	query := h.buildElasticsearchQueryWithFilters(filters, categorySlug)
 	maps, err := h.executeElasticsearchQueryAsMaps(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve filtered products as maps from elasticsearch: %w", err)

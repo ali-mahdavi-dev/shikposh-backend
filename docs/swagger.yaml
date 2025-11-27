@@ -26,6 +26,12 @@ definitions:
       name:
         minLength: 3
         type: string
+      origin_price:
+        minimum: 0
+        type: number
+      price:
+        minimum: 0
+        type: number
       sizes:
         items:
           type: string
@@ -47,16 +53,6 @@ definitions:
     - name
     - slug
     type: object
-  commands.LoginUser:
-    properties:
-      password:
-        type: string
-      phone:
-        type: string
-    required:
-    - password
-    - phone
-    type: object
   commands.ProductDetailInput:
     properties:
       color_key:
@@ -71,8 +67,6 @@ definitions:
         items:
           type: string
         type: array
-      original_price:
-        type: number
       price:
         minimum: 0
         type: number
@@ -131,14 +125,8 @@ definitions:
     properties:
       phone:
         type: string
-      type:
-        enum:
-        - login
-        - register
-        type: string
     required:
     - phone
-    - type
     type: object
   commands.UpdateProduct:
     properties:
@@ -169,6 +157,12 @@ definitions:
       name:
         minLength: 3
         type: string
+      origin_price:
+        minimum: 0
+        type: number
+      price:
+        minimum: 0
+        type: number
       sizes:
         items:
           type: string
@@ -197,15 +191,26 @@ definitions:
         type: string
       phone:
         type: string
-      type:
-        enum:
-        - login
-        - register
-        type: string
     required:
     - otp
     - phone
-    - type
+    type: object
+  handler.AddToWishlistRequest:
+    properties:
+      product_id:
+        type: integer
+    type: object
+  handler.SyncWishlistRequest:
+    properties:
+      product_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  handler.ToggleWishlistRequest:
+    properties:
+      product_id:
+        type: integer
     type: object
   http.HTTPError:
     properties:
@@ -255,8 +260,22 @@ paths:
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "204":
+          description: Product created successfully
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "422":
+          description: Validation failed
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/http.ResponseResult'
       security:
@@ -283,8 +302,22 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "204":
+          description: Product deleted successfully
+        "400":
+          description: Invalid product ID
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "404":
+          description: Product not found
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/http.ResponseResult'
       security:
@@ -312,8 +345,26 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "204":
+          description: Product updated successfully
+        "400":
+          description: Invalid request body or ID
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "404":
+          description: Product not found
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "422":
+          description: Validation failed
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/http.ResponseResult'
       security:
@@ -343,8 +394,16 @@ paths:
           description: Token refreshed successfully
           schema:
             $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
         "401":
           description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "404":
+          description: User not found
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "500":
@@ -374,11 +433,15 @@ paths:
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "400":
-          description: Invalid request
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "422":
+          description: Validation failed
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "429":
-          description: Too many requests
+          description: Rate limited - too many requests
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "500":
@@ -409,11 +472,15 @@ paths:
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "400":
-          description: Invalid request
+          description: Invalid request body
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "401":
-          description: Invalid OTP
+          description: Invalid or expired OTP
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "422":
+          description: Validation failed
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "500":
@@ -435,78 +502,58 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
       summary: Get all categories
       tags:
       - categories
-  /api/v1/public/login:
-    post:
+  /api/v1/public/categories/{slug}:
+    get:
       consumes:
       - application/json
-      description: Authenticates a user and returns an access token.
+      description: Retrieves a single category by its slug
       parameters:
-      - description: LoginUser
-        in: body
-        name: request
+      - description: Category slug
+        in: path
+        name: slug
         required: true
-        schema:
-          $ref: '#/definitions/commands.LoginUser'
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Access token
+          description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/http.ResponseResult'
         "400":
-          description: Invalid request body or unknown provider
+          description: Slug is required
           schema:
             $ref: '#/definitions/http.ResponseResult'
-        "401":
-          description: Authentication failed
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-        "422":
-          description: Unprocessable input (validation failed)
+        "404":
+          description: Category not found
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "500":
           description: Internal server error
           schema:
             $ref: '#/definitions/http.ResponseResult'
-      summary: Login user
+      summary: Get category by slug
       tags:
-      - users
+      - categories
   /api/v1/public/logout:
     post:
       consumes:
       - application/json
-      description: |-
-        Logs out the authenticated user.
-        Example success response: {"success": true}
-        Example error response: {"success": false, "error": {"code": "USER_NOT_FOUND", "message": "User not found", "status": "Not Found"}}
+      description: Logs out the authenticated user.
       produces:
       - application/json
       responses:
-        "200":
+        "204":
           description: Logout completed successfully
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-        "400":
-          description: Invalid request body or unknown provider
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-        "401":
-          description: User not authenticated
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
         "404":
           description: User not found
-          schema:
-            $ref: '#/definitions/http.ResponseResult'
-        "422":
-          description: Unprocessable input (validation failed)
           schema:
             $ref: '#/definitions/http.ResponseResult'
         "500":
@@ -517,7 +564,7 @@ paths:
       - BearerAuth: []
       summary: Logout user
       tags:
-      - users
+      - auth
   /api/v1/public/products:
     get:
       consumes:
@@ -532,6 +579,10 @@ paths:
       - description: Category slug
         in: query
         name: category
+        type: string
+      - description: Category name (search)
+        in: query
+        name: category_name
         type: string
       - description: Minimum price
         in: query
@@ -564,6 +615,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
       summary: Get all products
       tags:
       - products
@@ -583,6 +638,18 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: Slug is required
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "404":
+          description: Product not found
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/http.ResponseResult'
       summary: Get product by slug
@@ -610,6 +677,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
       summary: Get products for cart
       tags:
       - products
@@ -632,6 +707,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseResult'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
       summary: Get products by category
       tags:
       - products
@@ -645,6 +728,10 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/http.ResponseResult'
       summary: Get featured products
@@ -688,7 +775,7 @@ paths:
             $ref: '#/definitions/http.ResponseResult'
       summary: Register a new user
       tags:
-      - users
+      - auth
   /api/v1/public/sellers:
     get:
       consumes:
@@ -708,6 +795,10 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/http.ResponseResult'
       summary: Get all sellers
@@ -731,7 +822,187 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: ID is required
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "404":
+          description: Seller not found
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
       summary: Get seller by ID
       tags:
       - sellers
+  /api/v1/wishlist:
+    get:
+      consumes:
+      - application/json
+      description: Returns all wishlist product IDs for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: User not authenticated
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
+      summary: Get user's wishlist
+      tags:
+      - wishlist
+    post:
+      consumes:
+      - application/json
+      description: Adds a product to the authenticated user's wishlist
+      parameters:
+      - description: Product ID to add
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AddToWishlistRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: User not authenticated
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
+      summary: Add product to wishlist
+      tags:
+      - wishlist
+  /api/v1/wishlist/{productId}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a product from the authenticated user's wishlist
+      parameters:
+      - description: Product ID to remove
+        format: int64
+        in: path
+        name: productId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: User not authenticated
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "404":
+          description: Product not in wishlist
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
+      summary: Remove product from wishlist
+      tags:
+      - wishlist
+  /api/v1/wishlist/sync:
+    post:
+      consumes:
+      - application/json
+      description: Merges local wishlist with server wishlist for authenticated user
+      parameters:
+      - description: Product IDs from local storage
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SyncWishlistRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: User not authenticated
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
+      summary: Sync wishlist with server
+      tags:
+      - wishlist
+  /api/v1/wishlist/toggle:
+    post:
+      consumes:
+      - application/json
+      description: Adds product to wishlist if not exists, removes if exists
+      parameters:
+      - description: Product ID to toggle
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ToggleWishlistRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "401":
+          description: User not authenticated
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ResponseResult'
+      security:
+      - BearerAuth: []
+      summary: Toggle product in wishlist
+      tags:
+      - wishlist
 swagger: "2.0"

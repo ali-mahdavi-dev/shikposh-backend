@@ -37,7 +37,6 @@ func (u *UserController) RegisterRoutes(r fiber.Router) {
 	{
 		publicRoute.Post("/avatar/:id", u.GenerateAvatarHandler)
 		publicRoute.Post("/register", u.Register)
-		publicRoute.Post("/login", u.Login)
 		publicRoute.Post("/logout", u.Logout)
 
 		// OTP endpoints
@@ -73,7 +72,7 @@ func (u *UserController) GenerateAvatarHandler(c fiber.Ctx) error {
 //
 //	@Summary		Register a new user
 //	@Description	Handles user registration by parsing the request body and invoking the registration command.
-//	@Tags			users
+//	@Tags			auth
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		commands.RegisterUser	true	"RegisterUser request"
@@ -91,54 +90,28 @@ func (u *UserController) Register(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	err := u.bus.Handle(ctx, cmd)
+	result, err := u.userHandler.RegisterHandler(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	return httpapi.ResSuccess(c, map[string]interface{}{
-		"success": true,
-		"message": "کاربر با موفقیت ثبت نام شد",
-	})
-}
-
-// Login godoc
-//
-//	@Summary		Login user
-//	@Description	Authenticates a user and returns an access token.
-//	@Tags			users
-//	@Accept			json
-//	@Produce		json
-//	@Param			request	body		commands.LoginUser		true	"LoginUser"
-//	@Success		200		{object}	map[string]string		"Access token"
-//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body or unknown provider"
-//	@Failure		401		{object}	httpapi.ResponseResult	"Authentication failed"
-//	@Failure		422		{object}	httpapi.ResponseResult	"Unprocessable input (validation failed)"
-//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
-//	@Router			/api/v1/public/login [post]
-func (u *UserController) Login(c fiber.Ctx) error {
-	ctx := c.Context()
-	cmd := new(commands.LoginUser)
-
-	if err := httpapi.ParseJSON(c, cmd); err != nil {
-		return httpapi.ResError(c, err)
-	}
-
-	result, err := u.userHandler.LoginHandler(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
-	}
-
-	// Return tokens in response body (frontend will handle storage)
 	response := map[string]interface{}{
 		"success": true,
-		"message": "ورود با موفقیت انجام شد",
+		"message": "کاربر با موفقیت ثبت نام شد",
+		"token":   result.Token,
 	}
 
-	if result != nil && result.AccessToken != "" {
-		response["token"] = result.AccessToken
-		if result.RefreshToken != "" {
-			response["refresh_token"] = result.RefreshToken
+	if result.RefreshToken != "" {
+		response["refresh_token"] = result.RefreshToken
+	}
+
+	if result.User != nil {
+		response["user"] = map[string]interface{}{
+			"id":         result.User.ID,
+			"first_name": result.User.FirstName,
+			"last_name":  result.User.LastName,
+			"email":      result.User.Email,
+			"phone":      result.User.Phone,
 		}
 	}
 
@@ -149,17 +122,12 @@ func (u *UserController) Login(c fiber.Ctx) error {
 //
 //	@Summary		Logout user
 //	@Description	Logs out the authenticated user.
-//	@Description	Example success response: {"success": true}
-//	@Description	Example error response: {"success": false, "error": {"code": "USER_NOT_FOUND", "message": "User not found", "status": "Not Found"}}
-//	@Tags			users
+//	@Tags			auth
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{object}	httpapi.ResponseResult	"Logout completed successfully"
-//	@Failure		400	{object}	httpapi.ResponseResult	"Invalid request body or unknown provider"
-//	@Failure		401	{object}	httpapi.ResponseResult	"User not authenticated"
+//	@Success		204	"Logout completed successfully"
 //	@Failure		404	{object}	httpapi.ResponseResult	"User not found"
-//	@Failure		422	{object}	httpapi.ResponseResult	"Unprocessable input (validation failed)"
 //	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/logout [post]
 func (u *UserController) Logout(c fiber.Ctx) error {
@@ -178,7 +146,6 @@ func (u *UserController) Logout(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	// Tokens are managed by frontend, no need to clear cookies
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
@@ -191,8 +158,9 @@ func (u *UserController) Logout(c fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		commands.SendOtp		true	"SendOtp request"
 //	@Success		200		{object}	httpapi.ResponseResult	"OTP sent successfully"
-//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request"
-//	@Failure		429		{object}	httpapi.ResponseResult	"Too many requests"
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
+//	@Failure		422		{object}	httpapi.ResponseResult	"Validation failed"
+//	@Failure		429		{object}	httpapi.ResponseResult	"Rate limited - too many requests"
 //	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/auth/send-otp [post]
 func (u *UserController) SendOtp(c fiber.Ctx) error {
@@ -224,8 +192,9 @@ func (u *UserController) SendOtp(c fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		commands.VerifyOtp		true	"VerifyOtp request"
 //	@Success		200		{object}	httpapi.ResponseResult	"OTP verified successfully"
-//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request"
-//	@Failure		401		{object}	httpapi.ResponseResult	"Invalid OTP"
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
+//	@Failure		401		{object}	httpapi.ResponseResult	"Invalid or expired OTP"
+//	@Failure		422		{object}	httpapi.ResponseResult	"Validation failed"
 //	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/auth/verify-otp [post]
 func (u *UserController) VerifyOtp(c fiber.Ctx) error {
@@ -280,7 +249,9 @@ func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		map[string]string		true	"Refresh token request"	example({"refresh_token": "string"})
 //	@Success		200		{object}	httpapi.ResponseResult	"Token refreshed successfully"
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
 //	@Failure		401		{object}	httpapi.ResponseResult	"Invalid or expired refresh token"
+//	@Failure		404		{object}	httpapi.ResponseResult	"User not found"
 //	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/auth/refresh [post]
 func (u *UserController) RefreshToken(c fiber.Ctx) error {

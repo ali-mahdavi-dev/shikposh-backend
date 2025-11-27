@@ -39,9 +39,9 @@ func (id *CategoryID) UnmarshalJSON(data []byte) error {
 
 type Category struct {
 	adapter.BaseEntity
-	ID           CategoryID `json:"id" gorm:"primaryKey"`
-	CreatedAt    time.Time  `json:"created_at,omitempty"`
-	UpdatedAt    time.Time  `json:"updated_at,omitempty"`
+	ID           CategoryID     `json:"id" gorm:"primaryKey"`
+	CreatedAt    time.Time      `json:"created_at,omitempty"`
+	UpdatedAt    time.Time      `json:"updated_at,omitempty"`
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
 	Name         string         `json:"name" gorm:"name"`
 	Slug         string         `json:"slug" gorm:"slug;uniqueIndex"`

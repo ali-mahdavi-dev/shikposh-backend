@@ -22,7 +22,7 @@ func (h *OtpHandler) SendOtpHandler(ctx context.Context, cmd *commands.SendOtp) 
 	}
 
 	// Send OTP
-	_, err = h.otpService.SendOTP(ctx, cmd.Phone, cmd.Type)
+	_, err = h.otpService.SendOTP(ctx, cmd.Phone)
 	if err != nil {
 		return fmt.Errorf("OtpHandler.SendOtpHandler failed to send OTP: %w", err)
 	}

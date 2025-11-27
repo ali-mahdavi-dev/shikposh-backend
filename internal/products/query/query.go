@@ -85,7 +85,7 @@ func (h *ProductQueryHandler) executeElasticsearchQueryAsMaps(ctx context.Contex
 }
 
 // buildElasticsearchQueryWithFilters builds Elasticsearch query from filters
-func (h *ProductQueryHandler) buildElasticsearchQueryWithFilters(filters repository.ProductFilters, categoryID *uint64) map[string]interface{} {
+func (h *ProductQueryHandler) buildElasticsearchQueryWithFilters(filters repository.ProductFilters, categorySlug *string) map[string]interface{} {
 	boolQuery := map[string]interface{}{
 		"must":   []interface{}{},
 		"should": []interface{}{},
@@ -104,11 +104,16 @@ func (h *ProductQueryHandler) buildElasticsearchQueryWithFilters(filters reposit
 		})
 	}
 
-	// Add category filter
-	if categoryID != nil {
+	// Add category filter using nested query on categories.slug
+	if categorySlug != nil && *categorySlug != "" {
 		boolQuery["filter"] = append(boolQuery["filter"].([]interface{}), map[string]interface{}{
-			"term": map[string]interface{}{
-				"category_id": *categoryID,
+			"nested": map[string]interface{}{
+				"path": "categories",
+				"query": map[string]interface{}{
+					"term": map[string]interface{}{
+						"categories.slug": *categorySlug,
+					},
+				},
 			},
 		})
 	}
@@ -283,7 +288,7 @@ func (h *ProductQueryHandler) executeElasticsearchQuery(ctx context.Context, que
 }
 
 // searchInElasticsearchWithFilters performs a search with all filters applied in Elasticsearch
-func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Context, filters repository.ProductFilters, categoryID *uint64) ([]*productaggregate.Product, error) {
+func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Context, filters repository.ProductFilters, categorySlug *string) ([]*productaggregate.Product, error) {
 	// Build bool query with must, should, and filter clauses
 	boolQuery := map[string]interface{}{
 		"must":   []interface{}{},
@@ -303,11 +308,16 @@ func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Conte
 		})
 	}
 
-	// Add category filter using category_id (converted from slug in GetFilteredProducts)
-	if categoryID != nil {
+	// Add category filter using nested query on categories.slug
+	if categorySlug != nil && *categorySlug != "" {
 		boolQuery["filter"] = append(boolQuery["filter"].([]interface{}), map[string]interface{}{
-			"term": map[string]interface{}{
-				"category_id": *categoryID,
+			"nested": map[string]interface{}{
+				"path": "categories",
+				"query": map[string]interface{}{
+					"term": map[string]interface{}{
+						"categories.slug": *categorySlug,
+					},
+				},
 			},
 		})
 	}

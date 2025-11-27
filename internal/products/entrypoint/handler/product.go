@@ -143,16 +143,17 @@ func hasFilters(filters repository.ProductFilters) bool {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
-//	@Param			q			query		string	false	"Search query"
-//	@Param			category	query		string	false	"Category slug"
+//	@Param			q				query		string	false	"Search query"
+//	@Param			category		query		string	false	"Category slug"
 //	@Param			category_name	query		string	false	"Category name (search)"
-//	@Param			min			query		number	false	"Minimum price"
-//	@Param			max			query		number	false	"Maximum price"
-//	@Param			rating		query		number	false	"Minimum rating"
-//	@Param			featured	query		boolean	false	"Featured products only"
-//	@Param			tags		query		string	false	"Comma-separated tags"
-//	@Param			sort		query		string	false	"Sort order (price_asc, price_desc, rating, newest)"
-//	@Success		200			{object}	httpapi.ResponseResult
+//	@Param			min				query		number	false	"Minimum price"
+//	@Param			max				query		number	false	"Maximum price"
+//	@Param			rating			query		number	false	"Minimum rating"
+//	@Param			featured		query		boolean	false	"Featured products only"
+//	@Param			tags			query		string	false	"Comma-separated tags"
+//	@Param			sort			query		string	false	"Sort order (price_asc, price_desc, rating, newest)"
+//	@Success		200				{object}	httpapi.ResponseResult
+//	@Failure		500				{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/products [get]
 func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -183,6 +184,9 @@ func (p *ProductHandler) GetAllProducts(c fiber.Ctx) error {
 //	@Produce		json
 //	@Param			slug	path		string	true	"Product slug"
 //	@Success		200		{object}	httpapi.ResponseResult
+//	@Failure		400		{object}	httpapi.ResponseResult	"Slug is required"
+//	@Failure		404		{object}	httpapi.ResponseResult	"Product not found"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/products/{slug} [get]
 func (p *ProductHandler) GetProductBySlug(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -210,6 +214,7 @@ func (p *ProductHandler) GetProductBySlug(c fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	httpapi.ResponseResult
+//	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/products/featured [get]
 func (p *ProductHandler) GetFeaturedProducts(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -231,6 +236,8 @@ func (p *ProductHandler) GetFeaturedProducts(c fiber.Ctx) error {
 //	@Produce		json
 //	@Param			category	path		string	true	"Category slug"
 //	@Success		200			{object}	httpapi.ResponseResult
+//	@Failure		404			{object}	httpapi.ResponseResult	"Category not found"
+//	@Failure		500			{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/products/category/{category} [get]
 func (p *ProductHandler) GetProductsByCategory(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -255,6 +262,7 @@ func (p *ProductHandler) GetProductsByCategory(c fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	httpapi.ResponseResult
+//	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/categories [get]
 func (p *ProductHandler) GetAllCategories(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -276,6 +284,9 @@ func (p *ProductHandler) GetAllCategories(c fiber.Ctx) error {
 //	@Produce		json
 //	@Param			slug	path		string	true	"Category slug"
 //	@Success		200		{object}	httpapi.ResponseResult
+//	@Failure		400		{object}	httpapi.ResponseResult	"Slug is required"
+//	@Failure		404		{object}	httpapi.ResponseResult	"Category not found"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/categories/{slug} [get]
 func (p *ProductHandler) GetCategoryBySlug(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -303,8 +314,12 @@ func (p *ProductHandler) GetCategoryBySlug(c fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			request	body		commands.CreateProduct	true	"CreateProduct request"
-//	@Success		201		{object}	httpapi.ResponseResult
+//	@Param			request	body	commands.CreateProduct	true	"CreateProduct request"
+//	@Success		204		"Product created successfully"
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
+//	@Failure		401		{object}	httpapi.ResponseResult	"Unauthorized"
+//	@Failure		422		{object}	httpapi.ResponseResult	"Validation failed"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/admin/products [post]
 func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -330,9 +345,14 @@ func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			id		path		uint64					true	"Product ID"
-//	@Param			request	body		commands.UpdateProduct	true	"UpdateProduct request"
-//	@Success		200		{object}	httpapi.ResponseResult
+//	@Param			id		path	uint64					true	"Product ID"
+//	@Param			request	body	commands.UpdateProduct	true	"UpdateProduct request"
+//	@Success		204		"Product updated successfully"
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body or ID"
+//	@Failure		401		{object}	httpapi.ResponseResult	"Unauthorized"
+//	@Failure		404		{object}	httpapi.ResponseResult	"Product not found"
+//	@Failure		422		{object}	httpapi.ResponseResult	"Validation failed"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/admin/products/{id} [put]
 func (p *ProductHandler) UpdateProduct(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -364,9 +384,13 @@ func (p *ProductHandler) UpdateProduct(c fiber.Ctx) error {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			id			path		uint64	true	"Product ID"
-//	@Param			soft_delete	query		boolean	false	"Soft delete (default: true)"
-//	@Success		200			{object}	httpapi.ResponseResult
+//	@Param			id			path	uint64	true	"Product ID"
+//	@Param			soft_delete	query	boolean	false	"Soft delete (default: true)"
+//	@Success		204			"Product deleted successfully"
+//	@Failure		400			{object}	httpapi.ResponseResult	"Invalid product ID"
+//	@Failure		401			{object}	httpapi.ResponseResult	"Unauthorized"
+//	@Failure		404			{object}	httpapi.ResponseResult	"Product not found"
+//	@Failure		500			{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/admin/products/{id} [delete]
 func (p *ProductHandler) DeleteProduct(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -402,6 +426,8 @@ func (p *ProductHandler) DeleteProduct(c fiber.Ctx) error {
 //	@Produce		json
 //	@Param			request	body		[]string	true	"Array of product IDs"
 //	@Success		200		{object}	httpapi.ResponseResult
+//	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/products/cart [post]
 func (p *ProductHandler) GetProductsForCart(c fiber.Ctx) error {
 	ctx := c.Context()

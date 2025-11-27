@@ -54,7 +54,6 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, redis redis
 
 	// register command handlers
 	bus.AddCommandHandler(
-		commandeventhandler.NewCommandHandler(userHandler.RegisterHandler),
 		commandeventhandler.NewCommandHandler(userHandler.LogoutHandler),
 		commandeventhandler.NewCommandHandler(otpHandler.SendOtpHandler),
 	)

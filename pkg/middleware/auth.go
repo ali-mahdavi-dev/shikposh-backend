@@ -1,21 +1,15 @@
 package middleware
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
 	"shikposh-backend/internal/account/domain/entity"
 
-	httpapi "github.com/ali-mahdavi-dev/shikposh-framework/api/http"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/cast"
 )
-
-var errFailGetTokenFromDB = errors.New("fail to get token from DB")
-var errTokenDoesNotExist = errors.New("token does not exist")
 
 func (m *Middleware) AuthMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
@@ -64,10 +58,10 @@ func (m *Middleware) AuthMiddleware() fiber.Handler {
 			ctx := c.Context()
 			user, err := m.Uow.Token(ctx).FindByUserID(ctx, entity.UserID(userID))
 			if err != nil {
-				return httpapi.ResError(c, errFailGetTokenFromDB)
+				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Token not found"})
 			}
 			if user.Token != tokenStr {
-				return httpapi.ResError(c, errTokenDoesNotExist)
+				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Token mismatch"})
 			}
 
 			// Store user_id in Fiber context

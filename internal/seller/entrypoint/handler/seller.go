@@ -40,6 +40,7 @@ func (h *SellerHandler) RegisterRoutes(r fiber.Router) {
 //	@Param			q				query		string	false	"Search query"
 //	@Param			categories_like	query		string	false	"Filter by category"
 //	@Success		200				{object}	httpapi.ResponseResult
+//	@Failure		500				{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/sellers [get]
 func (h *SellerHandler) GetAllSellers(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -80,6 +81,9 @@ func (h *SellerHandler) GetAllSellers(c fiber.Ctx) error {
 //	@Produce		json
 //	@Param			id	path		string	true	"Seller ID"
 //	@Success		200	{object}	httpapi.ResponseResult
+//	@Failure		400	{object}	httpapi.ResponseResult	"ID is required"
+//	@Failure		404	{object}	httpapi.ResponseResult	"Seller not found"
+//	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/sellers/{id} [get]
 func (h *SellerHandler) GetSellerByID(c fiber.Ctx) error {
 	ctx := c.Context()

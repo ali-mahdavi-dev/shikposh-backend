@@ -45,8 +45,29 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "204": {
+                        "description": "Product created successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -92,8 +113,35 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "204": {
+                        "description": "Product updated successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request body or ID",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Product not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -134,8 +182,29 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "204": {
+                        "description": "Product deleted successfully"
+                    },
+                    "400": {
+                        "description": "Invalid product ID",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Product not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -177,8 +246,20 @@ const docTemplate = `{
                             "$ref": "#/definitions/http.ResponseResult"
                         }
                     },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
                     "401": {
                         "description": "Invalid or expired refresh token",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -224,13 +305,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request",
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
                     },
                     "429": {
-                        "description": "Too many requests",
+                        "description": "Rate limited - too many requests",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -276,13 +363,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request",
+                        "description": "Invalid request body",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
                     },
                     "401": {
-                        "description": "Invalid OTP",
+                        "description": "Invalid or expired OTP",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -315,13 +408,19 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
                     }
                 }
             }
         },
-        "/api/v1/public/login": {
-            "post": {
-                "description": "Authenticates a user and returns an access token.",
+        "/api/v1/public/categories/{slug}": {
+            "get": {
+                "description": "Retrieves a single category by its slug",
                 "consumes": [
                     "application/json"
                 ],
@@ -329,44 +428,33 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "categories"
                 ],
-                "summary": "Login user",
+                "summary": "Get category by slug",
                 "parameters": [
                     {
-                        "description": "LoginUser",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/commands.LoginUser"
-                        }
+                        "type": "string",
+                        "description": "Category slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Access token",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/http.ResponseResult"
                         }
                     },
                     "400": {
-                        "description": "Invalid request body or unknown provider",
+                        "description": "Slug is required",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
                     },
-                    "401": {
-                        "description": "Authentication failed",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    },
-                    "422": {
-                        "description": "Unprocessable input (validation failed)",
+                    "404": {
+                        "description": "Category not found",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -387,7 +475,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Logs out the authenticated user.\nExample success response: {\"success\": true}\nExample error response: {\"success\": false, \"error\": {\"code\": \"USER_NOT_FOUND\", \"message\": \"User not found\", \"status\": \"Not Found\"}}",
+                "description": "Logs out the authenticated user.",
                 "consumes": [
                     "application/json"
                 ],
@@ -395,36 +483,15 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "auth"
                 ],
                 "summary": "Logout user",
                 "responses": {
-                    "200": {
-                        "description": "Logout completed successfully",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body or unknown provider",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    },
-                    "401": {
-                        "description": "User not authenticated",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
+                    "204": {
+                        "description": "Logout completed successfully"
                     },
                     "404": {
                         "description": "User not found",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseResult"
-                        }
-                    },
-                    "422": {
-                        "description": "Unprocessable input (validation failed)",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -462,6 +529,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Category slug",
                         "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Category name (search)",
+                        "name": "category_name",
                         "in": "query"
                     },
                     {
@@ -507,6 +580,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
                     }
                 }
             }
@@ -544,6 +623,18 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
                     }
                 }
             }
@@ -576,6 +667,18 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
+                    },
+                    "404": {
+                        "description": "Category not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
                     }
                 }
             }
@@ -596,6 +699,12 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -631,6 +740,24 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
+                    },
+                    "400": {
+                        "description": "Slug is required",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Product not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
                     }
                 }
             }
@@ -645,7 +772,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "auth"
                 ],
                 "summary": "Register a new user",
                 "parameters": [
@@ -726,6 +853,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
                     }
                 }
             }
@@ -755,6 +888,289 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "400": {
+                        "description": "ID is required",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Seller not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wishlist": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all wishlist product IDs for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wishlist"
+                ],
+                "summary": "Get user's wishlist",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds a product to the authenticated user's wishlist",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wishlist"
+                ],
+                "summary": "Add product to wishlist",
+                "parameters": [
+                    {
+                        "description": "Product ID to add",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AddToWishlistRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wishlist/sync": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Merges local wishlist with server wishlist for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wishlist"
+                ],
+                "summary": "Sync wishlist with server",
+                "parameters": [
+                    {
+                        "description": "Product IDs from local storage",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SyncWishlistRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wishlist/toggle": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds product to wishlist if not exists, removes if exists",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wishlist"
+                ],
+                "summary": "Toggle product in wishlist",
+                "parameters": [
+                    {
+                        "description": "Product ID to toggle",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ToggleWishlistRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wishlist/{productId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes a product from the authenticated user's wishlist",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wishlist"
+                ],
+                "summary": "Remove product from wishlist",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Product ID to remove",
+                        "name": "productId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "401": {
+                        "description": "User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Product not in wishlist",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseResult"
                         }
@@ -809,6 +1225,14 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 3
                 },
+                "origin_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "price": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "sizes": {
                     "type": "array",
                     "items": {
@@ -830,21 +1254,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                }
-            }
-        },
-        "commands.LoginUser": {
-            "type": "object",
-            "required": [
-                "password",
-                "phone"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
                 }
             }
         },
@@ -870,9 +1279,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                },
-                "original_price": {
-                    "type": "number"
                 },
                 "price": {
                     "type": "number",
@@ -953,19 +1359,11 @@ const docTemplate = `{
         "commands.SendOtp": {
             "type": "object",
             "required": [
-                "phone",
-                "type"
+                "phone"
             ],
             "properties": {
                 "phone": {
                     "type": "string"
-                },
-                "type": {
-                    "type": "string",
-                    "enum": [
-                        "login",
-                        "register"
-                    ]
                 }
             }
         },
@@ -1018,6 +1416,14 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 3
                 },
+                "origin_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "price": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "sizes": {
                     "type": "array",
                     "items": {
@@ -1046,8 +1452,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "otp",
-                "phone",
-                "type"
+                "phone"
             ],
             "properties": {
                 "otp": {
@@ -1055,13 +1460,33 @@ const docTemplate = `{
                 },
                 "phone": {
                     "type": "string"
-                },
-                "type": {
-                    "type": "string",
-                    "enum": [
-                        "login",
-                        "register"
-                    ]
+                }
+            }
+        },
+        "handler.AddToWishlistRequest": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.SyncWishlistRequest": {
+            "type": "object",
+            "properties": {
+                "product_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "handler.ToggleWishlistRequest": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "integer"
                 }
             }
         },

@@ -9,12 +9,22 @@ import (
 	"shikposh-backend/internal/account/domain/commands"
 	"shikposh-backend/internal/account/domain/entity"
 
+	"github.com/ali-mahdavi-dev/shikposh-framework/api/jwt"
 	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.RegisterUser) error {
+// RegisterResult contains the result of registration
+type RegisterResult struct {
+	Token        string
+	RefreshToken string
+	User         *entity.User
+}
+
+func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.RegisterUser) (*RegisterResult, error) {
+	var registeredUser *entity.User
+
 	err := h.uow.Do(ctx, func(ctx context.Context) error {
 		// Check if phone already exists
 		_, err := h.uow.User(ctx).FindByPhone(ctx, cmd.Phone)
@@ -56,12 +66,34 @@ func (h *UserHandler) RegisterHandler(ctx context.Context, cmd *commands.Registe
 			return fmt.Errorf("UserHandler.Register error saving user: %w", err)
 		}
 
+		registeredUser = user
 		return nil
 	})
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	// Generate tokens for the new user
+	accessToken, err := jwt.GenerateToken(h.cfg.JWT.AccessTokenExpireDuration, h.cfg.JWT.Secret, uint64(registeredUser.ID))
+	if err != nil {
+		return nil, fmt.Errorf("UserHandler.Register error generating access token: %w", err)
+	}
+
+	refreshToken, err := jwt.GenerateToken(h.cfg.JWT.RefreshTokenExpireDuration, h.cfg.JWT.Secret, uint64(registeredUser.ID))
+	if err != nil {
+		return nil, fmt.Errorf("UserHandler.Register error generating refresh token: %w", err)
+	}
+
+	// Save token
+	err = h.uow.Token(ctx).Save(ctx, entity.NewToken(accessToken, refreshToken, registeredUser.ID))
+	if err != nil {
+		return nil, fmt.Errorf("UserHandler.Register error saving token: %w", err)
+	}
+
+	return &RegisterResult{
+		Token:        accessToken,
+		RefreshToken: refreshToken,
+		User:         registeredUser,
+	}, nil
 }
