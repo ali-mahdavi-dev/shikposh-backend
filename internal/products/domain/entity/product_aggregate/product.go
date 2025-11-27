@@ -44,8 +44,8 @@ type Product struct {
 	IsFeatured  bool             `json:"is_featured" gorm:"is_featured;default:false"`
 	Sizes       []Size           `json:"-" gorm:"many2many:product_sizes;"`
 	Colors      []Color          `json:"-" gorm:"many2many:product_colors;"`
-	Price       float64          `json:"price" gorm:"price;default:0"`
-	OriginPrice *float64         `json:"origin_price,omitempty" gorm:"origin_price"`
+	Price       int64            `json:"price" gorm:"price;default:0"`
+	OriginPrice *int64           `json:"origin_price,omitempty" gorm:"origin_price"`
 }
 
 func (p *Product) TableName() string {
@@ -167,7 +167,7 @@ func convertColorsToArray(colors []Color) []map[string]interface{} {
 // ToMap converts Product to map format for JSON response (new structure)
 func (p *Product) ToMap() map[string]interface{} {
 	// Get price, stock, discount from first detail if exists, otherwise use defaults
-	defaultPrice := 0.0
+	var defaultPrice int64 = 0
 	defaultStock := 0
 	defaultDiscount := 0
 

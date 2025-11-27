@@ -31,6 +31,7 @@ func init() {
 	rootCmd.AddCommand(migrateCmd())
 	rootCmd.AddCommand(reindexCmd())
 	rootCmd.AddCommand(updateImagesCmd())
+	rootCmd.AddCommand(importFromElasticCmd())
 }
 
 func Execute() {

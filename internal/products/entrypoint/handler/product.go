@@ -87,12 +87,12 @@ func parseProductFilters(c fiber.Ctx) repository.ProductFilters {
 		filters.CategoryName = &categoryName
 	}
 	if min := c.Query("min"); min != "" {
-		if minPrice := cast.ToFloat64(min); minPrice > 0 {
+		if minPrice := cast.ToInt64(min); minPrice > 0 {
 			filters.MinPrice = &minPrice
 		}
 	}
 	if max := c.Query("max"); max != "" {
-		if maxPrice := cast.ToFloat64(max); maxPrice > 0 {
+		if maxPrice := cast.ToInt64(max); maxPrice > 0 {
 			filters.MaxPrice = &maxPrice
 		}
 	}
@@ -508,13 +508,13 @@ func (p *ProductHandler) GetProductsForCart(c fiber.Ctx) error {
 		filtered["image"] = image
 
 		// Get price
-		price := 0.0
+		var price int64 = 0
 		if priceVal, ok := product["price"].(float64); ok {
-			price = priceVal
+			price = int64(priceVal)
 		} else if priceVal, ok := product["price"].(int); ok {
-			price = float64(priceVal)
+			price = int64(priceVal)
 		} else if priceVal, ok := product["price"].(int64); ok {
-			price = float64(priceVal)
+			price = priceVal
 		}
 		filtered["price"] = price
 

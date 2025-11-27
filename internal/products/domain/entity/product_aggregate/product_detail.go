@@ -25,8 +25,8 @@ type ProductDetail struct {
 	ColorKey      *string             `json:"color_key,omitempty" gorm:"color_key"`   // e.g., "red", "blue" - nullable for size-only details
 	ColorName     *string             `json:"color_name,omitempty" gorm:"color_name"` // e.g., "قرمز", "آبی" - nullable
 	SizeKey       *string             `json:"size_key,omitempty" gorm:"size_key"`     // e.g., "M", "L" - nullable for color-only details
-	Price         float64             `json:"price" gorm:"price"`                     // Price for this variant
-	OriginalPrice *float64            `json:"-" gorm:"original_price"`                // Original price before discount (deprecated, not exposed in API)
+	Price         int64               `json:"price" gorm:"price"`                     // Price for this variant
+	OriginalPrice *int64              `json:"-" gorm:"original_price"`                // Original price before discount (deprecated, not exposed in API)
 	Stock         int                 `json:"stock" gorm:"stock;default:0"`
 	Discount      int                 `json:"discount" gorm:"discount;default:0"`
 	Images        []shared.Attachment `json:"-" gorm:"polymorphic:Attachable;polymorphicValue:ProductDetail"` // Polymorphic relationship

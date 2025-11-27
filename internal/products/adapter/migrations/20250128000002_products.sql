@@ -13,6 +13,8 @@ CREATE TABLE products (
     is_new BOOLEAN DEFAULT false,
     is_featured BOOLEAN DEFAULT false,
     sizes JSONB DEFAULT '[]'::jsonb,
+    price BIGINT DEFAULT 0,
+    origin_price BIGINT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     deleted_at TIMESTAMP WITH TIME ZONE,

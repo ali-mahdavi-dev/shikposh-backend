@@ -112,11 +112,11 @@ func (s *ProductHasAnyTagSpecification) IsSatisfiedBy(product *productaggregate.
 // ProductInPriceRangeSpecification checks if a product's price is within a range
 // Note: This checks the first detail's price as the default price
 type ProductInPriceRangeSpecification struct {
-	minPrice *float64
-	maxPrice *float64
+	minPrice *int64
+	maxPrice *int64
 }
 
-func NewProductInPriceRangeSpecification(minPrice, maxPrice *float64) specification.Specification[*productaggregate.Product] {
+func NewProductInPriceRangeSpecification(minPrice, maxPrice *int64) specification.Specification[*productaggregate.Product] {
 	return &ProductInPriceRangeSpecification{
 		minPrice: minPrice,
 		maxPrice: maxPrice,
@@ -129,7 +129,7 @@ func (s *ProductInPriceRangeSpecification) IsSatisfiedBy(product *productaggrega
 	}
 
 	// Get the first detail's price as default
-	var price float64
+	var price int64
 	for i := range product.Details {
 		if product.Details[i].Price > 0 {
 			price = product.Details[i].Price

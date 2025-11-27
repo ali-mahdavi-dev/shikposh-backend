@@ -37,8 +37,8 @@ type ProductFilters struct {
 	Query        *string
 	Category     *string
 	CategoryName *string
-	MinPrice     *float64
-	MaxPrice     *float64
+	MinPrice     *int64
+	MaxPrice     *int64
 	Rating       *float64
 	Featured     *bool
 	Tags         []string
