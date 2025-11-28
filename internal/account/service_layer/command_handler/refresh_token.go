@@ -7,6 +7,7 @@ import (
 
 	accountphrases "shikposh-backend/internal/account/adapter/phrases"
 	"shikposh-backend/internal/account/adapter/repository"
+	"shikposh-backend/internal/account/domain/commands"
 	"shikposh-backend/internal/account/domain/entity"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/api/jwt"
@@ -21,7 +22,8 @@ type RefreshTokenResult struct {
 	RefreshToken string
 }
 
-func (h *UserHandler) RefreshTokenHandler(ctx context.Context, refreshToken string) (*RefreshTokenResult, error) {
+func (h *UserHandler) RefreshTokenHandler(ctx context.Context, cmd *commands.RefreshToken) (*RefreshTokenResult, error) {
+	refreshToken := cmd.RefreshToken
 	var result *RefreshTokenResult
 
 	err := h.uow.Do(ctx, func(ctx context.Context) error {

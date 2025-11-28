@@ -257,18 +257,16 @@ func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 func (u *UserController) RefreshToken(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	// Get refresh token from request body
-	var body map[string]string
-	if err := httpapi.ParseJSON(c, &body); err != nil {
+	cmd := new(commands.RefreshToken)
+	if err := httpapi.ParseJSON(c, cmd); err != nil {
 		return httpapi.ResError(c, err)
 	}
 
-	refreshToken := body["refresh_token"]
-	if refreshToken == "" || refreshToken == "null" {
+	if cmd.RefreshToken == "" || cmd.RefreshToken == "null" {
 		return httpapi.ResError(c, errors.Unauthorized(accountphrases.UserNotFound))
 	}
 
-	result, err := u.userHandler.RefreshTokenHandler(ctx, refreshToken)
+	result, err := u.userHandler.RefreshTokenHandler(ctx, cmd)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}

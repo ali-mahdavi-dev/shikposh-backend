@@ -40,6 +40,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 
 	// Initialize command handlers
 	productHandler := command_handler.NewProductCommandHandler(uow)
+	wishlistCommandHandler := command_handler.NewWishlistCommandHandler(uow)
 
 	// Initialize event handlers
 	productEventHandler := event_handler.NewProductEventHandler(uow)
@@ -51,7 +52,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 		productHandler,
 		bus,
 	)
-	wishlistHandler := handler.NewWishlistHandler(uow)
+	wishlistHandler := handler.NewWishlistHandler(uow, bus)
 
 	entrypoint.NewProductsRouter(router, entrypoint.ProductManagementRouter{
 		Product:  productHTTPHandler,
@@ -68,6 +69,10 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 		commandeventhandler.NewCommandHandler(productHandler.CreateProductHandler),
 		commandeventhandler.NewCommandHandler(productHandler.UpdateProductHandler),
 		commandeventhandler.NewCommandHandler(productHandler.DeleteProductHandler),
+		commandeventhandler.NewCommandHandler(wishlistCommandHandler.AddToWishlistHandler),
+		commandeventhandler.NewCommandHandler(wishlistCommandHandler.RemoveFromWishlistHandler),
+		commandeventhandler.NewCommandHandler(wishlistCommandHandler.ToggleWishlistHandler),
+		commandeventhandler.NewCommandHandler(wishlistCommandHandler.SyncWishlistHandler),
 	)
 
 	// event handlers

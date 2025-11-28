@@ -18,3 +18,7 @@ type LoginUser struct {
 type Logout struct {
 	UserID uint64 `json:"user_id" validate:"required"`
 }
+
+type RefreshToken struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}

@@ -19,3 +19,11 @@ type ProductCommandHandler struct {
 func NewProductCommandHandler(uow unitofwork.PGUnitOfWork) *ProductCommandHandler {
 	return &ProductCommandHandler{uow: uow}
 }
+
+type WishlistCommandHandler struct {
+	uow unitofwork.PGUnitOfWork
+}
+
+func NewWishlistCommandHandler(uow unitofwork.PGUnitOfWork) *WishlistCommandHandler {
+	return &WishlistCommandHandler{uow: uow}
+}
