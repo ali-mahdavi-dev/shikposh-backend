@@ -26,10 +26,13 @@ type ProductRepository interface {
 	Search(ctx context.Context, query string) ([]*productaggregate.Product, error)
 	Filter(ctx context.Context, filters ProductFilters) ([]*productaggregate.Product, error)
 	ClearFeatures(ctx context.Context, product *productaggregate.Product) error
-	ClearDetails(ctx context.Context, product *productaggregate.Product) error
+	ClearVariants(ctx context.Context, product *productaggregate.Product) error
 	ClearSpecs(ctx context.Context, product *productaggregate.Product) error
 	ClearTags(ctx context.Context, product *productaggregate.Product) error
 	ClearSizes(ctx context.Context, product *productaggregate.Product) error
+	ClearColors(ctx context.Context, product *productaggregate.Product) error
+	ClearImages(ctx context.Context, product *productaggregate.Product) error
+	ClearCategories(ctx context.Context, product *productaggregate.Product) error
 	ClearAllAssociations(ctx context.Context, product *productaggregate.Product) error
 }
 
@@ -65,23 +68,30 @@ func (r *productGormRepository) Model(ctx context.Context) *gorm.DB {
 // withPreloads applies all necessary preloads to the query
 func (r *productGormRepository) withPreloads(query *gorm.DB) *gorm.DB {
 	return query.
-		Preload("Details").
-		Preload("Details.Images").
+		Preload("Categories").
+		Preload("Colors").
+		Preload("Sizes").
+		Preload("Variants").
+		Preload("Tags").
 		Preload("Features", func(db *gorm.DB) *gorm.DB {
 			return db.Order("\"order\" ASC")
 		}).
 		Preload("Specs", func(db *gorm.DB) *gorm.DB {
 			return db.Order("\"order\" ASC")
 		}).
-		Preload("Tags").
-		Preload("Sizes").
-		Preload("Colors")
+		Preload("Images", func(db *gorm.DB) *gorm.DB {
+			return db.Order("sort_order ASC")
+		})
 }
 
 // withPreloadsWithoutImages applies preloads without Images (for reindexing)
 func (r *productGormRepository) withPreloadsWithoutImages(query *gorm.DB) *gorm.DB {
 	return query.
-		Preload("Details").
+		Preload("Categories").
+		Preload("Colors").
+		Preload("Sizes").
+		Preload("Variants").
+		Preload("Tags").
 		Preload("Features", func(db *gorm.DB) *gorm.DB {
 			return db.Order("\"order\" ASC")
 		}).
@@ -184,7 +194,7 @@ func (r *productGormRepository) Search(ctx context.Context, query string) ([]*pr
 	var products []*productaggregate.Product
 	searchPattern := "%" + query + "%"
 	err := r.withPreloads(r.Model(ctx)).
-		Where("name ILIKE ? OR description ILIKE ? OR brand ILIKE ?", searchPattern, searchPattern, searchPattern).
+		Where("title ILIKE ? OR description ILIKE ? OR brand ILIKE ?", searchPattern, searchPattern, searchPattern).
 		Find(&products).Error
 	if err != nil {
 		return nil, err
@@ -200,7 +210,7 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 
 	if filters.Query != nil && *filters.Query != "" {
 		searchPattern := "%" + *filters.Query + "%"
-		query = query.Where("name ILIKE ? OR description ILIKE ? OR brand ILIKE ?", searchPattern, searchPattern, searchPattern)
+		query = query.Where("title ILIKE ? OR description ILIKE ? OR brand ILIKE ?", searchPattern, searchPattern, searchPattern)
 	}
 
 	if filters.Category != nil && *filters.Category != "" {
@@ -225,7 +235,6 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 	}
 
 	if len(filters.Tags) > 0 {
-		// Join with tags table and filter by tag names
 		query = query.Joins("JOIN product_tags ON products.id = product_tags.product_id").
 			Joins("JOIN tags ON product_tags.tag_id = tags.id").
 			Where("tags.name IN ?", filters.Tags).
@@ -252,7 +261,6 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 		query = query.Order("created_at DESC")
 	}
 
-	// Apply limit
 	if filters.Limit != nil && *filters.Limit > 0 {
 		query = query.Limit(*filters.Limit)
 	}
@@ -269,54 +277,39 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 }
 
 func (r *productGormRepository) ClearFeatures(ctx context.Context, product *productaggregate.Product) error {
-	return r.Model(ctx).Association("Features").Clear()
+	return r.db.WithContext(ctx).Model(product).Association("Features").Clear()
 }
 
 func (r *productGormRepository) ClearSpecs(ctx context.Context, product *productaggregate.Product) error {
-	return r.Model(ctx).Association("Specs").Clear()
+	return r.db.WithContext(ctx).Model(product).Association("Specs").Clear()
 }
 
 func (r *productGormRepository) ClearTags(ctx context.Context, product *productaggregate.Product) error {
-	return r.Model(ctx).Association("Tags").Clear()
+	return r.db.WithContext(ctx).Model(product).Association("Tags").Clear()
 }
 
 func (r *productGormRepository) ClearSizes(ctx context.Context, product *productaggregate.Product) error {
-	return r.Model(ctx).Association("Sizes").Clear()
+	return r.db.WithContext(ctx).Model(product).Association("Sizes").Clear()
 }
 
-// clearDetailsAttachments loads details and clears their attachments
-func (r *productGormRepository) clearDetailsAttachments(ctx context.Context, product *productaggregate.Product) error {
-	// Load existing details to delete their attachments
-	if err := r.Model(ctx).Association("Details").Find(&product.Details); err != nil {
-		return err
-	}
-
-	// Delete attachments for existing details
-	for i := range product.Details {
-		if err := r.db.WithContext(ctx).Model(&product.Details[i]).Association("Images").Clear(); err != nil {
-			return err
-		}
-	}
-
-	return nil
+func (r *productGormRepository) ClearColors(ctx context.Context, product *productaggregate.Product) error {
+	return r.db.WithContext(ctx).Model(product).Association("Colors").Clear()
 }
 
-func (r *productGormRepository) ClearDetails(ctx context.Context, product *productaggregate.Product) error {
-	// Clear attachments for details
-	if err := r.clearDetailsAttachments(ctx, product); err != nil {
-		return err
-	}
+func (r *productGormRepository) ClearVariants(ctx context.Context, product *productaggregate.Product) error {
+	return r.db.WithContext(ctx).Model(product).Association("Variants").Clear()
+}
 
-	// Delete existing details
-	return r.Model(ctx).Association("Details").Clear()
+func (r *productGormRepository) ClearImages(ctx context.Context, product *productaggregate.Product) error {
+	return r.db.WithContext(ctx).Model(product).Association("Images").Clear()
+}
+
+func (r *productGormRepository) ClearCategories(ctx context.Context, product *productaggregate.Product) error {
+	return r.db.WithContext(ctx).Model(product).Association("Categories").Clear()
 }
 
 func (r *productGormRepository) ClearAllAssociations(ctx context.Context, product *productaggregate.Product) error {
-	// Clear attachments for details
-	if err := r.clearDetailsAttachments(ctx, product); err != nil {
-		return err
-	}
-
-	// Delete all associations using Select
-	return r.Model(ctx).Select("Features", "Details", "Specs", "Tags", "Sizes").Delete(product).Error
+	return r.db.WithContext(ctx).Model(product).
+		Select("Features", "Specs", "Tags", "Sizes", "Colors", "Variants", "Images", "Categories").
+		Delete(product).Error
 }

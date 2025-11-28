@@ -58,7 +58,15 @@ func NewProductInCategorySpecification(categoryID entity.CategoryID) specificati
 }
 
 func (s *ProductInCategorySpecification) IsSatisfiedBy(product *productaggregate.Product) bool {
-	return product != nil && product.CategoryID == s.categoryID
+	if product == nil || len(product.Categories) == 0 {
+		return false
+	}
+	for _, cat := range product.Categories {
+		if uint64(cat.ID) == s.categoryID {
+			return true
+		}
+	}
+	return false
 }
 
 // ProductHasTagSpecification checks if a product has a specific tag
@@ -110,7 +118,6 @@ func (s *ProductHasAnyTagSpecification) IsSatisfiedBy(product *productaggregate.
 }
 
 // ProductInPriceRangeSpecification checks if a product's price is within a range
-// Note: This checks the first detail's price as the default price
 type ProductInPriceRangeSpecification struct {
 	minPrice *int64
 	maxPrice *int64
@@ -124,18 +131,11 @@ func NewProductInPriceRangeSpecification(minPrice, maxPrice *int64) specificatio
 }
 
 func (s *ProductInPriceRangeSpecification) IsSatisfiedBy(product *productaggregate.Product) bool {
-	if product == nil || len(product.Details) == 0 {
+	if product == nil {
 		return false
 	}
 
-	// Get the first detail's price as default
-	var price int64
-	for i := range product.Details {
-		if product.Details[i].Price > 0 {
-			price = product.Details[i].Price
-			break
-		}
-	}
+	price := product.Price
 
 	if s.minPrice != nil && price < *s.minPrice {
 		return false
@@ -148,11 +148,6 @@ func (s *ProductInPriceRangeSpecification) IsSatisfiedBy(product *productaggrega
 }
 
 // ProductCanBePublishedSpecification checks if a product can be published
-// A product can be published if it has:
-// - A name
-// - A slug
-// - At least one detail (with price)
-// - A category
 type ProductCanBePublishedSpecification struct {
 }
 
@@ -165,8 +160,8 @@ func (s *ProductCanBePublishedSpecification) IsSatisfiedBy(product *productaggre
 		return false
 	}
 
-	// Must have name
-	if product.Name == "" {
+	// Must have title
+	if product.Title == "" {
 		return false
 	}
 
@@ -175,23 +170,15 @@ func (s *ProductCanBePublishedSpecification) IsSatisfiedBy(product *productaggre
 		return false
 	}
 
-	// Must have category
-	if product.CategoryID == 0 {
+	// Must have at least one category
+	if len(product.Categories) == 0 {
 		return false
 	}
 
-	// Must have at least one detail with price
-	if len(product.Details) == 0 {
+	// Must have price
+	if product.Price <= 0 {
 		return false
 	}
 
-	hasValidPrice := false
-	for i := range product.Details {
-		if product.Details[i].Price > 0 {
-			hasValidPrice = true
-			break
-		}
-	}
-
-	return hasValidPrice
+	return true
 }

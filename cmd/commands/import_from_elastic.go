@@ -91,11 +91,13 @@ func importFromElastic() error {
 
 		err := db.Transaction(func(tx *gorm.DB) error {
 			product := &product_aggregate.Product{
-				Name:        cast.ToString(doc["title"]),
+				Title:       cast.ToString(doc["title"]),
 				Slug:        cast.ToString(doc["slug"]),
 				Brand:       cast.ToString(doc["brand"]),
 				Description: strPtr(cast.ToString(doc["description"])),
-				Image:       cast.ToString(doc["thumbnail"]),
+				Thumbnail:   cast.ToString(doc["thumbnail"]),
+				Discount:    cast.ToInt(doc["discount"]),
+				Stock:       cast.ToInt(doc["stock"]),
 				IsNew:       cast.ToBool(doc["is_new"]),
 				IsFeatured:  cast.ToBool(doc["is_featured"]),
 				Rating:      cast.ToFloat64(doc["rating"]),
@@ -129,7 +131,7 @@ func importFromElastic() error {
 										Log()
 								}
 							}
-							product.CategoryID = uint64(cat.ID)
+							product.Categories = append(product.Categories, cat)
 						}
 					}
 				}

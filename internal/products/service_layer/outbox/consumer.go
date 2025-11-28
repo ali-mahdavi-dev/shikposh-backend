@@ -46,26 +46,6 @@ func NewConsumer(
 	}
 }
 
-// updateCategoryInProductMap updates category slug and name in productMap's categories array
-func (h *ProductEventHandler) updateCategoryInProductMap(ctx context.Context, productMap map[string]interface{}, categoryID uint64) {
-	if categoryID == 0 {
-		return
-	}
-
-	category, err := h.uow.Category(ctx).FindByID(ctx, categoryID)
-	if err != nil || category == nil {
-		return
-	}
-
-	// Update categories array in productMap
-	if categoriesRaw, ok := productMap["categories"].([]interface{}); ok && len(categoriesRaw) > 0 {
-		if categoryMap, ok := categoriesRaw[0].(map[string]interface{}); ok {
-			categoryMap["slug"] = category.Slug
-			categoryMap["name"] = category.Name
-		}
-	}
-}
-
 // HandleEvent implements frameworkoutbox.EventHandler
 func (h *ProductEventHandler) HandleEvent(ctx context.Context, eventType string, payload map[string]interface{}) error {
 	switch eventType {
@@ -114,9 +94,6 @@ func (h *ProductEventHandler) handleProductCreatedEvent(ctx context.Context, pay
 
 		// Convert product to map using ToMap method
 		productMap = product.ToMap()
-
-		// Update category slug and name in categories array
-		h.updateCategoryInProductMap(ctx, productMap, product.CategoryID)
 
 		return nil
 	})
@@ -170,9 +147,6 @@ func (h *ProductEventHandler) handleProductUpdatedEvent(ctx context.Context, pay
 
 		// Convert product to map using ToMap method
 		productMap = product.ToMap()
-
-		// Update category slug and name in categories array
-		h.updateCategoryInProductMap(ctx, productMap, product.CategoryID)
 
 		return nil
 	})

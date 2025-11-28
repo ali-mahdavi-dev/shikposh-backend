@@ -8,8 +8,8 @@ import (
 	"shikposh-backend/internal/products/adapter/phrases"
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
+	"shikposh-backend/internal/products/domain/entity"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/internal/products/domain/specification"
 
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
@@ -18,95 +18,176 @@ import (
 
 func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *commands.CreateProduct) error {
 	return h.uow.Do(ctx, func(ctx context.Context) error {
-		// Verify category exists
-		_, err := h.uow.Category(ctx).FindByID(ctx, cmd.CategoryID)
-		if err != nil {
-			if errors.Is(err, appadapter.ErrEntityNotFound) {
-				return apperrors.NotFound(phrases.CategoryNotFound)
-			}
+		// Verify at least one category exists
+		if len(cmd.Categories) == 0 {
+			return apperrors.Validation("", "At least one category is required")
+		}
 
-			return fmt.Errorf("ProductCommandHandler.CreateProductHandler error finding category: %w", err)
+		for _, catID := range cmd.Categories {
+			_, err := h.uow.Category(ctx).FindByID(ctx, catID)
+			if err != nil {
+				if errors.Is(err, appadapter.ErrEntityNotFound) {
+					return apperrors.NotFound(phrases.CategoryNotFound)
+				}
+				return fmt.Errorf("CreateProductHandler: error finding category: %w", err)
+			}
 		}
 
 		// Check if slug already exists
-		_, err = h.uow.Product(ctx).FindBySlug(ctx, cmd.Slug)
+		cmd.Slug = GenerateSlug(cmd.Title)
+		_, err := h.uow.Product(ctx).FindBySlug(ctx, cmd.Slug)
 		if err == nil {
 			return apperrors.Conflict(phrases.ProductSlugExists)
 		} else if !errors.Is(err, repository.ErrProductNotFound) {
-			return fmt.Errorf("ProductCommandHandler.CreateProductHandler error checking slug: %w", err)
+			return fmt.Errorf("CreateProductHandler: error checking slug: %w", err)
 		}
 
 		// Create product
-		cmd.Slug = GenerateSlug(cmd.Name)
-		product := product_aggregate.NewProduct(cmd)
-
-		// Convert Features
-		if len(cmd.Features) > 0 {
-			product.Features = make([]product_aggregate.ProductFeature, len(cmd.Features))
-			for i, f := range cmd.Features {
-				product.Features[i] = product_aggregate.NewProductFeature(0, f.Feature, f.Order)
-			}
+		product := &product_aggregate.Product{
+			SellerID:         cmd.SellerID,
+			Title:            cmd.Title,
+			Slug:             cmd.Slug,
+			Brand:            cmd.Brand,
+			Description:      cmd.Description,
+			ShortDescription: cmd.ShortDescription,
+			Thumbnail:        cmd.Thumbnail,
+			Discount:         cmd.Discount,
+			Stock:            cmd.Stock,
+			OriginPrice:      cmd.OriginPrice,
+			Price:            cmd.Price,
+			IsNew:            cmd.IsNew,
+			IsFeatured:       cmd.IsFeatured,
 		}
 
-		// Convert Details
-		if len(cmd.Details) > 0 {
-			product.Details = make([]product_aggregate.ProductDetail, len(cmd.Details))
-			for i, d := range cmd.Details {
-				product.Details[i] = product_aggregate.NewProductDetail(0, d)
+		// Categories (M:N)
+		categories := make([]entity.Category, 0, len(cmd.Categories))
+		for _, catID := range cmd.Categories {
+			cat, err := h.uow.Category(ctx).FindByID(ctx, catID)
+			if err != nil {
+				continue
+			}
+			categories = append(categories, entity.Category{
+				ID:   cat.ID,
+				Name: cat.Name,
+				Slug: cat.Slug,
+			})
+		}
+		product.Categories = categories
 
-				// Convert image paths to attachments
-				if len(d.Images) > 0 {
-					product.Details[i].Images = make([]shared.Attachment, len(d.Images))
-					for j, imgPath := range d.Images {
-						product.Details[i].Images[j] = shared.NewAttachment(imgPath, "image")
-					}
+		// Colors (M:N)
+		if len(cmd.Colors) > 0 {
+			colors := make([]product_aggregate.Color, 0, len(cmd.Colors))
+			for _, colorID := range cmd.Colors {
+				color, err := h.uow.Color(ctx).FindByID(ctx, colorID)
+				if err != nil {
+					continue
 				}
+				colors = append(colors, product_aggregate.Color{
+					ID:   color.ID,
+					Name: color.Name,
+					Slug: color.Slug,
+					Hex:  color.Hex,
+				})
 			}
+			product.Colors = colors
 		}
 
-		// Convert Specs
-		if len(cmd.Specs) > 0 {
-			product.Specs = make([]product_aggregate.ProductSpec, len(cmd.Specs))
-			for i, s := range cmd.Specs {
-				product.Specs[i] = product_aggregate.NewProductSpec(0, s)
+		// Sizes (M:N)
+		if len(cmd.Sizes) > 0 {
+			sizes := make([]product_aggregate.Size, 0, len(cmd.Sizes))
+			for _, sizeID := range cmd.Sizes {
+				size, err := h.uow.Size(ctx).FindByID(ctx, sizeID)
+				if err != nil {
+					continue
+				}
+				sizes = append(sizes, product_aggregate.Size{
+					ID:   size.ID,
+					Name: size.Name,
+					Slug: size.Slug,
+				})
 			}
+			product.Sizes = sizes
 		}
 
-		// Convert Tags - find or create tags by name
+		// Tags
 		if len(cmd.Tags) > 0 {
 			tags := make([]product_aggregate.Tag, 0, len(cmd.Tags))
 			for _, tagName := range cmd.Tags {
 				tag, err := h.uow.Tag(ctx).FindOrCreateByName(ctx, tagName)
 				if err != nil {
-					return fmt.Errorf("ProductCommandHandler.CreateProductHandler error finding/creating tag: %w", err)
+					return fmt.Errorf("CreateProductHandler: error finding/creating tag: %w", err)
 				}
-				tags = append(tags, *tag)
+				tags = append(tags, product_aggregate.Tag{
+					ID:   tag.ID,
+					Name: tag.Name,
+					Slug: tag.Slug,
+				})
 			}
 			product.Tags = tags
 		}
 
-		// Convert Sizes - find or create sizes by name
-		if len(cmd.Sizes) > 0 {
-			sizes := make([]product_aggregate.Size, 0, len(cmd.Sizes))
-			for _, sizeName := range cmd.Sizes {
-				size, err := h.uow.Size(ctx).FindOrCreateByName(ctx, sizeName)
-				if err != nil {
-					return fmt.Errorf("ProductCommandHandler.CreateProductHandler error finding/creating size: %w", err)
+		// Features
+		if len(cmd.Features) > 0 {
+			features := make([]product_aggregate.ProductFeature, len(cmd.Features))
+			for i, f := range cmd.Features {
+				features[i] = product_aggregate.ProductFeature{
+					Feature: f,
+					Order:   i,
 				}
-				sizes = append(sizes, *size)
 			}
-			product.Sizes = sizes
+			product.Features = features
 		}
 
-		// Validate product using specification pattern
+		// Specs
+		if len(cmd.Specs) > 0 {
+			specs := make([]product_aggregate.ProductSpec, len(cmd.Specs))
+			for i, s := range cmd.Specs {
+				specs[i] = product_aggregate.ProductSpec{
+					Key:   s.Key,
+					Value: s.Value,
+					Order: s.Order,
+				}
+			}
+			product.Specs = specs
+		}
+
+		// Variants (color_id + size_id + stock)
+		if len(cmd.Variants) > 0 {
+			variants := make([]product_aggregate.ProductVariant, len(cmd.Variants))
+			for i, v := range cmd.Variants {
+				variants[i] = product_aggregate.ProductVariant{
+					ColorID: product_aggregate.ColorID(v.ColorID),
+					SizeID:  product_aggregate.SizeID(v.SizeID),
+					Stock:   v.Stock,
+				}
+			}
+			product.Variants = variants
+		}
+
+		// Images (color_id + urls)
+		if len(cmd.Images) > 0 {
+			var images []product_aggregate.ProductImage
+			for _, img := range cmd.Images {
+				for order, url := range img.URLs {
+					images = append(images, product_aggregate.ProductImage{
+						ColorID:   product_aggregate.ColorID(img.ColorID),
+						URL:       url,
+						SortOrder: order,
+					})
+				}
+			}
+			product.Images = images
+		}
+
+		// Validate
 		canBePublishedSpec := specification.NewProductCanBePublishedSpecification()
 		if !canBePublishedSpec.IsSatisfiedBy(product) {
-			return apperrors.Validation("", "Product must have a name, slug, category, and at least one detail with price to be created")
+			return apperrors.Validation("", "Product must have title, slug, category, and price")
 		}
 
-		// Save product (GORM will handle associations)
+		// Save
 		if err := h.uow.Product(ctx).Save(ctx, product); err != nil {
-			return fmt.Errorf("ProductCommandHandler.CreateProductHandler error saving product: %w", err)
+			return fmt.Errorf("CreateProductHandler: error saving product: %w", err)
 		}
 
 		return nil

@@ -8,8 +8,8 @@ import (
 	"shikposh-backend/internal/products/adapter/phrases"
 	"shikposh-backend/internal/products/adapter/repository"
 	"shikposh-backend/internal/products/domain/commands"
+	"shikposh-backend/internal/products/domain/entity"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/internal/products/domain/entity/shared"
 	"shikposh-backend/internal/products/domain/events"
 	"shikposh-backend/internal/products/domain/specification"
 
@@ -27,87 +27,53 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 			if errors.Is(err, appadapter.ErrEntityNotFound) {
 				return apperrors.NotFound(phrases.ProductNotFound)
 			}
-
-			return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error finding product: %w", err)
+			return fmt.Errorf("UpdateProductHandler: error finding product: %w", err)
 		}
 
-		// Verify category exists
-		_, err = h.uow.Category(ctx).FindByID(ctx, cmd.CategoryID)
-		if err != nil {
-			if errors.Is(err, appadapter.ErrEntityNotFound) {
-				return apperrors.NotFound(phrases.CategoryNotFound)
+		// Verify categories exist if provided
+		if cmd.Categories != nil {
+			for _, catID := range cmd.Categories {
+				_, err = h.uow.Category(ctx).FindByID(ctx, catID)
+				if err != nil {
+					if errors.Is(err, appadapter.ErrEntityNotFound) {
+						return apperrors.NotFound(phrases.CategoryNotFound)
+					}
+					return fmt.Errorf("UpdateProductHandler: error finding category: %w", err)
+				}
 			}
-			return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error finding category: %w", err)
 		}
 
-		// Check if new slug already exists (and is not the current product)
+		// Check slug uniqueness
 		if cmd.Slug != product.Slug {
 			existingProduct, err := h.uow.Product(ctx).FindBySlug(ctx, cmd.Slug)
 			if err == nil && existingProduct != nil && existingProduct.ID != product.ID {
 				return apperrors.Conflict(phrases.ProductSlugExists)
 			}
 			if err != nil && !errors.Is(err, repository.ErrProductNotFound) {
-				return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error checking slug: %w", err)
+				return fmt.Errorf("UpdateProductHandler: error checking slug: %w", err)
 			}
 		}
 
 		// Update required fields
-		product.Name = cmd.Name
+		product.Title = cmd.Title
 		product.Slug = cmd.Slug
 		product.Brand = cmd.Brand
-		product.CategoryID = cmd.CategoryID
-
 		product.Description = cmd.Description
-		if cmd.Tags != nil {
-			// Clear existing tags
-			if err := h.uow.Product(ctx).ClearTags(ctx, product); err != nil {
-				return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error clearing tags: %w", err)
-			}
+		if cmd.ShortDescription != nil {
+			product.ShortDescription = cmd.ShortDescription
+		}
 
-			// Find or create new tags
-			if len(cmd.Tags) > 0 {
-				tags := make([]product_aggregate.Tag, 0, len(cmd.Tags))
-				for _, tagName := range cmd.Tags {
-					tag, err := h.uow.Tag(ctx).FindOrCreateByName(ctx, tagName)
-					if err != nil {
-						return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error finding/creating tag: %w", err)
-					}
-					tags = append(tags, *tag)
-				}
-				product.Tags = tags
-			} else {
-				product.Tags = []product_aggregate.Tag{}
-			}
+		if cmd.SellerID != nil {
+			product.SellerID = cmd.SellerID
 		}
-		if cmd.Sizes != nil {
-			// Clear existing sizes
-			if err := h.uow.Product(ctx).ClearSizes(ctx, product); err != nil {
-				return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error clearing sizes: %w", err)
-			}
-
-			// Find or create new sizes
-			if len(cmd.Sizes) > 0 {
-				sizes := make([]product_aggregate.Size, 0, len(cmd.Sizes))
-				for _, sizeName := range cmd.Sizes {
-					size, err := h.uow.Size(ctx).FindOrCreateByName(ctx, sizeName)
-					if err != nil {
-						return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error finding/creating size: %w", err)
-					}
-					sizes = append(sizes, *size)
-				}
-				product.Sizes = sizes
-			} else {
-				product.Sizes = []product_aggregate.Size{}
-			}
+		if cmd.Thumbnail != nil {
+			product.Thumbnail = *cmd.Thumbnail
 		}
-		if cmd.Image != nil {
-			product.Image = *cmd.Image
+		if cmd.Discount != nil {
+			product.Discount = *cmd.Discount
 		}
-		if cmd.IsNew != nil {
-			product.IsNew = *cmd.IsNew
-		}
-		if cmd.IsFeatured != nil {
-			product.IsFeatured = *cmd.IsFeatured
+		if cmd.Stock != nil {
+			product.Stock = *cmd.Stock
 		}
 		if cmd.Price != nil {
 			product.Price = *cmd.Price
@@ -115,88 +81,203 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 		if cmd.OriginPrice != nil {
 			product.OriginPrice = cmd.OriginPrice
 		}
+		if cmd.IsNew != nil {
+			product.IsNew = *cmd.IsNew
+		}
+		if cmd.IsFeatured != nil {
+			product.IsFeatured = *cmd.IsFeatured
+		}
 
-		// Update Features if provided
-		if cmd.Features != nil {
-			// Delete existing features
-			if err := h.uow.Product(ctx).ClearFeatures(ctx, product); err != nil {
-				return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error deleting features: %w", err)
+		// Update Categories (M:N)
+		if cmd.Categories != nil {
+			if err := h.uow.Product(ctx).ClearCategories(ctx, product); err != nil {
+				return fmt.Errorf("UpdateProductHandler: error clearing categories: %w", err)
 			}
 
-			// Create new features
-			if len(cmd.Features) > 0 {
-				product.Features = make([]product_aggregate.ProductFeature, len(cmd.Features))
-				for i, f := range cmd.Features {
-					product.Features[i] = product_aggregate.NewProductFeature(product.ID, f.Feature, f.Order)
+			if len(cmd.Categories) > 0 {
+				categories := make([]entity.Category, 0, len(cmd.Categories))
+				for _, catID := range cmd.Categories {
+					cat, err := h.uow.Category(ctx).FindByID(ctx, catID)
+					if err != nil {
+						continue
+					}
+					categories = append(categories, entity.Category{
+						ID:   cat.ID,
+						Name: cat.Name,
+						Slug: cat.Slug,
+					})
 				}
-			} else {
-				product.Features = []product_aggregate.ProductFeature{}
+				product.Categories = categories
 			}
 		}
 
-		// Update Details if provided
-		if cmd.Details != nil {
-			// Delete existing details and their attachments
-			if err := h.uow.Product(ctx).ClearDetails(ctx, product); err != nil {
-				return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error deleting details: %w", err)
+		// Update Colors
+		if cmd.Colors != nil {
+			if err := h.uow.Product(ctx).ClearColors(ctx, product); err != nil {
+				return fmt.Errorf("UpdateProductHandler: error clearing colors: %w", err)
 			}
+			if len(cmd.Colors) > 0 {
+				colors := make([]product_aggregate.Color, 0, len(cmd.Colors))
+				for _, colorID := range cmd.Colors {
+					color, err := h.uow.Color(ctx).FindByID(ctx, colorID)
+					if err != nil {
+						continue
+					}
+					colors = append(colors, product_aggregate.Color{
+						ID:   color.ID,
+						Name: color.Name,
+						Slug: color.Slug,
+						Hex:  color.Hex,
+					})
+				}
+				product.Colors = colors
+			}
+		}
 
-			// Create new details
-			if len(cmd.Details) > 0 {
-				product.Details = make([]product_aggregate.ProductDetail, len(cmd.Details))
-				for i, d := range cmd.Details {
-					product.Details[i] = product_aggregate.NewProductDetail(product.ID, d)
+		// Update Sizes
+		if cmd.Sizes != nil {
+			if err := h.uow.Product(ctx).ClearSizes(ctx, product); err != nil {
+				return fmt.Errorf("UpdateProductHandler: error clearing sizes: %w", err)
+			}
+			if len(cmd.Sizes) > 0 {
+				sizes := make([]product_aggregate.Size, 0, len(cmd.Sizes))
+				for _, sizeID := range cmd.Sizes {
+					size, err := h.uow.Size(ctx).FindByID(ctx, sizeID)
+					if err != nil {
+						continue
+					}
+					sizes = append(sizes, product_aggregate.Size{
+						ID:   size.ID,
+						Name: size.Name,
+						Slug: size.Slug,
+					})
+				}
+				product.Sizes = sizes
+			}
+		}
 
-					// Convert image paths to attachments
-					if len(d.Images) > 0 {
-						product.Details[i].Images = make([]shared.Attachment, len(d.Images))
-						for j, imgPath := range d.Images {
-							product.Details[i].Images[j] = shared.NewAttachment(imgPath, "image")
-						}
+		// Update Tags
+		if cmd.Tags != nil {
+			if err := h.uow.Product(ctx).ClearTags(ctx, product); err != nil {
+				return fmt.Errorf("UpdateProductHandler: error clearing tags: %w", err)
+			}
+			if len(cmd.Tags) > 0 {
+				tags := make([]product_aggregate.Tag, 0, len(cmd.Tags))
+				for _, tagName := range cmd.Tags {
+					tag, err := h.uow.Tag(ctx).FindOrCreateByName(ctx, tagName)
+					if err != nil {
+						return fmt.Errorf("UpdateProductHandler: error finding/creating tag: %w", err)
+					}
+					tags = append(tags, product_aggregate.Tag{
+						ID:   tag.ID,
+						Name: tag.Name,
+						Slug: tag.Slug,
+					})
+				}
+				product.Tags = tags
+			}
+		}
+
+		// Update Features
+		if cmd.Features != nil {
+			if err := h.uow.Product(ctx).ClearFeatures(ctx, product); err != nil {
+				return fmt.Errorf("UpdateProductHandler: error clearing features: %w", err)
+			}
+			if len(cmd.Features) > 0 {
+				features := make([]product_aggregate.ProductFeature, len(cmd.Features))
+				for i, f := range cmd.Features {
+					features[i] = product_aggregate.ProductFeature{
+						ProductID: product.ID,
+						Feature:   f,
+						Order:     i,
 					}
 				}
-			} else {
-				product.Details = []product_aggregate.ProductDetail{}
+				product.Features = features
 			}
 		}
 
-		// Update Specs if provided
+		// Update Specs
 		if cmd.Specs != nil {
-			// Delete existing specs
 			if err := h.uow.Product(ctx).ClearSpecs(ctx, product); err != nil {
-				return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error deleting specs: %w", err)
+				return fmt.Errorf("UpdateProductHandler: error clearing specs: %w", err)
 			}
-
-			// Create new specs
 			if len(cmd.Specs) > 0 {
-				product.Specs = make([]product_aggregate.ProductSpec, len(cmd.Specs))
+				specs := make([]product_aggregate.ProductSpec, len(cmd.Specs))
 				for i, s := range cmd.Specs {
-					product.Specs[i] = product_aggregate.NewProductSpec(product.ID, s)
+					specs[i] = product_aggregate.ProductSpec{
+						ProductID: product.ID,
+						Key:       s.Key,
+						Value:     s.Value,
+						Order:     s.Order,
+					}
 				}
-			} else {
-				product.Specs = []product_aggregate.ProductSpec{}
+				product.Specs = specs
 			}
 		}
 
-		// Validate product using specification pattern
+		// Update Variants
+		if cmd.Variants != nil {
+			if err := h.uow.Product(ctx).ClearVariants(ctx, product); err != nil {
+				return fmt.Errorf("UpdateProductHandler: error clearing variants: %w", err)
+			}
+			if len(cmd.Variants) > 0 {
+				variants := make([]product_aggregate.ProductVariant, len(cmd.Variants))
+				for i, v := range cmd.Variants {
+					variants[i] = product_aggregate.ProductVariant{
+						ProductID: product.ID,
+						ColorID:   product_aggregate.ColorID(v.ColorID),
+						SizeID:    product_aggregate.SizeID(v.SizeID),
+						Stock:     v.Stock,
+					}
+				}
+				product.Variants = variants
+			}
+		}
+
+		// Update Images
+		if cmd.Images != nil {
+			if err := h.uow.Product(ctx).ClearImages(ctx, product); err != nil {
+				return fmt.Errorf("UpdateProductHandler: error clearing images: %w", err)
+			}
+			if len(cmd.Images) > 0 {
+				var images []product_aggregate.ProductImage
+				for _, img := range cmd.Images {
+					for order, url := range img.URLs {
+						images = append(images, product_aggregate.ProductImage{
+							ProductID: product.ID,
+							ColorID:   product_aggregate.ColorID(img.ColorID),
+							URL:       url,
+							SortOrder: order,
+						})
+					}
+				}
+				product.Images = images
+			}
+		}
+
+		// Validate
 		canBePublishedSpec := specification.NewProductCanBePublishedSpecification()
 		if !canBePublishedSpec.IsSatisfiedBy(product) {
-			return apperrors.Validation("", "Product must have a name, slug, category, and at least one detail with price to be updated")
+			return apperrors.Validation("", "Product must have title, slug, category, and price")
 		}
 
-		// Save product
+		// Save
 		if err := h.uow.Product(ctx).Modify(ctx, product); err != nil {
-			return fmt.Errorf("ProductCommandHandler.UpdateProductHandler error saving product: %w", err)
+			return fmt.Errorf("UpdateProductHandler: error saving product: %w", err)
 		}
 
-		// Emit ProductUpdatedEvent
+		// Emit event
 		productID := uint64(product.ID)
+		var categoryID uint64
+		if len(product.Categories) > 0 {
+			categoryID = uint64(product.Categories[0].ID)
+		}
 		product.AddEvent(&events.ProductUpdatedEvent{
 			ProductID:  &productID,
-			Name:       product.Name,
+			Name:       product.Title,
 			Slug:       product.Slug,
 			Brand:      product.Brand,
-			CategoryID: product.CategoryID,
+			CategoryID: categoryID,
 			Description: func() string {
 				if product.Description != nil {
 					return *product.Description

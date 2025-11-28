@@ -25,6 +25,7 @@ type PGUnitOfWork interface {
 	Category(ctx context.Context) productrepository.CategoryRepository
 	Tag(ctx context.Context) productrepository.TagRepository
 	Size(ctx context.Context) productrepository.SizeRepository
+	Color(ctx context.Context) productrepository.ColorRepository
 	Outbox(ctx context.Context) productrepository.OutboxRepository
 	Wishlist(ctx context.Context) productrepository.WishlistRepository
 
@@ -92,6 +93,13 @@ func (uow *pgUnitOfWork) Size(ctx context.Context) productrepository.SizeReposit
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "size", func(session *gorm.DB) adapter.SeenedRepository {
 		return productrepository.NewSizeRepository(session)
 	}).(productrepository.SizeRepository)
+}
+
+// Color returns the ColorRepository instance for the current transaction.
+func (uow *pgUnitOfWork) Color(ctx context.Context) productrepository.ColorRepository {
+	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "color", func(session *gorm.DB) adapter.SeenedRepository {
+		return productrepository.NewColorRepository(session)
+	}).(productrepository.ColorRepository)
 }
 
 // Outbox returns the OutboxRepository instance for the current transaction.

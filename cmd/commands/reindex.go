@@ -192,15 +192,20 @@ func reindexProducts() error {
 			productMap := product.ToMap()
 			productIDStr := strconv.FormatUint(uint64(product.ID), 10)
 
-			// Get category slug and name from database and update categories array
-			if product.CategoryID > 0 {
-				category, err := categoryRepo.FindByID(ctx, product.CategoryID)
-				if err == nil && category != nil {
-					// Update categories array in productMap
-					if categoriesRaw, ok := productMap["categories"].([]interface{}); ok && len(categoriesRaw) > 0 {
-						if categoryMap, ok := categoriesRaw[0].(map[string]interface{}); ok {
-							categoryMap["slug"] = category.Slug
-							categoryMap["name"] = category.Name
+			// Get category slugs and names from database and update categories array
+			if len(product.Categories) > 0 {
+				if categoriesRaw, ok := productMap["categories"].([]interface{}); ok {
+					for i, catRaw := range categoriesRaw {
+						if i >= len(product.Categories) {
+							break
+						}
+						if categoryMap, ok := catRaw.(map[string]interface{}); ok {
+							catID := uint64(product.Categories[i].ID)
+							category, err := categoryRepo.FindByID(ctx, catID)
+							if err == nil && category != nil {
+								categoryMap["slug"] = category.Slug
+								categoryMap["name"] = category.Name
+							}
 						}
 					}
 				}
