@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	accountrepository "shikposh-backend/internal/account/adapter/repository"
+	orderrepository "shikposh-backend/internal/orders/adapter/repository"
 	productrepository "shikposh-backend/internal/products/adapter/repository"
 	sellerrepository "shikposh-backend/internal/seller/adapter/repository"
 
@@ -28,6 +29,9 @@ type PGUnitOfWork interface {
 	Color(ctx context.Context) productrepository.ColorRepository
 	Outbox(ctx context.Context) productrepository.OutboxRepository
 	Wishlist(ctx context.Context) productrepository.WishlistRepository
+
+	// order repositories
+	Order(ctx context.Context) orderrepository.OrderRepository
 
 	// seller repositories
 	Seller(ctx context.Context) sellerrepository.SellerRepository
@@ -114,6 +118,13 @@ func (uow *pgUnitOfWork) Wishlist(ctx context.Context) productrepository.Wishlis
 	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "wishlist", func(session *gorm.DB) adapter.SeenedRepository {
 		return productrepository.NewWishlistRepository(session)
 	}).(productrepository.WishlistRepository)
+}
+
+// Order returns the OrderRepository instance for the current transaction.
+func (uow *pgUnitOfWork) Order(ctx context.Context) orderrepository.OrderRepository {
+	return uow.BaseUnitOfWork.GetOrCreateRepository(ctx, "order", func(session *gorm.DB) adapter.SeenedRepository {
+		return orderrepository.NewOrderRepository(session)
+	}).(orderrepository.OrderRepository)
 }
 
 // Seller returns the SellerRepository instance for the current transaction.

@@ -9,6 +9,7 @@ import (
 	"log"
 
 	accountMigrations "shikposh-backend/internal/account/adapter/migrations"
+	ordersMigrations "shikposh-backend/internal/orders/adapter/migrations"
 	productsMigrations "shikposh-backend/internal/products/adapter/migrations"
 	sellerMigrations "shikposh-backend/internal/seller/adapter/migrations"
 
@@ -38,9 +39,10 @@ func dbmateDB() *dbmate.DB {
 	}
 
 	dbConn := dbmate.New(u)
-	// Combine both account and products migrations
+	// Combine all module migrations
 	combinedFS := combineFS(
 		accountMigrations.Migrations,
+		ordersMigrations.Migrations,
 		productsMigrations.Migrations,
 		sellerMigrations.Migrations,
 	)

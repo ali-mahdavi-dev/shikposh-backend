@@ -20,6 +20,7 @@ import (
 
 	config "shikposh-backend/config"
 	"shikposh-backend/internal/account"
+	"shikposh-backend/internal/orders"
 	"shikposh-backend/internal/products"
 	"shikposh-backend/internal/seller"
 	mw "shikposh-backend/pkg/middleware"
@@ -337,6 +338,10 @@ func setupRoutes(components *serverComponents, cfg *config.Config) error {
 	// Bootstrap application routes
 	if err := account.Bootstrap(components.server, components.db, cfg, components.redis); err != nil {
 		return fmt.Errorf("failed to bootstrap account module: %w", err)
+	}
+
+	if err := orders.Bootstrap(components.server, components.db, cfg); err != nil {
+		return fmt.Errorf("failed to bootstrap orders module: %w", err)
 	}
 
 	if err := products.Bootstrap(components.server, components.db, cfg, components.elasticsearch); err != nil {
