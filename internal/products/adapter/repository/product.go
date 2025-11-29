@@ -65,6 +65,20 @@ func (r *productGormRepository) Model(ctx context.Context) *gorm.DB {
 	return r.db.WithContext(ctx).Model(&productaggregate.Product{})
 }
 
+// FindByID overrides BaseRepository FindByID to include preloads
+func (r *productGormRepository) FindByID(ctx context.Context, id uint64) (*productaggregate.Product, error) {
+	var product productaggregate.Product
+	err := r.withPreloads(r.Model(ctx)).Where("id = ?", id).First(&product).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, adapter.ErrEntityNotFound
+		}
+		return nil, err
+	}
+	r.SetSeen(&product)
+	return &product, nil
+}
+
 // withPreloads applies all necessary preloads to the query
 func (r *productGormRepository) withPreloads(query *gorm.DB) *gorm.DB {
 	return query.
