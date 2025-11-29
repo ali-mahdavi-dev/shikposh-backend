@@ -23,11 +23,13 @@ import (
 	commandmiddleware "github.com/ali-mahdavi-dev/shikposh-framework/service_layer/command_event_handler/command_middleware"
 	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/messagebus"
 
+	mw "shikposh-backend/pkg/middleware"
+
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
 
-func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsearch elasticsearchx.Connection) error {
+func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsearch elasticsearchx.Connection, middleware *mw.Middleware) error {
 	// Register products module error phrases
 	phrases.RegisterProductsPhrases()
 	eventCh := make(chan adapter.EventWithWaitGroup, 100)
@@ -51,6 +53,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 		categoryQueryHandler,
 		productHandler,
 		bus,
+		middleware,
 	)
 	wishlistHandler := handler.NewWishlistHandler(uow, bus)
 

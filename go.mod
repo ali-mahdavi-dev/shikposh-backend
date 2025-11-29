@@ -6,6 +6,7 @@ require (
 	github.com/ali-mahdavi-dev/shikposh-framework v0.0.0-20251120231738-3cf19f36974e
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/disintegration/imaging v1.6.2
+	github.com/go-resty/resty/v2 v2.17.0
 	github.com/gofiber/fiber/v3 v3.0.0-rc.2
 	github.com/gofiber/swagger/v2 v2.0.0-20251031122725-30bc194ed26e
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -59,7 +60,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.28.0 // indirect
-	github.com/go-resty/resty/v2 v2.17.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gofiber/schema v1.6.0 // indirect

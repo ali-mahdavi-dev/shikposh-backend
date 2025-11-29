@@ -11,6 +11,7 @@ import (
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 	"shikposh-backend/internal/products/query"
 	"shikposh-backend/internal/products/service_layer/command_handler"
+	"shikposh-backend/pkg/middleware"
 
 	httpapi "github.com/ali-mahdavi-dev/shikposh-framework/api/http"
 	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/messagebus"
@@ -33,6 +34,7 @@ type ProductHandler struct {
 	categoryQueryHandler *query.CategoryQueryHandler
 	productHandler       *command_handler.ProductCommandHandler
 	bus                  messagebus.MessageBus
+	middleware           *middleware.Middleware
 }
 
 func NewProductHandler(
@@ -40,12 +42,14 @@ func NewProductHandler(
 	categoryQueryHandler *query.CategoryQueryHandler,
 	productHandler *command_handler.ProductCommandHandler,
 	bus messagebus.MessageBus,
+	mw *middleware.Middleware,
 ) *ProductHandler {
 	return &ProductHandler{
 		productQueryHandler:  productQueryHandler,
 		categoryQueryHandler: categoryQueryHandler,
 		productHandler:       productHandler,
 		bus:                  bus,
+		middleware:           mw,
 	}
 }
 
@@ -62,14 +66,36 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 		// Categories
 		publicRoute.Get("/categories", p.GetAllCategories)
 		publicRoute.Get("/categories/:slug", p.GetCategoryBySlug)
+
+		// Colors, Sizes, and Tags
+		publicRoute.Get("/colors", p.GetAllColors)
+		publicRoute.Get("/sizes", p.GetAllSizes)
+		publicRoute.Get("/tags", p.GetAllTags)
 	}
 
 	// Admin routes for product CRUD
-	adminRoute := r.Group("/api/v1/admin")
-	{
-		adminRoute.Post("/products", p.CreateProduct)
-		adminRoute.Put("/products/:id", p.UpdateProduct)
-		adminRoute.Delete("/products/:id", p.DeleteProduct)
+	// Note: AuthMiddleware should already be registered globally
+	if p.middleware != nil {
+		adminRoute := r.Group("/api/v1/admin", p.middleware.SuperuserMiddleware())
+		{
+			adminRoute.Post("/tags", p.CreateTag)
+		}
+		// Admin routes (admin or superuser)
+		adminRouteWithAdmin := r.Group("/api/v1/admin", p.middleware.AdminMiddleware())
+		{
+			adminRouteWithAdmin.Post("/products", p.CreateProduct)
+			adminRouteWithAdmin.Put("/products/:id", p.UpdateProduct)
+			adminRouteWithAdmin.Delete("/products/:id", p.DeleteProduct)
+		}
+	} else {
+		// Fallback if middleware is not available (shouldn't happen in production)
+		adminRoute := r.Group("/api/v1/admin")
+		{
+			adminRoute.Post("/products", p.CreateProduct)
+			adminRoute.Put("/products/:id", p.UpdateProduct)
+			adminRoute.Delete("/products/:id", p.DeleteProduct)
+			adminRoute.Post("/tags", p.CreateTag)
+		}
 	}
 }
 
@@ -306,21 +332,126 @@ func (p *ProductHandler) GetCategoryBySlug(c fiber.Ctx) error {
 	return httpapi.ResSuccess(c, category)
 }
 
-// CreateProduct godoc
+// GetAllColors godoc
 //
-//	@Summary		Create a new product
-//	@Description	Creates a new product with all its details, features, and specs
-//	@Tags			products
+//	@Summary		Get all colors
+//	@Description	Retrieves all product colors
+//	@Tags			colors
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	httpapi.ResponseResult
+//	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/public/colors [get]
+func (p *ProductHandler) GetAllColors(c fiber.Ctx) error {
+	ctx := c.Context()
+
+	colors, err := p.productQueryHandler.GetAllColors(ctx)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResSuccess(c, colors)
+}
+
+// GetAllSizes godoc
+//
+//	@Summary		Get all sizes
+//	@Description	Retrieves all product sizes
+//	@Tags			sizes
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	httpapi.ResponseResult
+//	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/public/sizes [get]
+func (p *ProductHandler) GetAllSizes(c fiber.Ctx) error {
+	ctx := c.Context()
+
+	sizes, err := p.productQueryHandler.GetAllSizes(ctx)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResSuccess(c, sizes)
+}
+
+// GetAllTags godoc
+//
+//	@Summary		Get all tags
+//	@Description	Retrieves all product tags
+//	@Tags			tags
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	httpapi.ResponseResult
+//	@Failure		500	{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/public/tags [get]
+func (p *ProductHandler) GetAllTags(c fiber.Ctx) error {
+	ctx := c.Context()
+
+	tags, err := p.productQueryHandler.GetAllTags(ctx)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResSuccess(c, tags)
+}
+
+// CreateTagRequest represents the request body for creating a tag
+type CreateTagRequest struct {
+	Name string `json:"name" validate:"required,min=1,max=255"`
+}
+
+// CreateTag godoc
+//
+//	@Summary		Create a new tag
+//	@Description	Creates a new tag (superuser only)
+//	@Tags			tags
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			request	body	commands.CreateProduct	true	"CreateProduct request"
-//	@Success		204		"Product created successfully"
+//	@Param			request	body		CreateTagRequest	true	"CreateTag request"
+//	@Success		201		{object}	httpapi.ResponseResult	"Tag created successfully"
 //	@Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
 //	@Failure		401		{object}	httpapi.ResponseResult	"Unauthorized"
-//	@Failure		422		{object}	httpapi.ResponseResult	"Validation failed"
+//	@Failure		403		{object}	httpapi.ResponseResult	"Forbidden (superuser only)"
+//	@Failure		409		{object}	httpapi.ResponseResult	"Tag already exists"
 //	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
-//	@Router			/api/v1/admin/products [post]
+//	@Router			/api/v1/admin/tags [post]
+func (p *ProductHandler) CreateTag(c fiber.Ctx) error {
+	ctx := c.Context()
+
+	var req CreateTagRequest
+	if err := httpapi.ParseJSON(c, &req); err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	// Validate name
+	if req.Name == "" {
+		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "tag name is required"))
+	}
+
+	// Create tag using FindOrCreateByName (it will create if not exists)
+	tag, err := p.productQueryHandler.CreateTag(ctx, req.Name)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	c.Status(fiber.StatusCreated)
+	return httpapi.ResSuccess(c, tag)
+}
+
+// @Summary		Create a new product
+// @Description	Creates a new product with all its details, features, and specs
+// @Tags			products
+// @Accept			json
+// @Produce		json
+// @Security		BearerAuth
+// @Param			request	body	commands.CreateProduct	true	"CreateProduct request"
+// @Success		204		"Product created successfully"
+// @Failure		400		{object}	httpapi.ResponseResult	"Invalid request body"
+// @Failure		401		{object}	httpapi.ResponseResult	"Unauthorized"
+// @Failure		422		{object}	httpapi.ResponseResult	"Validation failed"
+// @Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
+// @Router			/api/v1/admin/products [post]
 func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
 	ctx := c.Context()
 	cmd := new(commands.CreateProduct)

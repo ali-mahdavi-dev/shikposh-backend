@@ -16,6 +16,7 @@ var ErrTagNotFound = errors.New("tag not found")
 
 type TagRepository interface {
 	adapter.BaseRepository[*product_aggregate.Tag]
+	GetAll(ctx context.Context) ([]*product_aggregate.Tag, error)
 	FindByName(ctx context.Context, name string) (*product_aggregate.Tag, error)
 	FindOrCreateByName(ctx context.Context, name string) (*product_aggregate.Tag, error)
 	FindByNames(ctx context.Context, names []string) ([]*product_aggregate.Tag, error)
@@ -35,6 +36,18 @@ func NewTagRepository(db *gorm.DB) TagRepository {
 
 func (r *tagGormRepository) Model(ctx context.Context) *gorm.DB {
 	return r.db.WithContext(ctx).Model(&product_aggregate.Tag{})
+}
+
+func (r *tagGormRepository) GetAll(ctx context.Context) ([]*product_aggregate.Tag, error) {
+	var tags []*product_aggregate.Tag
+	err := r.Model(ctx).Find(&tags).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range tags {
+		r.SetSeen(t)
+	}
+	return tags, nil
 }
 
 func (r *tagGormRepository) FindByName(ctx context.Context, name string) (*product_aggregate.Tag, error) {

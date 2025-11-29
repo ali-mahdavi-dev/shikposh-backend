@@ -56,16 +56,23 @@ func (m *Middleware) AuthMiddleware() fiber.Handler {
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			userID := cast.ToUint64(claims["user_id"])
 			ctx := c.Context()
-			user, err := m.Uow.Token(ctx).FindByUserID(ctx, entity.UserID(userID))
+			tokenEntity, err := m.Uow.Token(ctx).FindByUserID(ctx, entity.UserID(userID))
 			if err != nil {
 				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Token not found"})
 			}
-			if user.Token != tokenStr {
+			if tokenEntity.Token != tokenStr {
 				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Token mismatch"})
 			}
 
-			// Store user_id in Fiber context
+			// Get user from database and store in context to avoid repeated queries
+			user, err := m.Uow.User(ctx).FindByID(ctx, uint64(userID))
+			if err != nil {
+				return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "User not found"})
+			}
+
+			// Store user_id and user in Fiber context for later use
 			c.Locals("user_id", userID)
+			c.Locals("user", user)
 		} else {
 			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token claims"})
 		}

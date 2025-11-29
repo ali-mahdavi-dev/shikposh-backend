@@ -107,11 +107,13 @@ func (u *UserController) Register(c fiber.Ctx) error {
 
 	if result.User != nil {
 		response["user"] = map[string]interface{}{
-			"id":         result.User.ID,
-			"first_name": result.User.FirstName,
-			"last_name":  result.User.LastName,
-			"email":      result.User.Email,
-			"phone":      result.User.Phone,
+			"id":            result.User.ID,
+			"first_name":    result.User.FirstName,
+			"last_name":     result.User.LastName,
+			"email":         result.User.Email,
+			"phone":         result.User.Phone,
+			"is_admin":      result.User.IsAdmin,
+			"is_superuser":  result.User.IsSuperuser,
 		}
 	}
 
@@ -229,11 +231,13 @@ func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 
 	if result.User != nil {
 		response["user"] = map[string]interface{}{
-			"id":         result.User.ID,
-			"first_name": result.User.FirstName,
-			"last_name":  result.User.LastName,
-			"email":      result.User.Email,
-			"phone":      result.User.Phone,
+			"id":            result.User.ID,
+			"first_name":    result.User.FirstName,
+			"last_name":     result.User.LastName,
+			"email":         result.User.Email,
+			"phone":         result.User.Phone,
+			"is_admin":      result.User.IsAdmin,
+			"is_superuser":  result.User.IsSuperuser,
 		}
 	}
 

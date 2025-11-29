@@ -20,6 +20,7 @@ import (
 
 	config "shikposh-backend/config"
 	"shikposh-backend/internal/account"
+	"shikposh-backend/internal/admin"
 	"shikposh-backend/internal/orders"
 	"shikposh-backend/internal/products"
 	"shikposh-backend/internal/seller"
@@ -54,6 +55,7 @@ type serverComponents struct {
 	tracer        *tracing.Tracer
 	elasticsearch elasticsearchx.Connection
 	redis         redisx.Connection
+	middleware    *mw.Middleware
 }
 
 func startServer(cfg *config.Config) error {
@@ -320,6 +322,9 @@ func setupMiddleware(components *serverComponents, cfg *config.Config) error {
 		components.db,
 	)
 
+	// Store middleware in components
+	components.middleware = middleware
+
 	// Register tracing middleware (if enabled)
 	if components.tracer != nil && cfg.Jaeger.Enabled {
 		components.server.Use(frameworkmiddleware.TracingMiddleware())
@@ -344,12 +349,16 @@ func setupRoutes(components *serverComponents, cfg *config.Config) error {
 		return fmt.Errorf("failed to bootstrap orders module: %w", err)
 	}
 
-	if err := products.Bootstrap(components.server, components.db, cfg, components.elasticsearch); err != nil {
+	if err := products.Bootstrap(components.server, components.db, cfg, components.elasticsearch, components.middleware); err != nil {
 		return fmt.Errorf("failed to bootstrap products module: %w", err)
 	}
 
 	if err := seller.Bootstrap(components.server, components.db, cfg); err != nil {
 		return fmt.Errorf("failed to bootstrap seller module: %w", err)
+	}
+
+	if err := admin.Bootstrap(components.server, components.db, cfg); err != nil {
+		return fmt.Errorf("failed to bootstrap admin module: %w", err)
 	}
 
 	return nil
