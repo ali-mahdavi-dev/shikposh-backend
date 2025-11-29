@@ -5,41 +5,75 @@ import (
 	"fmt"
 
 	"shikposh-backend/internal/products/adapter/repository"
+	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
 )
 
-// GetProductBySlugAsMap returns product from Elasticsearch as map (no database lookup)
+// GetProductBySlugAsMap returns product from Elasticsearch as map, with fallback to database
 func (h *ProductQueryHandler) GetProductBySlugAsMap(ctx context.Context, slug string) (map[string]interface{}, error) {
-	if h.elasticsearch == nil {
-		return nil, fmt.Errorf("elasticsearch connection is not initialized")
-	}
-
 	if slug == "" {
 		return nil, fmt.Errorf("product slug cannot be empty")
 	}
 
-	searchQuery := map[string]interface{}{
-		"query": map[string]interface{}{
-			"term": map[string]interface{}{
-				"slug": slug,
+	// Try Elasticsearch first if available
+	if h.elasticsearch != nil {
+		searchQuery := map[string]interface{}{
+			"query": map[string]interface{}{
+				"term": map[string]interface{}{
+					"slug": slug,
+				},
 			},
-		},
-		"size": 1,
+			"size": 1,
+		}
+
+		maps, err := h.executeElasticsearchQueryAsMaps(ctx, searchQuery)
+		if err == nil && len(maps) > 0 {
+			logging.Debug("Product retrieved from Elasticsearch by slug as map").
+				WithString("slug", slug).
+				Log()
+			return maps[0], nil
+		}
+
+		// Log Elasticsearch error but continue to database fallback
+		if err != nil {
+			logging.Warn("Elasticsearch query failed, falling back to database").
+				WithString("slug", slug).
+				WithError(err).
+				Log()
+		} else {
+			logging.Debug("Product not found in Elasticsearch, falling back to database").
+				WithString("slug", slug).
+				Log()
+		}
+	} else {
+		logging.Debug("Elasticsearch not available, using database").
+			WithString("slug", slug).
+			Log()
 	}
 
-	maps, err := h.executeElasticsearchQueryAsMaps(ctx, searchQuery)
+	// Fallback to database
+	var product *productaggregate.Product
+	err := h.uow.Do(ctx, func(ctx context.Context) error {
+		var err error
+		product, err = h.uow.Product(ctx).FindBySlug(ctx, slug)
+		return err
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to search product by slug from elasticsearch (slug=%s): %w", slug, err)
+		if err == repository.ErrProductNotFound {
+			return nil, repository.ErrProductNotFound
+		}
+		return nil, fmt.Errorf("failed to get product from database (slug=%s): %w", slug, err)
 	}
 
-	if len(maps) == 0 {
+	if product == nil {
 		return nil, repository.ErrProductNotFound
 	}
 
-	logging.Debug("Product retrieved from Elasticsearch by slug as map").
+	logging.Debug("Product retrieved from database by slug as map").
 		WithString("slug", slug).
 		Log()
 
-	return maps[0], nil
+	return product.ToMap(), nil
 }
