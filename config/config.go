@@ -21,6 +21,7 @@ type Config struct {
 	Otp           OtpConfig
 	JWT           JWTConfig
 	Jaeger        JaegerConfig
+	ZarinPal      ZarinPalConfig
 }
 
 type ServerConfig struct {
@@ -101,6 +102,12 @@ type ElasticsearchConfig struct {
 	Port     string
 	Username string
 	Password string
+}
+
+type ZarinPalConfig struct {
+	MerchantID  string
+	CallbackURL string
+	Sandbox     bool
 }
 
 func GetConfig() *Config {

@@ -13,13 +13,14 @@ type OrderID uint64
 type OrderStatus string
 
 const (
-	OrderStatusPending    OrderStatus = "pending"
-	OrderStatusProcessing OrderStatus = "processing"
-	OrderStatusConfirmed  OrderStatus = "confirmed"
-	OrderStatusShipped    OrderStatus = "shipped"
-	OrderStatusDelivered  OrderStatus = "delivered"
-	OrderStatusCancelled  OrderStatus = "cancelled"
-	OrderStatusRefunded   OrderStatus = "refunded"
+	OrderStatusPending          OrderStatus = "pending"
+	OrderStatusPaymentConfirmed OrderStatus = "payment_confirmed"
+	OrderStatusProcessing       OrderStatus = "processing"
+	OrderStatusConfirmed        OrderStatus = "confirmed"
+	OrderStatusShipped          OrderStatus = "shipped"
+	OrderStatusDelivered        OrderStatus = "delivered"
+	OrderStatusCancelled        OrderStatus = "cancelled"
+	OrderStatusRefunded         OrderStatus = "refunded"
 )
 
 type PaymentStatus string
@@ -39,7 +40,7 @@ type Order struct {
 	DeletedAt      gorm.DeletedAt `gorm:"index"`
 	OrderNumber    string         `json:"order_number" gorm:"column:order_number;uniqueIndex;not null"`
 	UserID         uint64         `json:"user_id" gorm:"column:user_id;not null;index"`
-	Status         OrderStatus    `json:"status" gorm:"column:status;type:varchar(20);default:'pending'"`
+	Status         OrderStatus    `json:"status" gorm:"column:status;type:varchar(20);default:'payment_confirmed'"`
 	TotalAmount    int64          `json:"total_amount" gorm:"column:total_amount;not null"`
 	DiscountAmount int64          `json:"discount_amount" gorm:"column:discount_amount;default:0"`
 	ShippingCost   int64          `json:"shipping_cost" gorm:"column:shipping_cost;default:0"`

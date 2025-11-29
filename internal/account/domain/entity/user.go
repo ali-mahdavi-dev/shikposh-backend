@@ -24,6 +24,8 @@ type User struct {
 	Email            string         `json:"email" gorm:"column:email"`
 	Phone            string         `json:"phone" gorm:"column:phone;uniqueIndex"`
 	Password         string         `json:"password" gorm:"column:password"`
+	IsSuperuser      bool           `json:"is_superuser" gorm:"column:is_superuser;default:false"`
+	IsAdmin          bool           `json:"is_admin" gorm:"column:is_admin;default:false"`
 }
 
 func NewUser(

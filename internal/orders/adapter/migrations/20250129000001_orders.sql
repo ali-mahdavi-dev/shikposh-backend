@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS orders (
     deleted_at TIMESTAMP,
     order_number VARCHAR(50) UNIQUE NOT NULL,
     user_id BIGINT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    status VARCHAR(20) NOT NULL DEFAULT 'payment_confirmed',
     total_amount BIGINT NOT NULL,
     discount_amount BIGINT NOT NULL DEFAULT 0,
     shipping_cost BIGINT NOT NULL DEFAULT 0,

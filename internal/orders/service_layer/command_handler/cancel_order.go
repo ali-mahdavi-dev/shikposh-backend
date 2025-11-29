@@ -21,7 +21,7 @@ func (h *OrderCommandHandler) CancelOrderHandler(ctx context.Context, orderID ui
 		}
 
 		// Check if order can be cancelled
-		if order.Status != entity.OrderStatusPending && order.Status != entity.OrderStatusProcessing {
+		if order.Status != entity.OrderStatusPaymentConfirmed && order.Status != entity.OrderStatusProcessing {
 			return errors.New("order cannot be cancelled in current status")
 		}
 

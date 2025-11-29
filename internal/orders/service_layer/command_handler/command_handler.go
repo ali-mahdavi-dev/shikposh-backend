@@ -13,3 +13,7 @@ func NewOrderCommandHandler(uow unitofwork.PGUnitOfWork) *OrderCommandHandler {
 		uow: uow,
 	}
 }
+
+func (h *OrderCommandHandler) GetUOW() unitofwork.PGUnitOfWork {
+	return h.uow
+}
