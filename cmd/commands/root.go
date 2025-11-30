@@ -34,6 +34,7 @@ func init() {
 	rootCmd.AddCommand(importFromElasticCmd())
 	rootCmd.AddCommand(searchElasticCmd())
 	rootCmd.AddCommand(testCategoryQueryCmd())
+	rootCmd.AddCommand(cleanupElasticCmd())
 }
 
 func Execute() {

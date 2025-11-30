@@ -88,11 +88,8 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 		}
 
 		// Update Categories (M:N)
+		// Don't clear here - let Modify handle clearing and appending
 		if cmd.Categories != nil {
-			if err := h.uow.Product(ctx).ClearCategories(ctx, product); err != nil {
-				return fmt.Errorf("UpdateProductHandler: error clearing categories: %w", err)
-			}
-
 			if len(cmd.Categories) > 0 {
 				categories := make([]entity.Category, 0, len(cmd.Categories))
 				for _, catID := range cmd.Categories {
@@ -107,14 +104,14 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 					})
 				}
 				product.Categories = categories
+			} else {
+				product.Categories = []entity.Category{}
 			}
 		}
 
 		// Update Colors
+		// Don't clear here - let Modify handle clearing and appending
 		if cmd.Colors != nil {
-			if err := h.uow.Product(ctx).ClearColors(ctx, product); err != nil {
-				return fmt.Errorf("UpdateProductHandler: error clearing colors: %w", err)
-			}
 			if len(cmd.Colors) > 0 {
 				colors := make([]product_aggregate.Color, 0, len(cmd.Colors))
 				for _, colorID := range cmd.Colors {
@@ -130,14 +127,14 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 					})
 				}
 				product.Colors = colors
+			} else {
+				product.Colors = []product_aggregate.Color{}
 			}
 		}
 
 		// Update Sizes
+		// Don't clear here - let Modify handle clearing and appending
 		if cmd.Sizes != nil {
-			if err := h.uow.Product(ctx).ClearSizes(ctx, product); err != nil {
-				return fmt.Errorf("UpdateProductHandler: error clearing sizes: %w", err)
-			}
 			if len(cmd.Sizes) > 0 {
 				sizes := make([]product_aggregate.Size, 0, len(cmd.Sizes))
 				for _, sizeID := range cmd.Sizes {
@@ -152,14 +149,14 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 					})
 				}
 				product.Sizes = sizes
+			} else {
+				product.Sizes = []product_aggregate.Size{}
 			}
 		}
 
 		// Update Tags
+		// Don't clear here - let Modify handle clearing and appending
 		if cmd.Tags != nil {
-			if err := h.uow.Product(ctx).ClearTags(ctx, product); err != nil {
-				return fmt.Errorf("UpdateProductHandler: error clearing tags: %w", err)
-			}
 			if len(cmd.Tags) > 0 {
 				tags := make([]product_aggregate.Tag, 0, len(cmd.Tags))
 				for _, tagName := range cmd.Tags {
@@ -174,14 +171,14 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 					})
 				}
 				product.Tags = tags
+			} else {
+				product.Tags = []product_aggregate.Tag{}
 			}
 		}
 
 		// Update Features
+		// Don't clear here - let Modify handle clearing and inserting
 		if cmd.Features != nil {
-			if err := h.uow.Product(ctx).ClearFeatures(ctx, product); err != nil {
-				return fmt.Errorf("UpdateProductHandler: error clearing features: %w", err)
-			}
 			if len(cmd.Features) > 0 {
 				features := make([]product_aggregate.ProductFeature, len(cmd.Features))
 				for i, f := range cmd.Features {
@@ -192,14 +189,14 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 					}
 				}
 				product.Features = features
+			} else {
+				product.Features = []product_aggregate.ProductFeature{}
 			}
 		}
 
 		// Update Specs
+		// Don't clear here - let Modify handle clearing and inserting
 		if cmd.Specs != nil {
-			if err := h.uow.Product(ctx).ClearSpecs(ctx, product); err != nil {
-				return fmt.Errorf("UpdateProductHandler: error clearing specs: %w", err)
-			}
 			if len(cmd.Specs) > 0 {
 				specs := make([]product_aggregate.ProductSpec, len(cmd.Specs))
 				for i, s := range cmd.Specs {
@@ -211,14 +208,14 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 					}
 				}
 				product.Specs = specs
+			} else {
+				product.Specs = []product_aggregate.ProductSpec{}
 			}
 		}
 
 		// Update Variants
+		// Don't clear here - let Modify handle clearing and inserting
 		if cmd.Variants != nil {
-			if err := h.uow.Product(ctx).ClearVariants(ctx, product); err != nil {
-				return fmt.Errorf("UpdateProductHandler: error clearing variants: %w", err)
-			}
 			if len(cmd.Variants) > 0 {
 				variants := make([]product_aggregate.ProductVariant, len(cmd.Variants))
 				for i, v := range cmd.Variants {
@@ -230,14 +227,14 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 					}
 				}
 				product.Variants = variants
+			} else {
+				product.Variants = []product_aggregate.ProductVariant{}
 			}
 		}
 
 		// Update Images
+		// Don't clear here - let Modify handle clearing and inserting
 		if cmd.Images != nil {
-			if err := h.uow.Product(ctx).ClearImages(ctx, product); err != nil {
-				return fmt.Errorf("UpdateProductHandler: error clearing images: %w", err)
-			}
 			if len(cmd.Images) > 0 {
 				var images []product_aggregate.ProductImage
 				for _, img := range cmd.Images {
@@ -251,6 +248,8 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 					}
 				}
 				product.Images = images
+			} else {
+				product.Images = []product_aggregate.ProductImage{}
 			}
 		}
 

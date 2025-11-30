@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"shikposh-backend/internal/products/domain/entity"
 	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
@@ -10,6 +11,7 @@ import (
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var ErrProductNotFound = errors.New("product not found")
@@ -18,6 +20,7 @@ type ProductRepository interface {
 	adapter.BaseRepository[*productaggregate.Product]
 	GetAll(ctx context.Context) ([]*productaggregate.Product, error)
 	FindBySlug(ctx context.Context, slug string) (*productaggregate.Product, error)
+	FindByIDIncludingDeleted(ctx context.Context, id uint64) (*productaggregate.Product, error)
 	FindByCategoryID(ctx context.Context, categoryID entity.CategoryID) ([]*productaggregate.Product, error)
 	FindByCategorySlug(ctx context.Context, categorySlug string) ([]*productaggregate.Product, error)
 	FindFeatured(ctx context.Context) ([]*productaggregate.Product, error)
@@ -72,6 +75,21 @@ func (r *productGormRepository) FindByID(ctx context.Context, id uint64) (*produ
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, adapter.ErrEntityNotFound
+		}
+		return nil, err
+	}
+	r.SetSeen(&product)
+	return &product, nil
+}
+
+// FindByIDIncludingDeleted finds a product by ID including soft deleted ones
+// This is useful for delete operations where we need to find the product even if it's already soft deleted
+func (r *productGormRepository) FindByIDIncludingDeleted(ctx context.Context, id uint64) (*productaggregate.Product, error) {
+	var product productaggregate.Product
+	err := r.withPreloads(r.Model(ctx)).Unscoped().Where("id = ?", id).First(&product).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProductNotFound
 		}
 		return nil, err
 	}
@@ -291,11 +309,17 @@ func (r *productGormRepository) Filter(ctx context.Context, filters ProductFilte
 }
 
 func (r *productGormRepository) ClearFeatures(ctx context.Context, product *productaggregate.Product) error {
-	return r.db.WithContext(ctx).Model(product).Association("Features").Clear()
+	// Use explicit delete to avoid GORM association issues
+	return r.db.WithContext(ctx).
+		Where("product_id = ?", product.ID).
+		Delete(&productaggregate.ProductFeature{}).Error
 }
 
 func (r *productGormRepository) ClearSpecs(ctx context.Context, product *productaggregate.Product) error {
-	return r.db.WithContext(ctx).Model(product).Association("Specs").Clear()
+	// Use explicit delete to avoid GORM association issues
+	return r.db.WithContext(ctx).
+		Where("product_id = ?", product.ID).
+		Delete(&productaggregate.ProductSpec{}).Error
 }
 
 func (r *productGormRepository) ClearTags(ctx context.Context, product *productaggregate.Product) error {
@@ -311,11 +335,17 @@ func (r *productGormRepository) ClearColors(ctx context.Context, product *produc
 }
 
 func (r *productGormRepository) ClearVariants(ctx context.Context, product *productaggregate.Product) error {
-	return r.db.WithContext(ctx).Model(product).Association("Variants").Clear()
+	// Use explicit delete to avoid GORM association issues
+	return r.db.WithContext(ctx).
+		Where("product_id = ?", product.ID).
+		Delete(&productaggregate.ProductVariant{}).Error
 }
 
 func (r *productGormRepository) ClearImages(ctx context.Context, product *productaggregate.Product) error {
-	return r.db.WithContext(ctx).Model(product).Association("Images").Clear()
+	// Use explicit delete to avoid GORM association issues
+	return r.db.WithContext(ctx).
+		Where("product_id = ?", product.ID).
+		Delete(&productaggregate.ProductImage{}).Error
 }
 
 func (r *productGormRepository) ClearCategories(ctx context.Context, product *productaggregate.Product) error {
@@ -326,4 +356,178 @@ func (r *productGormRepository) ClearAllAssociations(ctx context.Context, produc
 	return r.db.WithContext(ctx).Model(product).
 		Select("Features", "Specs", "Tags", "Sizes", "Colors", "Variants", "Images", "Categories").
 		Delete(product).Error
+}
+
+// Remove overrides BaseRepository Remove to properly handle soft delete with WHERE condition
+func (r *productGormRepository) Remove(ctx context.Context, product *productaggregate.Product, softDelete bool) error {
+	r.SetSeen(product)
+	if softDelete {
+		now := time.Now()
+		// Use Model with Where to ensure WHERE condition is set
+		return r.db.WithContext(ctx).
+			Model(product).
+			Where("id = ?", product.ID).
+			Update("deleted_at", &now).Error
+	}
+
+	// Hard delete
+	return r.db.WithContext(ctx).
+		Where("id = ?", product.ID).
+		Delete(product).Error
+}
+
+// Modify overrides BaseRepository Modify to properly handle product updates with associations
+// We need to update the product first, then handle associations separately to avoid duplicate key errors
+func (r *productGormRepository) Modify(ctx context.Context, product *productaggregate.Product) error {
+	// Save associations separately to avoid issues
+	variants := product.Variants
+	features := product.Features
+	specs := product.Specs
+	images := product.Images
+	categories := product.Categories
+	colors := product.Colors
+	sizes := product.Sizes
+	tags := product.Tags
+
+	// Clear associations from product before saving
+	product.Variants = nil
+	product.Features = nil
+	product.Specs = nil
+	product.Images = nil
+	product.Categories = nil
+	product.Colors = nil
+	product.Sizes = nil
+	product.Tags = nil
+
+	// Update product fields first (without associations)
+	err := r.db.WithContext(ctx).Model(product).Updates(map[string]interface{}{
+		"title":             product.Title,
+		"slug":              product.Slug,
+		"brand":             product.Brand,
+		"description":       product.Description,
+		"short_description": product.ShortDescription,
+		"thumbnail":         product.Thumbnail,
+		"discount":          product.Discount,
+		"stock":             product.Stock,
+		"origin_price":      product.OriginPrice,
+		"price":             product.Price,
+		"is_new":            product.IsNew,
+		"is_featured":       product.IsFeatured,
+		"updated_at":        product.UpdatedAt,
+	}).Error
+	if err != nil {
+		return err
+	}
+
+	// Restore associations
+	product.Variants = variants
+	product.Features = features
+	product.Specs = specs
+	product.Images = images
+	product.Categories = categories
+	product.Colors = colors
+	product.Sizes = sizes
+	product.Tags = tags
+
+	// Save associations - clear first to ensure clean state, then insert
+	// We clear here even though handler cleared, because we're in the same transaction
+	// and want to ensure no duplicates
+	if err := r.ClearVariants(ctx, product); err != nil {
+		return err
+	}
+	if err := r.ClearFeatures(ctx, product); err != nil {
+		return err
+	}
+	if err := r.ClearSpecs(ctx, product); err != nil {
+		return err
+	}
+	if err := r.ClearImages(ctx, product); err != nil {
+		return err
+	}
+
+	// Now insert new associations
+	// Use ON CONFLICT DO UPDATE to handle duplicates gracefully
+	if len(variants) > 0 {
+		for i := range variants {
+			variants[i].ProductID = product.ID
+		}
+		// Use Clauses to add ON CONFLICT handling
+		if err := r.db.WithContext(ctx).
+			Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "product_id"}, {Name: "color_id"}, {Name: "size_id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"stock"}),
+			}).
+			Create(&variants).Error; err != nil {
+			return err
+		}
+	}
+	if len(features) > 0 {
+		for i := range features {
+			features[i].ProductID = product.ID
+		}
+		if err := r.db.WithContext(ctx).Create(&features).Error; err != nil {
+			return err
+		}
+	}
+	if len(specs) > 0 {
+		for i := range specs {
+			specs[i].ProductID = product.ID
+		}
+		// Use ON CONFLICT DO UPDATE for specs (unique constraint on product_id, key)
+		if err := r.db.WithContext(ctx).
+			Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "product_id"}, {Name: "key"}},
+				DoUpdates: clause.AssignmentColumns([]string{"value", "order"}),
+			}).
+			Create(&specs).Error; err != nil {
+			return err
+		}
+	}
+	if len(images) > 0 {
+		for i := range images {
+			images[i].ProductID = product.ID
+		}
+		if err := r.db.WithContext(ctx).Create(&images).Error; err != nil {
+			return err
+		}
+	}
+	// For many-to-many relationships, clear first then append
+	// Clear all many-to-many associations
+	if err := r.ClearCategories(ctx, product); err != nil {
+		return err
+	}
+	if err := r.ClearColors(ctx, product); err != nil {
+		return err
+	}
+	if err := r.ClearSizes(ctx, product); err != nil {
+		return err
+	}
+	if err := r.ClearTags(ctx, product); err != nil {
+		return err
+	}
+
+	// Now append new many-to-many associations
+	if len(categories) > 0 {
+		if err := r.db.WithContext(ctx).Model(product).Association("Categories").Append(categories); err != nil {
+			return err
+		}
+	}
+	if len(colors) > 0 {
+		if err := r.db.WithContext(ctx).Model(product).Association("Colors").Append(colors); err != nil {
+			return err
+		}
+	}
+	if len(sizes) > 0 {
+		if err := r.db.WithContext(ctx).Model(product).Association("Sizes").Append(sizes); err != nil {
+			return err
+		}
+	}
+	if len(tags) > 0 {
+		if err := r.db.WithContext(ctx).Model(product).Association("Tags").Append(tags); err != nil {
+			return err
+		}
+	}
+
+	r.SetSeen(product)
+	return nil
 }

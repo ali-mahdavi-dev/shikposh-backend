@@ -83,6 +83,7 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 		// Admin routes (admin or superuser)
 		adminRouteWithAdmin := r.Group("/api/v1/admin", p.middleware.AdminMiddleware())
 		{
+			adminRouteWithAdmin.Get("/products", p.GetAllProductsAdmin)
 			adminRouteWithAdmin.Post("/products", p.CreateProduct)
 			adminRouteWithAdmin.Put("/products/:id", p.UpdateProduct)
 			adminRouteWithAdmin.Delete("/products/:id", p.DeleteProduct)
@@ -91,6 +92,7 @@ func (p *ProductHandler) RegisterRoutes(r fiber.Router) {
 		// Fallback if middleware is not available (shouldn't happen in production)
 		adminRoute := r.Group("/api/v1/admin")
 		{
+			adminRoute.Get("/products", p.GetAllProductsAdmin)
 			adminRoute.Post("/products", p.CreateProduct)
 			adminRoute.Put("/products/:id", p.UpdateProduct)
 			adminRoute.Delete("/products/:id", p.DeleteProduct)
@@ -437,6 +439,29 @@ func (p *ProductHandler) CreateTag(c fiber.Ctx) error {
 
 	c.Status(fiber.StatusCreated)
 	return httpapi.ResSuccess(c, tag)
+}
+
+// GetAllProductsAdmin godoc
+//
+//	@Summary		Get all products (Admin)
+//	@Description	Retrieves all products for admin panel (no filters applied)
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200		{object}	httpapi.ResponseResult
+//	@Failure		401		{object}	httpapi.ResponseResult	"Unauthorized"
+//	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
+//	@Router			/api/v1/admin/products [get]
+func (p *ProductHandler) GetAllProductsAdmin(c fiber.Ctx) error {
+	ctx := c.Context()
+
+	products, err := p.productQueryHandler.GetAllProductsAsMaps(ctx)
+	if err != nil {
+		return httpapi.ResError(c, err)
+	}
+
+	return httpapi.ResSuccess(c, products)
 }
 
 // @Summary		Create a new product
