@@ -61,3 +61,9 @@ jaeger:
   serviceName: shikposh-backend
   environment: docker
   samplingRate: 1.0
+debugger:
+  enabled: false
+  host: localhost
+  port: 2345
+  headless: false
+  apiKey: ""

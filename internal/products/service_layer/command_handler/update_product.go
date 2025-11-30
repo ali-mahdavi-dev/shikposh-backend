@@ -10,7 +10,6 @@ import (
 	"shikposh-backend/internal/products/domain/commands"
 	"shikposh-backend/internal/products/domain/entity"
 	"shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/internal/products/domain/events"
 	"shikposh-backend/internal/products/domain/specification"
 
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
@@ -261,30 +260,13 @@ func (h *ProductCommandHandler) UpdateProductHandler(ctx context.Context, cmd *c
 			return apperrors.Validation("", "Product must have title, slug, category, and price")
 		}
 
-		// Save
+		// Emit event BEFORE saving (so Unit of Work can collect it)
+		product.EmitUpdatedEvent()
+
+		// Save (this will add product to Seen() and events will be collected)
 		if err := h.uow.Product(ctx).Modify(ctx, product); err != nil {
 			return fmt.Errorf("UpdateProductHandler: error saving product: %w", err)
 		}
-
-		// Emit event
-		productID := uint64(product.ID)
-		var categoryID uint64
-		if len(product.Categories) > 0 {
-			categoryID = uint64(product.Categories[0].ID)
-		}
-		product.AddEvent(&events.ProductUpdatedEvent{
-			ProductID:  &productID,
-			Name:       product.Title,
-			Slug:       product.Slug,
-			Brand:      product.Brand,
-			CategoryID: categoryID,
-			Description: func() string {
-				if product.Description != nil {
-					return *product.Description
-				}
-				return ""
-			}(),
-		})
 
 		return nil
 	})

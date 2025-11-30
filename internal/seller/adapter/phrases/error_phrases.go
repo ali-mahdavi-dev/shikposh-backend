@@ -11,8 +11,7 @@ const (
 
 // RegisterSellerPhrases registers error phrases for the seller module
 func RegisterSellerPhrases() {
-	registry := phrases.GetRegistry()
-	registry.Register(map[phrases.Language]map[phrases.MessagePhrase]string{
+	phrases.GetRegistry().Register(map[phrases.Language]map[phrases.MessagePhrase]string{
 		phrases.Fa: {
 			SellerNotFound: "فروشنده پیدا نشد",
 		},

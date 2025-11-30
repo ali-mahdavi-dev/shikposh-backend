@@ -105,13 +105,14 @@ func (h *ProductQueryHandler) buildElasticsearchQueryWithFilters(filters reposit
 	}
 
 	// Add category filter using nested query on categories.slug
+	// Use term query with .keyword for exact match on keyword fields (slug is defined as keyword type)
 	if categorySlug != nil && *categorySlug != "" {
 		boolQuery["filter"] = append(boolQuery["filter"].([]interface{}), map[string]interface{}{
 			"nested": map[string]interface{}{
 				"path": "categories",
 				"query": map[string]interface{}{
 					"term": map[string]interface{}{
-						"categories.slug": *categorySlug,
+						"categories.slug.keyword": *categorySlug,
 					},
 				},
 			},
@@ -309,13 +310,14 @@ func (h *ProductQueryHandler) searchInElasticsearchWithFilters(ctx context.Conte
 	}
 
 	// Add category filter using nested query on categories.slug
+	// Use term query with .keyword for exact match on keyword fields (slug is defined as keyword type)
 	if categorySlug != nil && *categorySlug != "" {
 		boolQuery["filter"] = append(boolQuery["filter"].([]interface{}), map[string]interface{}{
 			"nested": map[string]interface{}{
 				"path": "categories",
 				"query": map[string]interface{}{
 					"term": map[string]interface{}{
-						"categories.slug": *categorySlug,
+						"categories.slug.keyword": *categorySlug,
 					},
 				},
 			},

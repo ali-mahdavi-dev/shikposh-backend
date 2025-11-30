@@ -22,6 +22,7 @@ type Config struct {
 	JWT           JWTConfig
 	Jaeger        JaegerConfig
 	ZarinPal      ZarinPalConfig
+	Debugger      DebuggerConfig
 }
 
 type ServerConfig struct {
@@ -108,6 +109,14 @@ type ZarinPalConfig struct {
 	MerchantID  string
 	CallbackURL string
 	Sandbox     bool
+}
+
+type DebuggerConfig struct {
+	Enabled  bool
+	Host     string
+	Port     string
+	Headless bool
+	APIKey   string
 }
 
 func GetConfig() *Config {

@@ -67,3 +67,9 @@ zarinpal:
   merchantID: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   callbackURL: "http://localhost:3000/payment/callback"
   sandbox: true
+debugger:
+  enabled: true
+  host: localhost
+  port: 2345
+  headless: false
+  apiKey: ""

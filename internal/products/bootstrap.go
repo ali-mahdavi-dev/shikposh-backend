@@ -45,7 +45,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 	wishlistCommandHandler := command_handler.NewWishlistCommandHandler(uow)
 
 	// Initialize event handlers
-	productEventHandler := event_handler.NewProductEventHandler(uow)
+	productEventHandler := event_handler.NewProductEventHandler(uow, elasticsearch)
 
 	// Initialize handler
 	productHTTPHandler := handler.NewProductHandler(

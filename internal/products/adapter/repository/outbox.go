@@ -49,7 +49,7 @@ func convertToFramework(event *entity.OutboxEvent) *frameworkoutbox.OutboxEvent 
 		EventType:     event.EventType,
 		AggregateType: event.AggregateType,
 		AggregateID:   event.AggregateID,
-		Payload:       event.Payload,
+		Payload:       frameworkoutbox.JSONBMap(map[string]interface{}(event.Payload)), // Convert entity JSONBMap to framework JSONBMap
 		Status:        frameworkoutbox.OutboxEventStatus(event.Status),
 		RetryCount:    event.RetryCount,
 		MaxRetries:    event.MaxRetries,
@@ -68,7 +68,7 @@ func convertFromFramework(event *frameworkoutbox.OutboxEvent) *entity.OutboxEven
 		EventType:     event.EventType,
 		AggregateType: event.AggregateType,
 		AggregateID:   event.AggregateID,
-		Payload:       event.Payload,
+		Payload:       entity.JSONBMap(map[string]interface{}(event.Payload)), // Convert framework JSONBMap to entity JSONBMap
 		Status:        entity.OutboxEventStatus(event.Status),
 		RetryCount:    event.RetryCount,
 		MaxRetries:    event.MaxRetries,

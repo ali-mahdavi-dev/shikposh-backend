@@ -13,8 +13,7 @@ const (
 
 // RegisterOrdersPhrases registers error phrases for the orders module
 func RegisterOrdersPhrases() {
-	registry := phrases.GetRegistry()
-	registry.Register(map[phrases.Language]map[phrases.MessagePhrase]string{
+	phrases.GetRegistry().Register(map[phrases.Language]map[phrases.MessagePhrase]string{
 		phrases.Fa: {
 			OrderNotFound:          "سفارش یافت نشد",
 			OrderCannotBeCancelled: "سفارش در وضعیت فعلی قابل لغو نیست",

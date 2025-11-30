@@ -42,22 +42,8 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 			return fmt.Errorf("CreateProductHandler: error checking slug: %w", err)
 		}
 
-		// Create product
-		product := &product_aggregate.Product{
-			SellerID:         cmd.SellerID,
-			Title:            cmd.Title,
-			Slug:             cmd.Slug,
-			Brand:            cmd.Brand,
-			Description:      cmd.Description,
-			ShortDescription: cmd.ShortDescription,
-			Thumbnail:        cmd.Thumbnail,
-			Discount:         cmd.Discount,
-			Stock:            cmd.Stock,
-			OriginPrice:      cmd.OriginPrice,
-			Price:            cmd.Price,
-			IsNew:            cmd.IsNew,
-			IsFeatured:       cmd.IsFeatured,
-		}
+		// Create product using aggregate constructor
+		product := product_aggregate.NewProduct(cmd)
 
 		// Categories (M:N)
 		categories := make([]entity.Category, 0, len(cmd.Categories))
@@ -189,6 +175,9 @@ func (h *ProductCommandHandler) CreateProductHandler(ctx context.Context, cmd *c
 		if err := h.uow.Product(ctx).Save(ctx, product); err != nil {
 			return fmt.Errorf("CreateProductHandler: error saving product: %w", err)
 		}
+
+		// Emit event after successful save (product ID is now available)
+		product.EmitCreatedEvent()
 
 		return nil
 	})

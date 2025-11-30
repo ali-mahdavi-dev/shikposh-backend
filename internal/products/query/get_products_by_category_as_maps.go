@@ -19,13 +19,14 @@ func (h *ProductQueryHandler) GetProductsByCategoryAsMaps(ctx context.Context, c
 
 	// Search for products by category slug in Elasticsearch using nested query
 	// Categories is a nested field, so we need to use nested query
+	// Use term query with .keyword for exact match on keyword fields (slug is defined as keyword type)
 	searchQuery := map[string]interface{}{
 		"query": map[string]interface{}{
 			"nested": map[string]interface{}{
 				"path": "categories",
 				"query": map[string]interface{}{
 					"term": map[string]interface{}{
-						"categories.slug": categorySlug,
+						"categories.slug.keyword": categorySlug,
 					},
 				},
 			},

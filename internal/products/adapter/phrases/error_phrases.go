@@ -13,8 +13,7 @@ const (
 
 // RegisterProductsPhrases registers error phrases for the products module
 func RegisterProductsPhrases() {
-	registry := phrases.GetRegistry()
-	registry.Register(map[phrases.Language]map[phrases.MessagePhrase]string{
+	phrases.GetRegistry().Register(map[phrases.Language]map[phrases.MessagePhrase]string{
 		phrases.Fa: {
 			CategoryNotFound:  "دسته‌بندی پیدا نشد",
 			ProductNotFound:   "محصول پیدا نشد",

@@ -8,8 +8,6 @@ import (
 
 type ProductVariantID uint64
 
-// ProductVariant - ترکیب رنگ + سایز با موجودی
-// variant: { "colorId": { "sizeId": { "stock": N } } }
 type ProductVariant struct {
 	ID        ProductVariantID `gorm:"primaryKey"`
 	ProductID ProductID        `gorm:"not null"`

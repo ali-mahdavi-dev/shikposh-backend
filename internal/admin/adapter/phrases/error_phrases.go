@@ -12,8 +12,7 @@ const (
 
 // RegisterAdminPhrases registers error phrases for the admin module
 func RegisterAdminPhrases() {
-	registry := phrases.GetRegistry()
-	registry.Register(map[phrases.Language]map[phrases.MessagePhrase]string{
+	phrases.GetRegistry().Register(map[phrases.Language]map[phrases.MessagePhrase]string{
 		phrases.Fa: {
 			AdminAccessDenied:     "دسترسی ادمین مورد نیاز است",
 			SuperuserAccessDenied: "دسترسی سوپر یوزر مورد نیاز است",

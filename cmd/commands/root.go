@@ -32,6 +32,8 @@ func init() {
 	rootCmd.AddCommand(reindexCmd())
 	rootCmd.AddCommand(updateImagesCmd())
 	rootCmd.AddCommand(importFromElasticCmd())
+	rootCmd.AddCommand(searchElasticCmd())
+	rootCmd.AddCommand(testCategoryQueryCmd())
 }
 
 func Execute() {

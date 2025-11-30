@@ -18,8 +18,7 @@ const (
 
 // RegisterAccountPhrases registers error phrases for the account module
 func RegisterAccountPhrases() {
-	registry := phrases.GetRegistry()
-	registry.Register(map[phrases.Language]map[phrases.MessagePhrase]string{
+	phrases.GetRegistry().Register(map[phrases.Language]map[phrases.MessagePhrase]string{
 		phrases.Fa: {
 			UserNotFound:       "کاربر پیدا نشد",
 			UserAlreadyExists:  "کاربر از قبل وجود دارد",

@@ -18,7 +18,7 @@ func (h *ProductQueryHandler) GetFilteredProductsAsMaps(ctx context.Context, fil
 	// Validate price range if both min and max are provided
 	if filters.MinPrice != nil && filters.MaxPrice != nil {
 		if *filters.MinPrice > *filters.MaxPrice {
-			return nil, fmt.Errorf("invalid price range: min_price (%.2f) cannot be greater than max_price (%.2f)", *filters.MinPrice, *filters.MaxPrice)
+			return nil, fmt.Errorf("invalid price range: min_price (%d) cannot be greater than max_price (%d)", *filters.MinPrice, *filters.MaxPrice)
 		}
 		if *filters.MinPrice < 0 || *filters.MaxPrice < 0 {
 			return nil, fmt.Errorf("invalid price range: prices cannot be negative")
@@ -35,7 +35,25 @@ func (h *ProductQueryHandler) GetFilteredProductsAsMaps(ctx context.Context, fil
 	// Get category slug for Elasticsearch nested query
 	var categorySlug *string
 	if filters.Category != nil && *filters.Category != "" {
-		categorySlug = filters.Category
+		// Verify category exists in database before searching
+		err := h.uow.Do(ctx, func(ctx context.Context) error {
+			category, err := h.uow.Category(ctx).FindBySlug(ctx, *filters.Category)
+			if err != nil {
+				return err
+			}
+			if category == nil {
+				return fmt.Errorf("category not found with slug: %s", *filters.Category)
+			}
+			categorySlug = filters.Category
+			return nil
+		})
+		if err != nil {
+			logging.Warn("Category not found in database").
+				WithString("category_slug", *filters.Category).
+				WithError(err).
+				Log()
+			return nil, fmt.Errorf("category not found (slug=%s): %w", *filters.Category, err)
+		}
 	} else if filters.CategoryName != nil && *filters.CategoryName != "" {
 		// Convert category name to slug
 		err := h.uow.Do(ctx, func(ctx context.Context) error {
@@ -59,7 +77,20 @@ func (h *ProductQueryHandler) GetFilteredProductsAsMaps(ctx context.Context, fil
 
 	logging.Debug("Products filtered from Elasticsearch as maps").
 		WithInt("count", len(maps)).
+		WithString("category_slug", func() string {
+			if categorySlug != nil {
+				return *categorySlug
+			}
+			return ""
+		}()).
 		Log()
+
+	// Log warning if category filter was used but no products found
+	if categorySlug != nil && len(maps) == 0 {
+		logging.Warn("No products found for category in Elasticsearch").
+			WithString("category_slug", *categorySlug).
+			Log()
+	}
 
 	return maps, nil
 }

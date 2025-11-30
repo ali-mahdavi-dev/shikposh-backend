@@ -70,26 +70,53 @@ func NewProduct(cmd *commands.CreateProduct) *Product {
 		Price:            cmd.Price,
 		OriginPrice:      cmd.OriginPrice,
 	}
-	productID := uint64(product.ID)
-	var categoryID uint64
-	if len(product.Categories) > 0 {
-		categoryID = uint64(product.Categories[0].ID)
+
+	return product
+}
+
+// EmitCreatedEvent emits ProductCreatedEvent with current product data
+// Should be called after product is saved (so ID is available)
+func (p *Product) EmitCreatedEvent() {
+	productID := uint64(p.ID)
+	categoryIDs := make([]uint64, 0, len(p.Categories))
+	for i := range p.Categories {
+		categoryIDs = append(categoryIDs, uint64(p.Categories[i].ID))
 	}
-	product.AddEvent(&events.ProductCreatedEvent{
-		ProductID:  &productID,
-		Name:       product.Title,
-		Slug:       product.Slug,
-		Brand:      product.Brand,
-		CategoryID: categoryID,
+	p.AddEvent(&events.ProductCreatedEvent{
+		ProductID:   &productID,
+		Name:        p.Title,
+		Slug:        p.Slug,
+		Brand:       p.Brand,
+		CategoryIDs: categoryIDs,
 		Description: func() string {
-			if product.Description != nil {
-				return *product.Description
+			if p.Description != nil {
+				return *p.Description
 			}
 			return ""
 		}(),
 	})
+}
 
-	return product
+// EmitUpdatedEvent emits ProductUpdatedEvent with current product data
+func (p *Product) EmitUpdatedEvent() {
+	productID := uint64(p.ID)
+	categoryIDs := make([]uint64, 0, len(p.Categories))
+	for i := range p.Categories {
+		categoryIDs = append(categoryIDs, uint64(p.Categories[i].ID))
+	}
+	p.AddEvent(&events.ProductUpdatedEvent{
+		ProductID:   &productID,
+		Name:        p.Title,
+		Slug:        p.Slug,
+		Brand:       p.Brand,
+		CategoryIDs: categoryIDs,
+		Description: func() string {
+			if p.Description != nil {
+				return *p.Description
+			}
+			return ""
+		}(),
+	})
 }
 
 // BeforeCreate hook
