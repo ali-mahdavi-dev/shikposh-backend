@@ -22,6 +22,10 @@ type Profile struct {
 	Address   string         `json:"address" gorm:"address"`
 }
 
+func (p *Profile) GetID() uint64 {
+	return uint64(p.ID)
+}
+
 func NewProfile(userID UserID) *Profile {
 	return &Profile{
 		UserID: userID,

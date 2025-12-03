@@ -16,6 +16,10 @@ type Wishlist struct {
 	CreatedAt time.Time
 }
 
+func (w *Wishlist) GetID() uint64 {
+	return uint64(w.ID)
+}
+
 func (Wishlist) TableName() string {
 	return "wishlists"
 }

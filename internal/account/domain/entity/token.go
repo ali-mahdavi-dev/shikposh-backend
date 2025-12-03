@@ -21,6 +21,10 @@ type Token struct {
 	UserID       UserID         `json:"user_id" gorm:"user_id"`
 }
 
+func (t *Token) GetID() uint64 {
+	return uint64(t.ID)
+}
+
 func NewToken(token string, refreshToken string, userID UserID) *Token {
 	return &Token{
 		Token:        token,

@@ -52,6 +52,10 @@ type Category struct {
 	ProductCount int            `json:"product_count,omitempty" gorm:"-"`
 }
 
+func (c *Category) GetID() uint64 {
+	return uint64(c.ID)
+}
+
 func (c *Category) TableName() string {
 	return "categories"
 }

@@ -28,6 +28,10 @@ type User struct {
 	IsAdmin          bool           `json:"is_admin" gorm:"column:is_admin;default:false"`
 }
 
+func (u *User) GetID() uint64 {
+	return uint64(u.ID)
+}
+
 func NewUser(
 	avatarIdentifier string,
 	firstName string,

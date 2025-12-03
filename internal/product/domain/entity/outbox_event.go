@@ -71,6 +71,10 @@ type OutboxEvent struct {
 	ProcessedAt   *time.Time        `json:"processed_at,omitempty" gorm:"processed_at"`
 }
 
+func (o *OutboxEvent) GetID() uint64 {
+	return uint64(o.ID)
+}
+
 func (o *OutboxEvent) TableName() string {
 	return "outbox_events"
 }

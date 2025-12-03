@@ -97,6 +97,10 @@ type Seller struct {
 	Categories JSONBStringArray `json:"categories" gorm:"categories;type:jsonb;default:'[]'::jsonb"`
 }
 
+func (s *Seller) GetID() uint64 {
+	return uint64(s.ID)
+}
+
 func (s *Seller) TableName() string {
 	return "sellers"
 }

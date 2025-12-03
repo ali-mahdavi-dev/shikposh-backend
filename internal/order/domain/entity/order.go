@@ -56,6 +56,10 @@ type Order struct {
 	ShippingAddress *OrderAddress `json:"shipping_address,omitempty" gorm:"foreignKey:OrderID"`
 }
 
+func (o *Order) GetID() uint64 {
+	return uint64(o.ID)
+}
+
 type OrderItem struct {
 	ID           uint64    `gorm:"primaryKey"`
 	CreatedAt    time.Time `json:"created_at"`
