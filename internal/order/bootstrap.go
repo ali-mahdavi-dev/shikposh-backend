@@ -12,6 +12,9 @@ import (
 	unitofwork "shikposh-backend/internal/unit_of_work"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
+	commandeventhandler "github.com/ali-mahdavi-dev/shikposh-framework/service_layer/command_event_handler"
+	commandmiddleware "github.com/ali-mahdavi-dev/shikposh-framework/service_layer/command_event_handler/command_middleware"
+	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/messagebus"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -23,6 +26,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 
 	eventCh := make(chan adapter.EventWithWaitGroup, 100)
 	uow := unitofwork.New(db, eventCh)
+	bus := messagebus.NewMessageBus(uow, eventCh)
 
 	// Initialize ZarinPal payment service
 	zarinPalService := payment.NewZarinPalService(&cfg.ZarinPal)
@@ -36,13 +40,25 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
 	// Initialize HTTP handler
 	orderHTTPHandler := handler.NewOrderHandler(
 		orderQueryHandler,
-		orderCommandHandler,
 		zarinPalService,
+		bus,
+		orderCommandHandler,
 	)
 
 	entrypoint.NewOrdersRouter(router, entrypoint.OrderRouter{
 		Order: orderHTTPHandler,
 	})
+
+	// register command middlewares
+	bus.AddCommandMiddleware(
+		commandmiddleware.Logging(),
+	)
+
+	// register command handlers (only commands without result)
+	bus.AddCommandHandler(
+		commandeventhandler.NewCommandHandler(orderCommandHandler.CancelOrderHandler),
+		commandeventhandler.NewCommandHandler(orderCommandHandler.UpdateOrderStatusHandler),
+	)
 
 	return nil
 }

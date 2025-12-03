@@ -82,17 +82,21 @@ func (u *UserController) GenerateAvatarHandler(c fiber.Ctx) error {
 //	@Failure		422		{object}	httpapi.ResponseResult	"Unprocessable input (validation failed)"
 //	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/register [post]
+//
+// Note: this handler مستقیماً از UserHandler استفاده می‌کند (و نه bus)
+// چون Register نیاز دارد result کامل (توکن‌ها و یوزر) برگرداند و MessageBus فعلی فقط error می‌دهد.
+// بقیه Commandهایی که result ندارند (مثل Logout, SendOtp) از bus استفاده می‌کنند.
 func (u *UserController) Register(c fiber.Ctx) error {
 	ctx := c.Context()
 	cmd := new(commands.RegisterUser)
 
-	if err := httpapi.ParseJSON(c, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, cmd); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
-	result, err := u.userHandler.RegisterHandler(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	result, rErr := u.userHandler.RegisterHandler(ctx, cmd)
+	if rErr != nil {
+		return httpapi.ResError(c, rErr)
 	}
 
 	response := map[string]interface{}{
@@ -107,13 +111,13 @@ func (u *UserController) Register(c fiber.Ctx) error {
 
 	if result.User != nil {
 		response["user"] = map[string]interface{}{
-			"id":            result.User.ID,
-			"first_name":    result.User.FirstName,
-			"last_name":     result.User.LastName,
-			"email":         result.User.Email,
-			"phone":         result.User.Phone,
-			"is_admin":      result.User.IsAdmin,
-			"is_superuser":  result.User.IsSuperuser,
+			"id":           result.User.ID,
+			"first_name":   result.User.FirstName,
+			"last_name":    result.User.LastName,
+			"email":        result.User.Email,
+			"phone":        result.User.Phone,
+			"is_admin":     result.User.IsAdmin,
+			"is_superuser": result.User.IsSuperuser,
 		}
 	}
 
@@ -143,9 +147,9 @@ func (u *UserController) Logout(c fiber.Ctx) error {
 	cmd := new(commands.Logout)
 	cmd.UserID = cast.ToUint64(userID)
 
-	err := u.bus.Handle(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	hErr := u.bus.Handle(ctx, cmd)
+	if hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
@@ -169,13 +173,13 @@ func (u *UserController) SendOtp(c fiber.Ctx) error {
 	ctx := c.Context()
 	cmd := new(commands.SendOtp)
 
-	if err := httpapi.ParseJSON(c, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, cmd); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
-	err := u.bus.Handle(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	hErr := u.bus.Handle(ctx, cmd)
+	if hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	return httpapi.ResSuccess(c, map[string]interface{}{
@@ -199,17 +203,20 @@ func (u *UserController) SendOtp(c fiber.Ctx) error {
 //	@Failure		422		{object}	httpapi.ResponseResult	"Validation failed"
 //	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/auth/verify-otp [post]
+//
+// Note: این endpoint هم مثل Register به result نیاز دارد و مستقیماً از OtpHandler استفاده می‌کند
+// (Exception از CQRS سخت‌گیرانه، به خاطر محدودیت MessageBus در برگرداندن result).
 func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 	ctx := c.Context()
 	cmd := new(commands.VerifyOtp)
 
-	if err := httpapi.ParseJSON(c, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, cmd); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
-	result, err := u.otpHandler.VerifyOtpHandler(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	result, voErr := u.otpHandler.VerifyOtpHandler(ctx, cmd)
+	if voErr != nil {
+		return httpapi.ResError(c, voErr)
 	}
 
 	if result == nil {
@@ -231,13 +238,13 @@ func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 
 	if result.User != nil {
 		response["user"] = map[string]interface{}{
-			"id":            result.User.ID,
-			"first_name":    result.User.FirstName,
-			"last_name":     result.User.LastName,
-			"email":         result.User.Email,
-			"phone":         result.User.Phone,
-			"is_admin":      result.User.IsAdmin,
-			"is_superuser":  result.User.IsSuperuser,
+			"id":           result.User.ID,
+			"first_name":   result.User.FirstName,
+			"last_name":    result.User.LastName,
+			"email":        result.User.Email,
+			"phone":        result.User.Phone,
+			"is_admin":     result.User.IsAdmin,
+			"is_superuser": result.User.IsSuperuser,
 		}
 	}
 
@@ -258,21 +265,24 @@ func (u *UserController) VerifyOtp(c fiber.Ctx) error {
 //	@Failure		404		{object}	httpapi.ResponseResult	"User not found"
 //	@Failure		500		{object}	httpapi.ResponseResult	"Internal server error"
 //	@Router			/api/v1/public/auth/refresh [post]
+//
+// Note: RefreshToken هم از الگوی Exception پیروی می‌کند و مستقیماً از UserHandler استفاده می‌کند
+// چون نیاز به برگرداندن توکن‌های جدید دارد.
 func (u *UserController) RefreshToken(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	cmd := new(commands.RefreshToken)
-	if err := httpapi.ParseJSON(c, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, cmd); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
 	if cmd.RefreshToken == "" || cmd.RefreshToken == "null" {
 		return httpapi.ResError(c, errors.Unauthorized(accountphrases.UserNotFound))
 	}
 
-	result, err := u.userHandler.RefreshTokenHandler(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	result, rtErr := u.userHandler.RefreshTokenHandler(ctx, cmd)
+	if rtErr != nil {
+		return httpapi.ResError(c, rtErr)
 	}
 
 	// Return new tokens in response body (frontend will handle storage)

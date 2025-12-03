@@ -2,7 +2,7 @@ package handler
 
 import (
 	"shikposh-backend/internal/product/domain/commands"
-	unitofwork "shikposh-backend/internal/unit_of_work"
+	"shikposh-backend/internal/product/query"
 
 	httpapi "github.com/ali-mahdavi-dev/shikposh-framework/api/http"
 	"github.com/ali-mahdavi-dev/shikposh-framework/errors"
@@ -13,12 +13,12 @@ import (
 )
 
 type WishlistHandler struct {
-	uow unitofwork.PGUnitOfWork
-	bus messagebus.MessageBus
+	wishlistQueryHandler *query.WishlistQueryHandler
+	bus                  messagebus.MessageBus
 }
 
-func NewWishlistHandler(uow unitofwork.PGUnitOfWork, bus messagebus.MessageBus) *WishlistHandler {
-	return &WishlistHandler{uow: uow, bus: bus}
+func NewWishlistHandler(wishlistQueryHandler *query.WishlistQueryHandler, bus messagebus.MessageBus) *WishlistHandler {
+	return &WishlistHandler{wishlistQueryHandler: wishlistQueryHandler, bus: bus}
 }
 
 func (w *WishlistHandler) RegisterRoutes(r fiber.Router) {
@@ -64,7 +64,7 @@ func (w *WishlistHandler) GetWishlist(c fiber.Ctx) error {
 		return httpapi.ResError(c, errors.Unauthorized("USER_NOT_AUTHENTICATED"))
 	}
 
-	productIDs, err := w.uow.Wishlist(ctx).GetProductIDs(ctx, cast.ToUint64(userID))
+	productIDs, err := w.wishlistQueryHandler.GetProductIDs(ctx, cast.ToUint64(userID))
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}
@@ -97,8 +97,8 @@ func (w *WishlistHandler) AddToWishlist(c fiber.Ctx) error {
 	}
 
 	var req AddToWishlistRequest
-	if err := httpapi.ParseJSON(c, &req); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, &req); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
 	cmd := &commands.AddToWishlist{
@@ -106,8 +106,8 @@ func (w *WishlistHandler) AddToWishlist(c fiber.Ctx) error {
 		ProductID: req.ProductID,
 	}
 
-	if err := w.bus.Handle(ctx, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if hErr := w.bus.Handle(ctx, cmd); hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	return httpapi.ResSuccess(c, map[string]interface{}{
@@ -145,8 +145,8 @@ func (w *WishlistHandler) RemoveFromWishlist(c fiber.Ctx) error {
 		ProductID: productID,
 	}
 
-	if err := w.bus.Handle(ctx, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if hErr := w.bus.Handle(ctx, cmd); hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	return httpapi.ResSuccess(c, map[string]interface{}{
@@ -178,23 +178,25 @@ func (w *WishlistHandler) ToggleWishlist(c fiber.Ctx) error {
 	}
 
 	var req ToggleWishlistRequest
-	if err := httpapi.ParseJSON(c, &req); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, &req); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
 	uid := cast.ToUint64(userID)
 
 	// Check if item exists before toggling to determine response
-	_, err := w.uow.Wishlist(ctx).FindByUserAndProduct(ctx, uid, req.ProductID)
-	wasInWishlist := err == nil
+	wasInWishlist, existsErr := w.wishlistQueryHandler.Exists(ctx, uid, req.ProductID)
+	if existsErr != nil {
+		return httpapi.ResError(c, existsErr)
+	}
 
 	cmd := &commands.ToggleWishlist{
 		UserID:    uid,
 		ProductID: req.ProductID,
 	}
 
-	if err := w.bus.Handle(ctx, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if hErr := w.bus.Handle(ctx, cmd); hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	// Determine if item was added or removed based on previous state
@@ -234,8 +236,8 @@ func (w *WishlistHandler) SyncWishlist(c fiber.Ctx) error {
 	}
 
 	var req SyncWishlistRequest
-	if err := httpapi.ParseJSON(c, &req); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, &req); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
 	uid := cast.ToUint64(userID)
@@ -245,12 +247,12 @@ func (w *WishlistHandler) SyncWishlist(c fiber.Ctx) error {
 		ProductIDs: req.ProductIDs,
 	}
 
-	if err := w.bus.Handle(ctx, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if hErr := w.bus.Handle(ctx, cmd); hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	// Get updated list after sync
-	productIDs, err := w.uow.Wishlist(ctx).GetProductIDs(ctx, uid)
+	productIDs, err := w.wishlistQueryHandler.GetProductIDs(ctx, uid)
 	if err != nil {
 		return httpapi.ResError(c, err)
 	}

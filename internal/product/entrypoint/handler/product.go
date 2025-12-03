@@ -481,13 +481,13 @@ func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
 	ctx := c.Context()
 	cmd := new(commands.CreateProduct)
 
-	if err := httpapi.ParseJSON(c, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, cmd); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
-	err := p.bus.Handle(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	hErr := p.bus.Handle(ctx, cmd)
+	if hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
@@ -512,21 +512,21 @@ func (p *ProductHandler) CreateProduct(c fiber.Ctx) error {
 //	@Router			/api/v1/admin/products/{id} [put]
 func (p *ProductHandler) UpdateProduct(c fiber.Ctx) error {
 	ctx := c.Context()
-	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	id, piErr := strconv.ParseUint(c.Params("id"), 10, 64)
+	if piErr != nil {
+		return httpapi.ResError(c, piErr)
 	}
 
 	cmd := new(commands.UpdateProduct)
 	cmd.ID = id
 
-	if err := httpapi.ParseJSON(c, cmd); err != nil {
-		return httpapi.ResError(c, err)
+	if pjErr := httpapi.ParseJSON(c, cmd); pjErr != nil {
+		return httpapi.ResError(c, pjErr)
 	}
 
-	err = p.bus.Handle(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	hErr := p.bus.Handle(ctx, cmd)
+	if hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
@@ -550,9 +550,9 @@ func (p *ProductHandler) UpdateProduct(c fiber.Ctx) error {
 //	@Router			/api/v1/admin/products/{id} [delete]
 func (p *ProductHandler) DeleteProduct(c fiber.Ctx) error {
 	ctx := c.Context()
-	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	id, piErr := strconv.ParseUint(c.Params("id"), 10, 64)
+	if piErr != nil {
+		return httpapi.ResError(c, piErr)
 	}
 
 	cmd := &commands.DeleteProduct{
@@ -565,9 +565,9 @@ func (p *ProductHandler) DeleteProduct(c fiber.Ctx) error {
 		cmd.SoftDelete = cast.ToBool(softDelete)
 	}
 
-	err = p.bus.Handle(ctx, cmd)
-	if err != nil {
-		return httpapi.ResError(c, err)
+	hErr := p.bus.Handle(ctx, cmd)
+	if hErr != nil {
+		return httpapi.ResError(c, hErr)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)

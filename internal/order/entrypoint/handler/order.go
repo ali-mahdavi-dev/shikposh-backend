@@ -16,6 +16,7 @@ import (
 	httpapi "github.com/ali-mahdavi-dev/shikposh-framework/api/http"
 	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
 	"github.com/ali-mahdavi-dev/shikposh-framework/infrastructure/logging"
+	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/messagebus"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/spf13/cast"
@@ -25,17 +26,20 @@ type OrderHandler struct {
 	orderQueryHandler   *query.OrderQueryHandler
 	orderCommandHandler *command_handler.OrderCommandHandler
 	zarinPalService     *payment.ZarinPalService
+	bus                 messagebus.MessageBus
 }
 
 func NewOrderHandler(
 	orderQueryHandler *query.OrderQueryHandler,
-	orderCommandHandler *command_handler.OrderCommandHandler,
 	zarinPalService *payment.ZarinPalService,
+	bus messagebus.MessageBus,
+	orderCommandHandler *command_handler.OrderCommandHandler,
 ) *OrderHandler {
 	return &OrderHandler{
 		orderQueryHandler:   orderQueryHandler,
 		orderCommandHandler: orderCommandHandler,
 		zarinPalService:     zarinPalService,
+		bus:                 bus,
 	}
 }
 
@@ -139,8 +143,8 @@ func (h *OrderHandler) GetOrderByID(c fiber.Ctx) error {
 		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "id is required"))
 	}
 
-	id, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil {
+	id, piErr := strconv.ParseUint(idStr, 10, 64)
+	if piErr != nil {
 		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "invalid order id"))
 	}
 
@@ -150,17 +154,12 @@ func (h *OrderHandler) GetOrderByID(c fiber.Ctx) error {
 		return httpapi.ResError(c, fiber.NewError(fiber.StatusUnauthorized, "user not authenticated"))
 	}
 
-	order, err := h.orderQueryHandler.GetOrderByID(ctx, id)
+	order, err := h.orderQueryHandler.GetOrderByID(ctx, id, userID)
 	if err != nil {
 		if errors.Is(err, repository.ErrOrderNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "order not found"))
 		}
 		return httpapi.ResError(c, err)
-	}
-
-	// Verify order belongs to user
-	if order.UserID != userID {
-		return httpapi.ResError(c, fiber.NewError(fiber.StatusForbidden, "access denied"))
 	}
 
 	return httpapi.ResSuccess(c, orderToMap(order))
@@ -198,8 +197,8 @@ func (h *OrderHandler) CancelOrder(c fiber.Ctx) error {
 		return httpapi.ResError(c, fiber.NewError(fiber.StatusUnauthorized, "user not authenticated"))
 	}
 
-	// Verify order belongs to user
-	order, err := h.orderQueryHandler.GetOrderByID(ctx, id)
+	// Verify order exists and belongs to user (authorization check is done inside GetOrderByID)
+	_, err = h.orderQueryHandler.GetOrderByID(ctx, id, userID)
 	if err != nil {
 		if errors.Is(err, repository.ErrOrderNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "order not found"))
@@ -207,13 +206,11 @@ func (h *OrderHandler) CancelOrder(c fiber.Ctx) error {
 		return httpapi.ResError(c, err)
 	}
 
-	if order.UserID != userID {
-		return httpapi.ResError(c, fiber.NewError(fiber.StatusForbidden, "access denied"))
+	// Cancel order via message bus
+	cmd := &commands.CancelOrder{
+		OrderID: id,
 	}
-
-	// Cancel order
-	err = h.orderCommandHandler.CancelOrderHandler(ctx, id)
-	if err != nil {
+	if err := h.bus.Handle(ctx, cmd); err != nil {
 		return httpapi.ResError(c, err)
 	}
 
@@ -383,10 +380,15 @@ func (h *OrderHandler) CreateOrder(c fiber.Ctx) error {
 	// Store authority in order notes (temporary storage)
 	authorityNote := fmt.Sprintf("payment_authority:%s", authority)
 	order.Notes = &authorityNote
-	orderRepo := h.orderCommandHandler.GetUOW().Order(ctx)
-	if err := orderRepo.Modify(ctx, order); err != nil {
+
+	// Update order notes through message bus (CQRS)
+	updateCmd := &commands.UpdateOrderStatus{
+		OrderID: uint64(order.ID),
+		Notes:   &authorityNote,
+	}
+	if uErr := h.bus.Handle(ctx, updateCmd); uErr != nil {
 		logging.Error("CreateOrder: failed to update order with authority").
-			WithError(err).
+			WithError(uErr).
 			WithInt64("order_id", int64(order.ID)).
 			Log()
 	}
@@ -401,7 +403,7 @@ func (h *OrderHandler) CreateOrder(c fiber.Ctx) error {
 		Log()
 
 	return httpapi.ResSuccess(c, map[string]interface{}{
-		"order_id":     order.ID,
+		"order_id":     uint64(order.ID),
 		"order_number": order.OrderNumber,
 		"payment_url":  paymentURL,
 		"authority":    authority,
@@ -439,18 +441,13 @@ func (h *OrderHandler) VerifyZarinPalPayment(c fiber.Ctx) error {
 		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "invalid request body"))
 	}
 
-	// Get order
-	order, err := h.orderQueryHandler.GetOrderByID(ctx, req.OrderID)
+	// Get order (authorization check is done inside GetOrderByID)
+	order, err := h.orderQueryHandler.GetOrderByID(ctx, req.OrderID, userID)
 	if err != nil {
 		if errors.Is(err, repository.ErrOrderNotFound) {
 			return httpapi.ResError(c, fiber.NewError(fiber.StatusNotFound, "order not found"))
 		}
 		return httpapi.ResError(c, err)
-	}
-
-	// Verify order belongs to user
-	if order.UserID != userID {
-		return httpapi.ResError(c, fiber.NewError(fiber.StatusForbidden, "access denied"))
 	}
 
 	// Verify order is in pending status
@@ -467,28 +464,38 @@ func (h *OrderHandler) VerifyZarinPalPayment(c fiber.Ctx) error {
 			WithString("authority", req.Authority).
 			Log()
 
-		// Update order status to failed
-		order.PaymentStatus = entity.PaymentStatusFailed
-		orderRepo := h.orderCommandHandler.GetUOW().Order(ctx)
-		if err := orderRepo.Modify(ctx, order); err != nil {
+		// Update order status to failed through command handler (CQRS)
+		paymentStatusFailed := string(entity.PaymentStatusFailed)
+		updateCmd := &commands.UpdateOrderStatus{
+			OrderID:       uint64(order.ID),
+			PaymentStatus: &paymentStatusFailed,
+		}
+		if uErr := h.bus.Handle(ctx, updateCmd); uErr != nil {
 			logging.Error("VerifyZarinPalPayment: failed to update order status").
-				WithError(err).
+				WithError(uErr).
 				Log()
 		}
 
 		return httpapi.ResError(c, fiber.NewError(fiber.StatusBadRequest, "payment verification failed"))
 	}
 
-	// Update order status
+	// Update order status via message bus
+	statusConfirmed := string(entity.OrderStatusPaymentConfirmed)
+	paymentStatusPaid := string(entity.PaymentStatusPaid)
+	refIDStr := fmt.Sprintf("ref_id:%d", refID)
 	order.Status = entity.OrderStatusPaymentConfirmed
 	order.PaymentStatus = entity.PaymentStatusPaid
-	refIDStr := fmt.Sprintf("ref_id:%d", refID)
 	order.Notes = &refIDStr
 
-	orderRepo := h.orderCommandHandler.GetUOW().Order(ctx)
-	if err := orderRepo.Modify(ctx, order); err != nil {
+	updateCmd := &commands.UpdateOrderStatus{
+		OrderID:       uint64(order.ID),
+		Status:        &statusConfirmed,
+		PaymentStatus: &paymentStatusPaid,
+		Notes:         &refIDStr,
+	}
+	if uErr := h.bus.Handle(ctx, updateCmd); uErr != nil {
 		logging.Error("VerifyZarinPalPayment: failed to update order").
-			WithError(err).
+			WithError(uErr).
 			WithInt64("order_id", int64(req.OrderID)).
 			Log()
 		return httpapi.ResError(c, fiber.NewError(fiber.StatusInternalServerError, "failed to update order"))
@@ -500,7 +507,7 @@ func (h *OrderHandler) VerifyZarinPalPayment(c fiber.Ctx) error {
 		Log()
 
 	return httpapi.ResSuccess(c, map[string]interface{}{
-		"order_id":     order.ID,
+		"order_id":     uint64(order.ID),
 		"order_number": order.OrderNumber,
 		"status":       order.Status,
 		"ref_id":       refID,

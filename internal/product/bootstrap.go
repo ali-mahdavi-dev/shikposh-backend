@@ -38,6 +38,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 	// Initialize query handlers
 	productQueryHandler := query.NewProductQueryHandler(uow, elasticsearch)
 	categoryQueryHandler := query.NewCategoryQueryHandler(uow)
+	wishlistQueryHandler := query.NewWishlistQueryHandler(uow)
 
 	// Initialize command handlers
 	productHandler := command_handler.NewProductCommandHandler(uow)
@@ -54,7 +55,7 @@ func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, elasticsear
 		bus,
 		middleware,
 	)
-	wishlistHandler := handler.NewWishlistHandler(uow, bus)
+	wishlistHandler := handler.NewWishlistHandler(wishlistQueryHandler, bus)
 
 	entrypoint.NewProductsRouter(router, entrypoint.ProductManagementRouter{
 		Product:  productHTTPHandler,

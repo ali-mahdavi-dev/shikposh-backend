@@ -3,14 +3,15 @@ package command_handler
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"shikposh-backend/internal/order/adapter/repository"
 	"shikposh-backend/internal/order/domain/commands"
 	"shikposh-backend/internal/order/domain/entity"
 )
 
-// CancelOrderHandler handles cancelling an order command
-func (h *OrderCommandHandler) CancelOrderHandler(ctx context.Context, cmd *commands.CancelOrder) error {
+// UpdateOrderStatusHandler handles updating order status, payment status and notes
+func (h *OrderCommandHandler) UpdateOrderStatusHandler(ctx context.Context, cmd *commands.UpdateOrderStatus) error {
 	return h.uow.Do(ctx, func(ctx context.Context) error {
 		orderRepo := h.uow.Order(ctx)
 
@@ -22,19 +23,24 @@ func (h *OrderCommandHandler) CancelOrderHandler(ctx context.Context, cmd *comma
 			return err
 		}
 
-		// Check if order can be cancelled
-		if order.Status != entity.OrderStatusPaymentConfirmed && order.Status != entity.OrderStatusProcessing {
-			return errors.New("order cannot be cancelled in current status")
+		if cmd.Status != nil && *cmd.Status != "" {
+			order.Status = entity.OrderStatus(*cmd.Status)
 		}
 
-		// Update order status
-		order.Status = entity.OrderStatusCancelled
+		if cmd.PaymentStatus != nil && *cmd.PaymentStatus != "" {
+			order.PaymentStatus = entity.PaymentStatus(*cmd.PaymentStatus)
+		}
+
+		if cmd.Notes != nil {
+			order.Notes = cmd.Notes
+		}
 
 		if err := orderRepo.Modify(ctx, order); err != nil {
-			return err
+			return fmt.Errorf("failed to update order status: %w", err)
 		}
 
 		return nil
 	})
 }
+
 
