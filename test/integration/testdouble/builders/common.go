@@ -7,7 +7,7 @@ import (
 	"os"
 
 	accountMigrations "shikposh-backend/internal/account/adapter/migrations"
-	productsMigrations "shikposh-backend/internal/products/adapter/migrations"
+	productsMigrations "shikposh-backend/internal/product/adapter/migrations"
 
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/postgres"

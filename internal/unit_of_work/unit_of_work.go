@@ -6,8 +6,8 @@ import (
 	"gorm.io/gorm"
 
 	accountrepository "shikposh-backend/internal/account/adapter/repository"
-	orderrepository "shikposh-backend/internal/orders/adapter/repository"
-	productrepository "shikposh-backend/internal/products/adapter/repository"
+	orderrepository "shikposh-backend/internal/order/adapter/repository"
+	productrepository "shikposh-backend/internal/product/adapter/repository"
 	sellerrepository "shikposh-backend/internal/seller/adapter/repository"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"

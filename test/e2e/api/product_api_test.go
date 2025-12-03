@@ -8,11 +8,11 @@ import (
 	"net/http/httptest"
 
 	"shikposh-backend/config"
-	products "shikposh-backend/internal/products"
-	"shikposh-backend/internal/products/adapter/repository"
-	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/entity"
-	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
+	products "shikposh-backend/internal/product"
+	"shikposh-backend/internal/product/adapter/repository"
+	"shikposh-backend/internal/product/domain/commands"
+	"shikposh-backend/internal/product/domain/entity"
+	productaggregate "shikposh-backend/internal/product/domain/entity/product_aggregate"
 
 	"github.com/gofiber/fiber/v3"
 	. "github.com/onsi/ginkgo/v2"

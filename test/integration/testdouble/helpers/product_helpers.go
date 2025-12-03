@@ -3,8 +3,8 @@ package helpers
 import (
 	"context"
 
-	"shikposh-backend/internal/products/adapter/repository"
-	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
+	"shikposh-backend/internal/product/adapter/repository"
+	productaggregate "shikposh-backend/internal/product/domain/entity/product_aggregate"
 
 	. "github.com/onsi/gomega"
 	"gorm.io/gorm"

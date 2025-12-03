@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
-	"shikposh-backend/cmd/commands"
+	"shikposh-backend/cmd/command"
 )
 
 func main() {
-	commands.Execute()
+	command.Execute()
 }
 
 func init() {

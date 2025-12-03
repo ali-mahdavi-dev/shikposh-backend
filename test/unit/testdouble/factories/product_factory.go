@@ -1,10 +1,10 @@
 package factories
 
 import (
-	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/entity"
-	productaggregate "shikposh-backend/internal/products/domain/entity/product_aggregate"
-	"shikposh-backend/internal/products/service_layer/command_handler"
+	"shikposh-backend/internal/product/domain/commands"
+	"shikposh-backend/internal/product/domain/entity"
+	productaggregate "shikposh-backend/internal/product/domain/entity/product_aggregate"
+	"shikposh-backend/internal/product/service_layer/command_handler"
 )
 
 func CreateProductCommand(name, brand string, categoryID uint64) *commands.CreateProduct {

@@ -13,15 +13,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config) error {
+func Bootstrap(router fiber.Router, db *gorm.DB, cfg *config.Config, middleware *mw.Middleware) error {
 	// Register admin module error phrases
 	phrases.RegisterAdminPhrases()
-
-	// Initialize middleware
-	middleware := mw.NewMiddleware(
-		mw.MiddlewareConfig{JWTSecret: cfg.JWT.Secret},
-		db,
-	)
 
 	// Initialize repository
 	adminRepo := repository.NewAdminRepository(db)

@@ -3,8 +3,8 @@ package integration_test
 import (
 	"context"
 
-	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/service_layer/command_handler"
+	"shikposh-backend/internal/product/domain/commands"
+	"shikposh-backend/internal/product/service_layer/command_handler"
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
 	"shikposh-backend/test/integration/testdouble/builders"

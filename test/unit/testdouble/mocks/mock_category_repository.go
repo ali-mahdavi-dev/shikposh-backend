@@ -3,8 +3,8 @@ package mocks
 import (
 	"context"
 
-	"shikposh-backend/internal/products/adapter/repository"
-	"shikposh-backend/internal/products/domain/entity"
+	"shikposh-backend/internal/product/adapter/repository"
+	"shikposh-backend/internal/product/domain/entity"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/adapter"
 

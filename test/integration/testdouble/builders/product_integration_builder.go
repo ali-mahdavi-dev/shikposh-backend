@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"shikposh-backend/internal/products/service_layer/command_handler"
+	"shikposh-backend/internal/product/service_layer/command_handler"
 	unitofwork "shikposh-backend/internal/unit_of_work"
 
 	appadapter "github.com/ali-mahdavi-dev/shikposh-framework/adapter"

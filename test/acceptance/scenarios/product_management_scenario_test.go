@@ -3,8 +3,8 @@ package acceptance_test
 import (
 	"context"
 
-	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/service_layer/command_handler"
+	"shikposh-backend/internal/product/domain/commands"
+	"shikposh-backend/internal/product/service_layer/command_handler"
 	apperrors "github.com/ali-mahdavi-dev/shikposh-framework/errors"
 	"shikposh-backend/test/acceptance/testdouble/builders"
 	"shikposh-backend/test/acceptance/testdouble/factories"

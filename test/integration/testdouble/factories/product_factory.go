@@ -3,10 +3,10 @@ package factories
 import (
 	"context"
 
-	"shikposh-backend/internal/products/adapter/repository"
-	"shikposh-backend/internal/products/domain/commands"
-	"shikposh-backend/internal/products/domain/entity"
-	"shikposh-backend/internal/products/service_layer/command_handler"
+	"shikposh-backend/internal/product/adapter/repository"
+	"shikposh-backend/internal/product/domain/commands"
+	"shikposh-backend/internal/product/domain/entity"
+	"shikposh-backend/internal/product/service_layer/command_handler"
 
 	. "github.com/onsi/gomega"
 	"gorm.io/gorm"

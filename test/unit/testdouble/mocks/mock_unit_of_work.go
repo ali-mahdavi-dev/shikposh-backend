@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"shikposh-backend/internal/account/adapter/repository"
-	productrepository "shikposh-backend/internal/products/adapter/repository"
+	productrepository "shikposh-backend/internal/product/adapter/repository"
 
 	"github.com/ali-mahdavi-dev/shikposh-framework/service_layer/types"
 

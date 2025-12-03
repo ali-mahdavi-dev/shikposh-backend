@@ -12,6 +12,7 @@ import (
 
 type MiddlewareConfig struct {
 	JWTSecret string
+	DB        *gorm.DB
 }
 
 type Middleware struct {
@@ -20,10 +21,10 @@ type Middleware struct {
 	Uow             unitofwork.PGUnitOfWork
 }
 
-func NewMiddleware(cfg MiddlewareConfig, db *gorm.DB) *Middleware {
+func NewMiddleware(cfg MiddlewareConfig) *Middleware {
 	// Create uow for middleware
 	eventCh := make(chan adapter.EventWithWaitGroup, 1)
-	uow := unitofwork.New(db, eventCh)
+	uow := unitofwork.New(cfg.DB, eventCh)
 
 	return &Middleware{
 		Cfg: cfg,
